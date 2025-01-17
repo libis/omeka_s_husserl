@@ -1,0 +1,57 @@
+<!-- overview blocks -->
+<section class="section">
+  <div class="container">
+  <!-- overview blocks -->
+  <?php if($attachments):?>
+    <?php if($block->dataValue('title')):?>
+      <h3><?php echo $block->dataValue('title');?></h3>
+    <?php endif;?>
+    <div class="row">
+      <?php for($i = 1; $i <= sizeof($attachments); $i++){ ?>
+        <?php if(($i == 3) && sizeof($attachments) == 4):?>
+        <?php else:?>
+          <?php if(($i == 2) && sizeof($attachments) == 4):?>
+            <div class="col-xs-12 col-md-4">
+          <?php else:?>
+            <div class="col-xs-12 col-md-4">
+          <?php endif;?>
+        <?php endif;?>
+        <?php
+          $url='';
+          if($attachments[$i-1]):
+            $media = $attachments[$i-1]->media();
+            if($media):
+              if(sizeof($attachments) <= 2):
+                $url = $media->thumbnailUrl('large');
+                $url = str_replace('http:', '', $url);
+              else:
+                $url = $media->thumbnailUrl('medium');
+                $url = str_replace('http:', '', $url);
+              endif;
+            endif;
+          endif;
+        ?>
+        <div class="kul-card-image card card-gray">
+            <?php if($url):?>             
+              <div class="tile-bg"
+                style="background:url(<?php echo  $url;?>) no-repeat center 20%;height:250px;background-color:#7fb5b2;background-size: cover;"
+                ></div>
+            <?php endif;?>
+            <div class="card-body">
+              <h2>
+                <a href="<?php echo $block->dataValue('link'.$i);?>"><?php echo $block->dataValue('title'.$i);?></a>
+              </h2>
+                        
+              <?php echo $block->dataValue('text'.$i);?>
+                <?php if($block->dataValue('link'.$i) && $block->dataValue('linktext'.$i)):?>
+                  <a class="more" href="<?php echo $block->dataValue('link'.$i);?>"><?php echo $block->dataValue('linktext'.$i);?></a>
+                <?php endif;?>
+            </div>
+        </div>
+      </div>      
+      <?php } ?>   
+    </div>
+    <?php endif;?>
+  </div>
+</section>
+

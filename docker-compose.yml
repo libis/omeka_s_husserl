@@ -1,0 +1,18 @@
+services:
+  omeka-s:
+    build: ./
+    networks:
+     - my-network
+    ports:
+      - "9013:80"
+    volumes:
+      - ./files/:/var/www/html/husserl/files/
+      - ./modules/:/var/www/html/husserl/modules/
+      - ./themes/:/var/www/html/husserl/themes/
+      - ./config/:/var/www/html/husserl/config/
+    restart: "no"
+
+networks:
+  my-network:
+    external:
+      name: dev-network

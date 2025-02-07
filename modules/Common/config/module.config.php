@@ -61,6 +61,7 @@ return [
             Form\Element\OptionalCheckbox::class => Form\Element\OptionalCheckbox::class,
             Form\Element\OptionalDate::class => Form\Element\OptionalDate::class,
             Form\Element\OptionalDateTime::class => Form\Element\OptionalDateTime::class,
+            Form\Element\OptionalEmail::class => Form\Element\OptionalEmail::class,
             Form\Element\OptionalMultiCheckbox::class => Form\Element\OptionalMultiCheckbox::class,
             Form\Element\OptionalNumber::class => Form\Element\OptionalNumber::class,
             Form\Element\OptionalRadio::class => Form\Element\OptionalRadio::class,
@@ -87,6 +88,7 @@ return [
             Form\Element\OptionalResourceClassSelect::class => Service\Form\Element\OptionalResourceClassSelectFactory::class,
             Form\Element\OptionalResourceTemplateSelect::class => Service\Form\Element\OptionalResourceTemplateSelectFactory::class,
             Form\Element\OptionalRoleSelect::class => Service\Form\Element\OptionalRoleSelectFactory::class,
+            Form\Element\OptionalSitePageSelect::class => Service\Form\Element\OptionalSitePageSelectFactory::class,
             Form\Element\OptionalSiteSelect::class => Service\Form\Element\OptionalSiteSelectFactory::class,
             Form\Element\OptionalUserSelect::class => Service\Form\Element\OptionalUserSelectFactory::class,
         ],
@@ -97,11 +99,12 @@ return [
     ],
     'controller_plugins' => [
         'invokables' => [
+            'jSend' => Mvc\Controller\Plugin\JSend::class,
+            'messenger' => Mvc\Controller\Plugin\Messenger::class,
             'sendFile' => Mvc\Controller\Plugin\SendFile::class,
         ],
         'factories' => [
             'easyMeta' => Service\ControllerPlugin\EasyMetaFactory::class,
-            'messenger' => Mvc\Controller\Plugin\Messenger::class,
             'specifyMediaType' => Service\ControllerPlugin\SpecifyMediaTypeFactory::class,
             'translator' => Service\ControllerPlugin\TranslatorFactory::class,
         ],

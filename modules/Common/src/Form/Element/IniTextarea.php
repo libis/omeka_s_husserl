@@ -124,7 +124,7 @@ class IniTextarea extends Textarea implements InputProviderInterface
                             // See https://www.php.net/manual/fr/function.call-user-func-array.php#125953
                             'contextKey' => $this->getName(),
                         ],
-                        'message' => 'Invalid ini string', // @translate
+                        'message' => 'Invalid ini string or values with double quotes', // @translate
                     ],
                 ],
             ],
@@ -160,7 +160,15 @@ class IniTextarea extends Textarea implements InputProviderInterface
 
         try {
             $result = $writer->toString($array);
-        } catch (Exception\InvalidArgumentException $e) {
+        } catch (Exception\ExceptionInterface $e) {
+            /**
+             * @todo Fix issue in IniTextarea when a "Value can not contain double quotes".
+             * @see \Laminas\Config\Writer::prepareValue()
+             */
+            (new \Omeka\Mvc\Controller\Plugin\Messenger())->addError(new \Common\Stdlib\PsrMessage(
+                'The field {label} has an issue: {msg}', // @translate
+                ['label' => $this->getLabel(), 'msg' => $e->getMessage()],
+            ));
             return null;
         }
 
@@ -186,7 +194,7 @@ class IniTextarea extends Textarea implements InputProviderInterface
 
         try {
             $result = $reader->fromString($string);
-        } catch (Exception\RuntimeException $e) {
+        } catch (Exception\ExceptionInterface $e) {
             return null;
         }
 
@@ -198,11 +206,13 @@ class IniTextarea extends Textarea implements InputProviderInterface
 
     public function validateIni($value, ?array $context = null, ?string $contextKey = null): bool
     {
-        if (!isset($context) || !isset($contextKey)) {
-            return (new \Common\Validator\Ini())->isValid($value);
+        if (isset($context) && isset($contextKey)) {
+            if (!isset($context[$contextKey])) {
+                return false;
+            }
+            $value = $context[$contextKey];
         }
-        return isset($context[$contextKey])
-            && (new \Common\Validator\Ini())->isValid($context[$contextKey]);
+        return (new \Common\Validator\Ini())->isValid($value);
     }
 
     /**

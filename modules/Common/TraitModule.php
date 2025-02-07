@@ -28,6 +28,7 @@
 
 namespace Common;
 
+use Common\Stdlib\PsrMessage;
 use Laminas\EventManager\Event;
 use Laminas\Mvc\Controller\AbstractController;
 use Laminas\ServiceManager\ServiceLocatorInterface;
@@ -35,7 +36,6 @@ use Laminas\View\Renderer\PhpRenderer;
 use Omeka\Module\Exception\ModuleCannotInstallException;
 use Omeka\Module\Manager as ModuleManager;
 use Omeka\Settings\SettingsInterface;
-use Omeka\Stdlib\Message;
 
 /**
  * This trait allows to manage all methods that should run only once and that
@@ -62,7 +62,38 @@ trait TraitModule
         return include $this->modulePath() . '/config/module.config.php';
     }
 
+    /**
+     * Get the settings of the current module.
+     *
+     * The settings are the default config of config, settings, site settings,
+     * user settings, block settings, etc.
+     *
+     * The config of the module is not merged with Omeka main config for
+     * services before the end of install. So it is locally cached to avoid to
+     * reload and reprocess the file. It is used to manage the forms too.
+     */
+    protected function getModuleConfig(?string $settingsType = null): ?array
+    {
+        static $localConfig;
+
+        if (!isset($localConfig)) {
+            $space = strtolower(static::NAMESPACE);
+            $localConfig = $this->getConfig();
+            $localConfig = $localConfig[$space] ?? false;
+        }
+
+        return $localConfig === false
+            ? null
+            : ($localConfig[$settingsType] ?? []);
+    }
+
     public function install(ServiceLocatorInterface $services): void
+    {
+        // This method allows to use this trait like a parent.
+        $this->installAuto($services);
+    }
+
+    protected function installAuto(ServiceLocatorInterface $services): void
     {
         $this->setServiceLocator($services);
 
@@ -74,32 +105,32 @@ trait TraitModule
         $this->preInstall();
         if (!$this->checkDependencies()) {
             if (count($this->dependencies) === 1) {
-                $message = new Message(
-                    $translator->translate('This module requires the module "%s".'), // @translate
-                    reset($this->dependencies)
+                $message = new PsrMessage(
+                    'This module requires the module "{module}".', // @translate
+                    ['module' => reset($this->dependencies)]
                 );
             } else {
-                $message = new Message(
-                    $translator->translate('This module requires modules "%s".'), // @translate
-                    implode('", "', $this->dependencies)
+                $message = new PsrMessage(
+                    'This module requires modules "{modules}".', // @translate
+                    ['modules' => implode('", "', $this->dependencies)]
                 );
             }
-            throw new ModuleCannotInstallException((string) $message);
+            throw new ModuleCannotInstallException((string) $message->setTranslator($translator));
         }
 
         if (!$this->checkAllResourcesToInstall()) {
-            $message = new Message(
-                $translator->translate('This module has resources that cannot be installed.') // @translate
+            $message = new PsrMessage(
+                'This module has resources that cannot be installed.' // @translate
             );
-            throw new ModuleCannotInstallException((string) $message);
+            throw new ModuleCannotInstallException((string) $message->setTranslator($translator));
         }
 
         $sqlFile = $this->modulePath() . '/data/install/schema.sql';
         if (!$this->checkNewTablesFromFile($sqlFile)) {
-            $message = new Message(
-                $translator->translate('This module cannot install its tables, because they exist already. Try to remove them first.') // @translate
+            $message = new PsrMessage(
+                'This module cannot install its tables, because they exist already. Try to remove them first.' // @translate
             );
-            throw new ModuleCannotInstallException((string) $message);
+            throw new ModuleCannotInstallException((string) $message->setTranslator($translator));
         }
 
         $this->execSqlFromFile($sqlFile);
@@ -130,14 +161,10 @@ trait TraitModule
 
     public function upgrade($oldVersion, $newVersion, ServiceLocatorInterface $services): void
     {
-        $filepath = $this->modulePath() . '/data/scripts/upgrade.php';
-        if (file_exists($filepath) && filesize($filepath) && is_readable($filepath)) {
-            // For compatibility with old upgrade files.
-            $serviceLocator = $services;
-            $this->setServiceLocator($serviceLocator);
-            $this->initTranslations();
-            require_once $filepath;
-        }
+        $this->setServiceLocator($services);
+
+        $this->preUpgrade($oldVersion, $newVersion);
+        $this->postUpgrade($oldVersion, $newVersion);
 
         // To clear cache after upgrade avoids some mysterious issues, in
         // particular when a doctrine entity is modified.
@@ -217,9 +244,8 @@ trait TraitModule
 
     protected function handleConfigFormAuto(AbstractController $controller): bool
     {
-        $config = $this->getConfig();
-        $space = strtolower(static::NAMESPACE);
-        if (empty($config[$space]['config'])) {
+        $defaultSettings = $this->getModuleConfig('config');
+        if (!$defaultSettings) {
             return true;
         }
 
@@ -243,7 +269,6 @@ trait TraitModule
         $params = $form->getData();
 
         $settings = $services->get('Omeka\Settings');
-        $defaultSettings = $config[$space]['config'];
         $params = array_intersect_key($params, $defaultSettings);
         foreach ($params as $name => $value) {
             $settings->set($name, $value);
@@ -315,10 +340,35 @@ trait TraitModule
 
     protected function postUninstallAuto(): void
     {
-        $services = $this->getServiceLocator();
         $filepath = $this->modulePath() . '/data/scripts/uninstall.php';
         if (file_exists($filepath) && filesize($filepath) && is_readable($filepath)) {
-            $this->setServiceLocator($services);
+            // Required for the file uninstall.
+            /** @var \Laminas\ServiceManager\ServiceLocatorInterface $services */
+            $services = $this->getServiceLocator();
+            require_once $filepath;
+        }
+    }
+
+    protected function preUpgrade(?string $oldVersion, ?string $newVersion): void
+    {
+        // To be overridden. Automatically run on upgrade.
+    }
+
+    protected function postUpgrade(?string $oldVersion, ?string $newVersion): void
+    {
+        // To be overridden. Automatically run on upgrade.
+        $this->postUpgradeAuto($oldVersion, $newVersion);
+    }
+
+    protected function postUpgradeAuto(?string $oldVersion, ?string $newVersion): void
+    {
+        $filepath = $this->modulePath() . '/data/scripts/upgrade.php';
+        if (file_exists($filepath) && filesize($filepath) && is_readable($filepath)) {
+            // Required for the file upgrade.
+            /** @var \Laminas\ServiceManager\ServiceLocatorInterface $services */
+            $services = $this->getServiceLocator();
+            // For compatibility with old upgrade files.
+            $this->initTranslations();
             require_once $filepath;
         }
     }
@@ -405,10 +455,9 @@ trait TraitModule
                 $connection->executeStatement("SET FOREIGN_KEY_CHECKS=0; DROP TABLE `$table`;");
             }
 
-            $translator = $services->get('MvcTranslator');
-            $message = new Message(
-                $translator->translate('The module removed tables "%s" from a previous broken install.'), // @translate
-                implode('", "', $dropTables)
+            $message = new PsrMessage(
+                'The module removed tables "{tables}" from a previous broken install.', // @translate
+                ['tables' => implode('", "', $dropTables)]
             );
             $messenger = $services->get('ControllerPluginManager')->get('messenger');
             $messenger->addWarning($message);
@@ -501,9 +550,8 @@ trait TraitModule
     protected function manageSiteSettings(string $process, array $values = []): self
     {
         $settingsType = 'site_settings';
-        $config = $this->getConfig();
-        $space = strtolower(static::NAMESPACE);
-        if (empty($config[$space][$settingsType])) {
+        $defaultSettings = $this->getModuleConfig($settingsType);
+        if (!$defaultSettings) {
             return $this;
         }
         $services = $this->getServiceLocator();
@@ -534,9 +582,8 @@ trait TraitModule
     protected function manageUserSettings(string $process, array $values = []): self
     {
         $settingsType = 'user_settings';
-        $config = $this->getConfig();
-        $space = strtolower(static::NAMESPACE);
-        if (empty($config[$space][$settingsType])) {
+        $defaultSettings = $this->getModuleConfig($settingsType);
+        if (!$defaultSettings) {
             return $this;
         }
         $services = $this->getServiceLocator();
@@ -568,15 +615,13 @@ trait TraitModule
      */
     protected function manageAnySettings(SettingsInterface $settings, string $settingsType, string $process, array $values = []): self
     {
-        $config = $this->getConfig();
-        $space = strtolower(static::NAMESPACE);
-        if (empty($config[$space][$settingsType])) {
+        $defaultSettings = $this->getModuleConfig($settingsType);
+        if (!$defaultSettings) {
             return $this;
         }
 
         $translator = $this->getServiceLocator()->get('MvcTranslator');
 
-        $defaultSettings = $config[$space][$settingsType];
         foreach ($defaultSettings as $name => $value) {
             switch ($process) {
                 case 'install':
@@ -795,9 +840,8 @@ trait TraitModule
             return false;
         }
 
-        $config = $this->getConfig();
-        $space = strtolower(static::NAMESPACE);
-        if (empty($config[$space][$settingsType])) {
+        $defaultSettings = $this->getModuleConfig($settingsType);
+        if (!$defaultSettings) {
             return false;
         }
 
@@ -818,7 +862,6 @@ trait TraitModule
         $translator = $services->get('MvcTranslator');
 
         $currentSettings = $stmt->fetchAllKeyValue();
-        $defaultSettings = $config[$space][$settingsType];
         // Skip settings that are arrays, because the fields "multi-checkbox"
         // and "multi-select" are removed when no value are selected, so it's
         // not possible to determine if it's a new setting or an old empty
@@ -851,15 +894,13 @@ trait TraitModule
      */
     protected function prepareDataToPopulate(SettingsInterface $settings, string $settingsType): ?array
     {
-        $config = $this->getConfig();
-        $space = strtolower(static::NAMESPACE);
+        // TODO Explain this feature.
         // Use isset() instead of empty() to give the possibility to display a
         // specific form.
-        if (!isset($config[$space][$settingsType])) {
+        $defaultSettings = $this->getModuleConfig($settingsType);
+        if ($defaultSettings === null) {
             return null;
         }
-
-        $defaultSettings = $config[$space][$settingsType];
 
         $data = [];
         foreach ($defaultSettings as $name => $value) {
@@ -872,11 +913,28 @@ trait TraitModule
     /**
      * Check if a setting is translatable.
      *
-     * The method can be overridden with to matching settings names.
+     * The method can be overridden to match settings names.
      */
     protected function isSettingTranslatable(string $settingsType, string $name): bool
     {
         return false;
+    }
+
+    /**
+     * Check if the current process is a background one.
+     *
+     * The library to get status manages only admin, site or api requests.
+     * A background process is none of them.
+     */
+    protected function isBackgroundProcess(): bool
+    {
+        // Warning: there is a matched route ("site") for backend processes.
+        /** @var \Omeka\Mvc\Status $status */
+        $status = $this->getServiceLocator()->get('Omeka\Status');
+        return !$status->isSiteRequest()
+            && !$status->isAdminRequest()
+            && !$status->isApiRequest()
+            && (!method_exists($status, 'isKeyauthRequest') || !$status->isKeyauthRequest());
     }
 
     /**
@@ -914,17 +972,17 @@ trait TraitModule
         }
         $translator = $services->get('MvcTranslator');
         if ($version) {
-            $message = new Message(
-                $translator->translate('This module requires the module "%1$s", version %2$s or above.'), // @translate
-                $moduleName, $version
+            $message = new PsrMessage(
+                'This module requires the module "{module}", version {version} or above.', // @translate
+                ['module' => $moduleName, 'version' => $version]
             );
         } else {
-            $message = new Message(
-                $translator->translate('This module requires the module "%s".'), // @translate
-                $moduleName
+            $message = new PsrMessage(
+                'This module requires the module "{module}".', // @translate
+                ['module' => $moduleName]
             );
         }
-        throw new ModuleCannotInstallException((string) $message);
+        throw new ModuleCannotInstallException((string) $message->setTranslator($translator));
     }
 
     /**
@@ -1031,15 +1089,15 @@ trait TraitModule
         $moduleManager->deactivate($managedModule);
 
         $translator = $services->get('MvcTranslator');
-        $message = new Message(
-            $translator->translate('The module "%s" was automatically deactivated because the dependencies are unavailable.'), // @translate
-            $module
+        $message = new PsrMessage(
+            'The module "{module}" was automatically deactivated because the dependencies are unavailable.', // @translate
+            ['module' => $module]
         );
         $messenger = $services->get('ControllerPluginManager')->get('messenger');
         $messenger->addWarning($message);
 
         $logger = $services->get('Omeka\Logger');
-        $logger->warn($message);
+        $logger->warn($message->getMessage(), $message->getContext());
         return true;
     }
 
@@ -1087,7 +1145,7 @@ trait TraitModule
         if (strpos($dirPath, '/..') !== false || substr($dirPath, 0, 1) !== '/') {
             return false;
         }
-        $files = array_diff(scandir($dirPath), ['.', '..']);
+        $files = array_diff(scandir($dirPath) ?: [], ['.', '..']);
         foreach ($files as $file) {
             $path = $dirPath . '/' . $file;
             if (is_dir($path)) {

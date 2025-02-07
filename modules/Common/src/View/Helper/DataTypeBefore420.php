@@ -7,8 +7,10 @@ use Omeka\DataType\Manager as DataTypeManager;
 
 /**
  * View helper for rendering data types.
+ *
+ * @deprecated Use DataType instead.
  */
-class DataType extends \Omeka\View\Helper\DataType
+class DataTypeBefore420 extends \Omeka\View\Helper\DataType
 {
     /**
      * @param FormElementManager
@@ -29,7 +31,7 @@ class DataType extends \Omeka\View\Helper\DataType
      * {@inheritDoc}
      * @see \Omeka\View\Helper\DataType::getSelect()
      */
-    public function getSelect($name, $value = null, $attributes = [], $options = [])
+    public function getSelect($name, $value = null, $attributes = [])
     {
         $element = $this->formElementManager->get(\Common\Form\Element\DataTypeSelect::class);
         $element

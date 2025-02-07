@@ -2,9 +2,9 @@
 
 namespace Common\Form\Element;
 
-use Omeka\Form\Element\SiteSelect;
+use Omeka\Form\Element\SitePageSelect;
 
-class OptionalSiteSelect extends SiteSelect
+class OptionalSitePageSelect extends SitePageSelect
 {
     use TraitOptionalElement;
     use TraitPrependAndGetValuesOptions;

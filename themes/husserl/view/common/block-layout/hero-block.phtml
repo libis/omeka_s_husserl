@@ -1,0 +1,37 @@
+<?php
+  $escape = $this->plugin('escapeHtml');
+  $url = '';
+  $siteTitle = $block->page()->site()->title();
+  if($attachments):
+    $media = $attachments[0]->media();
+
+    $url = '';
+    $altText = "";
+    if($media):
+      $url = $media->thumbnailUrl('large');
+      $url = str_replace('http:', '', $url);
+      $altText = $attachments[0]->caption();
+    endif;
+  endif;
+?>
+
+<header class="hero">
+  <?php if($url != ''):?>
+    <div class="hero__hero-image hero-image">
+      <img src="<?php echo $url?>" alt="<?php echo empty($altText) ? 'Husserl Archives' : strip_tags($altText) ?>" />
+    </div>
+  <?php else:?>
+  <?php endif;?>
+  <div class="hero__hero-text-section hero-text-section">
+    <div class="hero-text-section__hero-text hero-text">
+      <h1 class="hero-text__page-title page-title h1"><?php echo $block->dataValue('title');?></h1>
+      <p class="hero-text__hero-info hero-info body-text"><?= strip_tags($block->dataValue('text'));?></p>
+      <?php if(!empty($block->dataValue('link'))): ?>
+        <a class="hero-text__cta-button cta-button primary-button button-text" href="<?php echo $block->dataValue('link');?>">
+          <?php echo $block->dataValue('link_text');?>
+        </a>
+      <?php else:?>
+      <?php endif;?>
+    </div>
+  </div>
+ </header>

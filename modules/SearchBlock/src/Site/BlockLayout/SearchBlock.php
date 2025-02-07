@@ -5,7 +5,6 @@ use Omeka\Site\BlockLayout\AbstractBlockLayout;
 use Omeka\Api\Representation\SiteRepresentation;
 use Omeka\Api\Representation\SitePageRepresentation;
 use Omeka\Api\Representation\SitePageBlockRepresentation;
-use Omeka\Form\Element\ResourceTemplateSelect;
 use Omeka\Stdlib\HtmlPurifier;
 use Omeka\Stdlib\ErrorStore;
 use Zend\Form\Element\Textarea;
@@ -58,10 +57,11 @@ class SearchBlock extends AbstractBlockLayout
         SitePageRepresentation $page = null, SitePageBlockRepresentation $block = null
     ) {
       $defaults = [
-          //'type' => 'beeldbank'
+          'type' => 'objecten'
       ];
 
       $data = $block ? $block->data() + $defaults : $defaults;
+
       $form = new Form();
 
       $form->add([
@@ -69,16 +69,15 @@ class SearchBlock extends AbstractBlockLayout
           'type' => Element\Select::class,
           'options' => [
               'label' => 'Type', // @translate
-
               'value_options' => [
-                  'schoolerfgoed' => 'Schoolerfgoed',
-                  'inspiratie' => 'Inspiratie',
-                  'projecten' => 'Project'
+                  'objecten' => 'Objecten',  // @translate
               ],
           ],
-          'attributes' => [
-            'value' => $block->dataValue('type'),
-          ]
+      ]);
+
+      $form->setData([
+          'o:block[__blockIndex__][o:data][type]' => $data['type'],
+
       ]);
 
       return $view->formCollection($form);
@@ -102,13 +101,20 @@ class SearchBlock extends AbstractBlockLayout
      */
     public function render(PhpRenderer $view, SitePageBlockRepresentation $block)
     {
-      //$item = $view->api()->searchOne('items', array('item_set_id' => '19','sort_by' => 'created', 'sort_order' => 'desc'))->getContent();
+      $lang = $block->page()->site()->slug();  
+      $filters = array("languages" => $lang.',null');
+    
+      $references = $block->page()->site()->getServiceLocator()->get('ControllerPluginManager')->get('references');
 
+      parse_str("resource_template_id[0]=3", $query);
+
+      $identifiers = $view->references()->list('dcterms:identifier',$query,array("lang" => $lang,"filters" => $filters));
+      $identifiers = $identifiers['o:references'];
 
       return $view->partial('common/block-layout/search-block', [
-
         'block' => $block,
-        'attachments' => $block->attachments()
+        'attachments' => $block->attachments(),
+        'identifiers' => $identifiers,
       ]);
     }
 }

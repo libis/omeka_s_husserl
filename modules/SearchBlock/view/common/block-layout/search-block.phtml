@@ -1,31 +1,78 @@
-<section class="section search-section">
-    <div class="container">
-        <div class="columns">
-            <div class="column is-two-thirds">
-                <form class="has-icons-right" action="<?php echo $block->page()->site()->url();?>/zoek-<?php echo $block->dataValue('type');?>">
-                  <div class="field has-addons">
+<?php 
+$siteurl = 'http://localhost:9013/husserl/s/'.$block->page()->site()->slug();
+$lang = $block->page()->site()->slug();
+$translate = $this->plugin('translate');
+?>
+<div class="section search-block">
+  <div class="container">
+    <div class="browse-text">
+      <form class="has-icons-right" action="http://localhost:9013/husserl/s/<?php echo $block->page()->site()->slug();?>/search" id="search-form">
+        <div class="columns" style="margin-bottom:0;">
+            <div class="column is-6">
+                <div class="field has-addons">
                     <div class="control">
-                      <input class="input is-info is-medium" type="text" name="q" id="q" placeholder="Zoek <?php echo lcfirst($block->dataValue('type'));?>" value="">
-                      <?php if($block->dataValue('type') == 'schoolerfgoed'):?>
-                        <input type='hidden' name="facet[resource_template_id][0]" value="<?php echo ucfirst($block->dataValue('type'));?>"/>
-                      <?php endif;?>
+                      <input class="input" type="text" name="q" id="q" placeholder="<?php echo $translate("Zoek naar objecten in de collecties");?>" aria-label="">
                     </div>
                     <div class="control">
-                      <button type="submit" class="button is-info is-medium">
+                      <button type="submit" class="button is-primary">
                         <span class="icon is-large">
                           <i class="fas fa-search"></i>
                         </span>
                       </button>
                     </div>
-
-                  </div>
-                </form>
-                <?php if($block->dataValue('type') == 'schoolerfgoed'):?>
-                  <a style="margin-top:1rem;" class="button is-info" href="<?php echo $block->page()->site()->url();?>/zoek-<?php echo $block->dataValue('type');?>?q=<?php echo "&facet[resource_template_id][0]=Slim erfgoed - ".ucfirst($block->dataValue('type'));?>">Toon alles</a>
-                <?php else:?>
-                  <a style="margin-top:1rem;" class="button is-info" href="<?php echo $block->page()->site()->url();?>/zoek-<?php echo $block->dataValue('type');?>?q=">Toon alles</a>
-                <?php endif;?>
+                </div>
+            </div>
+            <div class="column">
+              <?php //echo $this->hyperlink($translate('Advanced search'), $this->url(null, ['action' => 'search'], true), ['class' => 'button is-outlined is-primary']); ?>
+              <button class="button is-outlined is-primary advanced-switch">
+                <span><?php echo $translate('Advanced search');?></span>
+                <span class="icon is-small">
+                  <i class="fas fa-angle-right"></i>
+                </span>
+              </button>
+              <?php if($lang == "nl"):?>
+                <a class="button is-primary" href="<?php echo $siteurl;?>/search"><?php echo $translate("Toon alles");?></a>
+              <?php else:?>
+                <a class="button is-primary" href="<?php echo $siteurl;?>/search"><?php echo $translate("Toon alles");?></a>
+              <?php endif;?>              
             </div>
         </div>
+        <div class="columns advanced-search closed">
+            <div class="column is-7">
+              <div class="field is-horizontal">
+                <div class="field-body">
+                  <div class="field">
+                    <p class="control is-expanded">
+                      <select class="selectize" placeholder="<?php echo $translate("Identifier");?>" name="facet[dcterms_identifier][]">
+                          <option value=""></option>                          
+                          <?php foreach($identifiers as $key=>$value):?>                          
+                            <option value="<?php echo $value['val'];?>">
+                              <?php echo $value['val'];?>
+                            </option>
+                          <?php endforeach;?>
+                      </select>
+                    </p>
+                  </div>
+                </div>
+              </div>
+          </div>
+        </div>
+      </form>
     </div>
-</section>
+  </div>
+    <script>
+    $(document).ready(function() {
+      // Check for click events on the navbar burger icon
+      $(".advanced-switch").unbind('click').bind('click', function (e) {
+        e.preventDefault();
+        $("div.advanced-search").toggleClass("closed open");
+      });
+      $(".advanced-close").unbind('click').bind('click', function (e) {
+        e.preventDefault();
+        $("div.advanced-search").toggleClass("closed open");
+      });
+
+      $('.selectize').selectize([create = false,multiple = true,selectOnTab = true]);
+    });
+    </script>
+</div>

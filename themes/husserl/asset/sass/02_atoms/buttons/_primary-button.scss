@@ -1,0 +1,10 @@
+.primary-button {
+    background-color: var(--secondary-bg-color);
+    border: none;
+    padding: 12px 15px;
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    width: fit-content;
+    color: var(--primary-text-color);
+}

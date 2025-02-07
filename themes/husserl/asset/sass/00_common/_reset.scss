@@ -1,0 +1,26 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow-x: hidden;
+    width: 100%;
+    background-color: var(--primary-bg-color);
+    min-height: 100vh;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+button, input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+a {
+    text-decoration: none;
+}

@@ -37,6 +37,7 @@ return [
     ],
     'block_templates' => [
         'reference' => [
+            'reference-grid' => 'Reference grid', // @translate
             'reference-index' => 'Reference (index)', // @translate
         ],
     ],
@@ -51,8 +52,10 @@ return [
             Form\Element\DoubleArrayTextarea::class => Form\Element\DoubleArrayTextarea::class,
             Form\SettingsFieldset::class => Form\SettingsFieldset::class,
             Form\SiteSettingsFieldset::class => Form\SiteSettingsFieldset::class,
-            Form\ReferenceFieldset::class => Form\ReferenceFieldset::class,
-            Form\ReferenceTreeFieldset::class => Form\ReferenceTreeFieldset::class,
+        ],
+        'factories' => [
+            Form\ReferenceFieldset::class => Service\Form\ReferenceFieldsetFactory::class,
+            Form\ReferenceTreeFieldset::class => Service\Form\ReferenceFieldsetFactory::class,
         ],
     ],
     'controllers' => [
@@ -174,11 +177,13 @@ return [
                 'sort_by' => 'alphabetic',
                 'sort_order' => 'asc',
                 'by_initial' => false,
+                'search_config' => '',
                 'link_to_single' => true,
                 'custom_url' => false,
                 'skiplinks' => true,
                 'headings' => true,
                 'total' => true,
+                'thumbnail' => false,
                 'list_by_max' => 0,
                 'subject_property' => null,
             ],
@@ -190,9 +195,11 @@ return [
                 'resource_name' => 'items',
                 'query' => [],
                 'query_type' => 'eq',
+                'search_config' => '',
                 'link_to_single' => true,
                 'custom_url' => false,
                 'total' => true,
+                'thumbnail' => false,
                 'branch' => false,
                 'expanded' => true,
             ],

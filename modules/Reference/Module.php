@@ -20,7 +20,7 @@ use Omeka\Settings\SettingsInterface;
  * Allows to serve an alphabetized and a hierarchical page of links to searches
  * for all resources classes and properties of all resources of Omeka S.
  *
- * @copyright Daniel Berthereau, 2017-2023
+ * @copyright Daniel Berthereau, 2017-2025
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
  */
 class Module extends AbstractModule
@@ -51,10 +51,10 @@ class Module extends AbstractModule
         $plugins = $services->get('ControllerPluginManager');
         $translate = $plugins->get('translate');
 
-        if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.62')) {
+        if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.66')) {
             $message = new \Omeka\Stdlib\Message(
                 $translate('The module %1$s should be upgraded to version %2$s or later.'), // @translate
-                'Common', '3.4.62'
+                'Common', '3.4.66'
             );
             throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
         }
@@ -76,6 +76,12 @@ class Module extends AbstractModule
             );
         }
         $messenger->addWarning($message);
+
+        if (!extension_loaded('intl')) {
+            $messenger->addWarning(new PsrMessage(
+                'The php extension "intl" is recommended to fix issues with diacritic letters.' // @translate
+            ));
+        }
     }
 
     public function attachListeners(SharedEventManagerInterface $sharedEventManager): void
@@ -137,7 +143,7 @@ class Module extends AbstractModule
             [$this, 'handleEasyAdminJobsForm']
             );
         $sharedEventManager->attach(
-            \EasyAdmin\Controller\CheckAndFixController::class,
+            \EasyAdmin\Controller\Admin\CheckAndFixController::class,
             'easyadmin.job',
             [$this, 'handleEasyAdminJobs']
         );

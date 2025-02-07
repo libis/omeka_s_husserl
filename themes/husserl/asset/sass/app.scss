@@ -1,0 +1,14 @@
+@import '00_common/variables';
+@import '00_common/reset';
+@import '01_fundaments/typography';
+@import '02_atoms/**/*.scss';
+@import '03_molecules/**/*.scss';
+@import '04_organisms/**/*.scss';
+@import '05_layouts/**/*.scss';
+@import '06_pages/**/*.scss';
+
+:root {
+    @each $name, $color in $colors {
+        --#{$name}: #{$color};
+    }
+}

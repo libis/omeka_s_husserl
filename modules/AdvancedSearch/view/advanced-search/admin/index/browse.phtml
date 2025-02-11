@@ -1,7 +1,7 @@
 <?php
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2017-2024
+ * Copyright Daniel Berthereau, 2017-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -29,57 +29,58 @@
 
 /**
  * @var \Laminas\View\Renderer\PhpRenderer $this
- * @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation[] $engines
+ * @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation[] $searchEngines
  * @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation[] $searchConfigs
  * @var \AdvancedSearch\Api\Representation\SearchSuggesterRepresentation[] $suggesters
  */
 
 $plugins = $this->getHelperPluginManager();
-$translate = $plugins->get('translate');
-$escape = $plugins->get('escapeHtml');
-$escapeAttr = $plugins->get('escapeHtmlAttr');
 $url = $plugins->get('url');
+$escape = $plugins->get('escapeHtml');
+$translate = $plugins->get('translate');
 $assetUrl = $plugins->get('assetUrl');
+$escapeAttr = $plugins->get('escapeHtmlAttr');
 
 $this->headLink()
-    ->appendStylesheet($assetUrl('css/advanced-search-configure.css', 'AdvancedSearch'));
+    ->appendStylesheet($assetUrl('css/advanced-search-manager.css', 'AdvancedSearch'));
 $this->headScript()
-    ->appendFile($assetUrl('js/advanced-search-configure.js', 'AdvancedSearch'), 'text/javascript', ['defer' => 'defer']);
+    ->appendFile($assetUrl('js/advanced-search-manager.js', 'AdvancedSearch'), 'text/javascript', ['defer' => 'defer']);
+
+$this->htmlElement('body')->appendAttribute('class', 'search-admin resource browse');
 ?>
 
-<?php $this->htmlElement('body')->appendAttribute('class', 'search-admin resource browse'); ?>
 
-<?= $this->pageTitle($translate('Search manager')) ?>
+<?= $this->pageTitle($translate('Search'), 1, $translate('Search manager')) ?>
 
 <div id="page-actions">
-    <a class="button" href="<?= $url('admin/search-manager/engine', ['action' => 'add']) ?>"><?= $translate('Add new search engine') ?></a>
-    <?php if (!empty($engines)): ?>
-        <a class="button" href="<?= $url('admin/search-manager/config', ['action' => 'add']) ?>"><?= $translate('Add new page') ?></a>
-        <a class="button" href="<?= $url('admin/search-manager/suggester', ['action' => 'add']) ?>"><?= $translate('Add new suggester') ?></a>
+    <a class="button" href="<?= $url('admin/search-manager/engine', ['action' => 'add']) ?>"><?= $translate('Add search engine') ?></a>
+    <?php if (!empty($searchEngines)): ?>
+        <a class="button" href="<?= $url('admin/search-manager/config', ['action' => 'add']) ?>"><?= $translate('Add page') ?></a>
+        <a class="button" href="<?= $url('admin/search-manager/suggester', ['action' => 'add']) ?>"><?= $translate('Add suggester') ?></a>
     <?php endif; ?>
 </div>
 
 <h2 id="table-caption-engines"><?= $translate('Search engines') ?></h2>
-<?php if (count($engines) > 0): ?>
+<?php if (count($searchEngines) > 0): ?>
     <table aria-labelledby="table-caption-engines" class="tablesaw" data-tablesaw-mode="stack">
         <thead>
             <tr>
                 <th><?= $translate('Name') ?></th>
-                <th><?= $translate('Adapter') ?></th>
+                <th><?= $translate('Engine adapter') ?></th>
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($engines as $engine): ?>
-                <?php $searchAdapter = $engine->adapter();
-                $isInternal = $searchAdapter && $searchAdapter instanceof \AdvancedSearch\Adapter\InternalAdapter;
+            <?php foreach ($searchEngines as $searchEngine): ?>
+                <?php $engineAdapter = $searchEngine->engineAdapter();
+                $isInternal = $engineAdapter && $engineAdapter instanceof \AdvancedSearch\EngineAdapter\Internal;
                 ?>
                 <tr>
                     <td>
-                        <span><?= $engine->name() ?></span>
+                        <span><?= $searchEngine->name() ?></span>
                         <ul class="actions">
-                            <?php if ($searchAdapter): ?>
+                            <?php if ($engineAdapter): ?>
                                 <li>
-                                    <?= $engine->link('', 'edit', [
+                                    <?= $searchEngine->link('', 'edit', [
                                         'class' => 'o-icon-edit',
                                         'aria-label' => $translate('Edit'),
                                         'title' => $translate('Edit'),
@@ -93,7 +94,7 @@ $this->headScript()
                                     title="<?= $escape($translate('No reindex for internal engine')) ?>"></span>
                                 <?php else: ?>
                                     <a href="#"
-                                    data-sidebar-content-url="<?= $escape($engine->url('index-confirm')) ?>"
+                                    data-sidebar-content-url="<?= $escape($searchEngine->url('index-confirm')) ?>"
                                     class="o-icon- fa fa-refresh fa-sync sidebar-content"
                                     aria-label="<?= $escape($translate('Reindex')) ?>"
                                     title="<?= $escape($translate('Reindex')) ?>"></a>
@@ -102,14 +103,14 @@ $this->headScript()
                             <?php endif; ?>
                             <li>
                                 <a href="#"
-                                data-sidebar-content-url="<?= $escape($engine->url('delete-confirm')) ?>"
+                                data-sidebar-content-url="<?= $escape($searchEngine->url('delete-confirm')) ?>"
                                 class="o-icon-delete sidebar-content"
                                 aria-label="<?= $escape($translate('Delete')) ?>"
                                 title="<?= $escape($translate('Delete')) ?>"></a>
                             </li>
                         </ul>
                     </td>
-                    <td><?= $engine->adapterLabel() ?></td>
+                    <td><?= $escape($searchEngine->engineAdapterLabel()) ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
@@ -141,7 +142,7 @@ $this->headScript()
                                     'title' => $translate('Edit'),
                                 ]) ?>
                             </li>
-                            <?php if ($searchConfig->engine()->adapter()): ?>
+                            <?php if ($searchConfig->engineAdapter()): ?>
                             <li>
                                 <?= $searchConfig->link('', 'configure', [
                                     'class' => 'o-icon- fa fa-sliders fa-sliders-h',
@@ -159,12 +160,12 @@ $this->headScript()
                         </ul>
                     </td>
                     <td><?= $searchConfig->slug() ?></td>
-                    <td><?= $searchConfig->engine()->name() ?></td>
+                    <td><?= $searchConfig->searchEngine()->name() ?></td>
                     <td>
                         <?php
                             $formAdapter = $searchConfig->formAdapter();
                             if ($formAdapter) {
-                                echo $formAdapter->getLabel();
+                                echo $escape($formAdapter->getLabel());
                             } else {
                                 echo $searchConfig->formAdapterName();
                             }
@@ -189,15 +190,15 @@ $this->headScript()
         </thead>
         <tbody>
             <?php foreach ($suggesters as $suggester): ?>
-                <?php $searchAdapter = $suggester->engine()->adapter();
-                $isInternal = $searchAdapter && $searchAdapter instanceof \AdvancedSearch\Adapter\InternalAdapter;
+                <?php $engineAdapter = $suggester->engineAdapter();
+                $isInternal = $engineAdapter && $engineAdapter instanceof \AdvancedSearch\EngineAdapter\Internal;
                 ?>
                 <tr>
                     <td>
                         <span><?= $suggester->name() ?></span>
                         <ul class="actions">
                             <li>
-                            <?php if ($searchAdapter): ?>
+                            <?php if ($engineAdapter): ?>
                                 <?= $suggester->link('', 'edit', [
                                     'class' => 'o-icon-edit',
                                     'title' => $translate('Edit'),
@@ -231,7 +232,7 @@ $this->headScript()
                             </li>
                         </ul>
                     </td>
-                    <td><?= $suggester->engine()->name() ?></td>
+                    <td><?= $suggester->searchEngine()->name() ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>

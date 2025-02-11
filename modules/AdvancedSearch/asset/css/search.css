@@ -1,10 +1,15 @@
-@media screen {
+@media all {
     /* From omeka main styles. */
     .collapse + .collapsible {
         display: block;
         clear: both;
     }
     .collapsible {
+        display: none;
+    }
+
+    [hidden],
+    .hidden {
         display: none;
     }
 
@@ -136,6 +141,7 @@
     .search-results .search-filters {
         width: 100%;
         flex: 0 0 100%;
+        padding-left: 0;
     }
     .search-results .search-filters .filter a::after {
         content: "×";
@@ -167,10 +173,10 @@
         flex-flow: row wrap;
     }
     .search-results .resource-list.list .resource-thumbnail {
-        flex-basis: 42px;
+        flex-basis: 120px;
     }
     .search-results .resource-list.list .resource-heading {
-        flex-basis: calc(100% - 42px);
+        flex-basis: calc(100% - 120px);
     }
     .search-results .resource-list.list .resource-metadata,
     .search-results .resource-list.list .resource-body {
@@ -376,7 +382,7 @@
         width: 1.5em;
         content: "\f0c8";
     }
-    .facet-item .active a::before {
+    .facet-item.active a::before {
         content: "\f14a";
     }
 

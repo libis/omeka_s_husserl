@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
+
 namespace Log\Entity;
 
 use DateTime;
-use Doctrine\ORM\Event\LifecycleEventArgs;
 use Omeka\Entity\AbstractEntity;
 use Omeka\Entity\Job;
 use Omeka\Entity\User;
@@ -11,18 +11,20 @@ use Omeka\Entity\User;
  * @Entity
  * @Table(
  *     indexes={
- *         @Index(name="owner_idx", columns={"owner_id"}),
- *         @Index(name="job_idx", columns={"job_id"}),
- *         @Index(name="reference_idx", columns={"reference"}),
- *         @Index(name="severity_idx", columns={"severity"})
+ *         @Index(
+ *             columns={"reference"}
+ *         ),
+ *         @Index(
+ *             columns={"severity"}
+ *         )
  *     }
  * )
- * @HasLifecycleCallbacks
  */
 class Log extends AbstractEntity
 {
     /**
      * @var int
+     *
      * @Id
      * @Column(type="integer")
      * @GeneratedValue
@@ -30,6 +32,8 @@ class Log extends AbstractEntity
     protected $id;
 
     /**
+     * @var \Omeka\Entity\User
+     *
      * @ManyToOne(
      *     targetEntity="Omeka\Entity\User"
      * )
@@ -41,6 +45,8 @@ class Log extends AbstractEntity
     protected $owner;
 
     /**
+     * @var \Omeka\Entity\Job
+     *
      * @ManyToOne(
      *     targetEntity="Omeka\Entity\Job"
      * )
@@ -53,37 +59,56 @@ class Log extends AbstractEntity
 
     /**
      * @var string
+     *
      * @Column(
      *     length=190,
-     *     options={"default"=""}
+     *     options={
+     *         "default":""
+     *     }
      * )
      */
     protected $reference = '';
 
     /**
      * @var int
+     *
      * @Column(
      *     type="integer",
-     *     options={"default"=0}
+     *     options={
+     *         "default":0
+     *     }
      * )
      */
     protected $severity = 0;
 
     /**
      * @var string
-     * @Column(type="text")
+     *
+     * @Column(
+     *     type="text"
+     * )
      */
     protected $message;
 
     /**
      * @var array
-     * @Column(type="json")
+     *
+     * @Column(
+     *     type="json"
+     * )
      */
     protected $context;
 
     /**
      * @var DateTime
-     * @Column(type="datetime")
+     *
+     * @Column(
+     *     type="datetime",
+     *     nullable=false,
+     *     options={
+     *         "default": "CURRENT_TIMESTAMP"
+     *     }
+     * )
      */
     protected $created;
 
@@ -92,7 +117,7 @@ class Log extends AbstractEntity
         return $this->id;
     }
 
-    public function setOwner(User $owner = null): AbstractEntity
+    public function setOwner(User $owner = null): self
     {
         $this->owner = $owner;
         return $this;
@@ -103,7 +128,7 @@ class Log extends AbstractEntity
         return $this->owner;
     }
 
-    public function setJob(Job $job = null): AbstractEntity
+    public function setJob(Job $job = null): self
     {
         $this->job = $job;
         return $this;
@@ -114,7 +139,7 @@ class Log extends AbstractEntity
         return $this->job;
     }
 
-    public function setReference($reference): AbstractEntity
+    public function setReference($reference): self
     {
         $this->reference = $reference;
         return $this;
@@ -125,7 +150,7 @@ class Log extends AbstractEntity
         return $this->reference;
     }
 
-    public function setSeverity($severity): AbstractEntity
+    public function setSeverity($severity): self
     {
         $this->severity = (int) $severity;
         return $this;
@@ -136,7 +161,7 @@ class Log extends AbstractEntity
         return $this->severity;
     }
 
-    public function setMessage($message): AbstractEntity
+    public function setMessage($message): self
     {
         $this->message = $message;
         return $this;
@@ -147,7 +172,7 @@ class Log extends AbstractEntity
         return $this->message;
     }
 
-    public function setContext(array $context): AbstractEntity
+    public function setContext(array $context): self
     {
         $this->context = $context;
         return $this;
@@ -158,7 +183,7 @@ class Log extends AbstractEntity
         return $this->context;
     }
 
-    public function setCreated(DateTime $created): AbstractEntity
+    public function setCreated(DateTime $created): self
     {
         $this->created = $created;
         return $this;
@@ -167,15 +192,5 @@ class Log extends AbstractEntity
     public function getCreated(): DateTime
     {
         return $this->created;
-    }
-
-    /**
-     * @PrePersist
-     * @param LifecycleEventArgs $eventContext
-     */
-    public function prePersist(LifecycleEventArgs $eventContext): AbstractEntity
-    {
-        $this->created = new DateTime('now');
-        return $this;
     }
 }

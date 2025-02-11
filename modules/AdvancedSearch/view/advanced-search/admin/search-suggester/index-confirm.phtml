@@ -5,12 +5,12 @@
  * @var \Omeka\Form\ConfirmForm $form
  * @var string $wrapSidebar
  * @var string $resourceLabel
- * @var int $totalJobs
+ * @var array $listJobsStatusesByIds
  */
 
 $translate = $this->plugin('translate');
 
-$resourceTypes = $resource->engine()->setting('resource_types', []);
+$resourceTypes = $resource->searchEngine()->setting('resource_types', []);
 
 $this->form->setAttribute('action', $resource->url('index'));
 $this->form->setButtonLabel($translate('Confirm reindex'));
@@ -33,12 +33,12 @@ $this->form->setButtonLabel($translate('Confirm reindex'));
             <br/>
             <br/>
             <input form="<?= $form->getName() ?>" type="radio" name="process_mode" id="process_mode" value="sql"/><?= $translate('Direct sql (in particular mode "full")') ?>
-            </br/>
+            <br/>
             <input form="<?= $form->getName() ?>" type="radio" name="process_mode" id="process_mode" value="orm" checked="checked"/><?= $translate('Orm (slower but more precise index, required for old database, or small memory)') ?>
         </p>
         <p>
-        <?php if ($totalJobs): ?>
-            <?= sprintf($translate('%d running indexings.'), $totalJobs) ?><br />
+        <?php if ($listJobsStatusesByIds): ?>
+	        <?= sprintf($translate('%1$d running indexings: #%2$s.'), count($listJobsStatusesByIds), implode(', #', array_keys($listJobsStatusesByIds))) ?><br />
             <input form="<?= $form->getName() ?>" name="force" type="checkbox" /><?= $translate('Force indexing') ?><br />
         <?php else: ?>
             <?= $translate('No running indexing: process can be launched.') ?>

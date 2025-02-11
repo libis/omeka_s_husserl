@@ -51,6 +51,7 @@ class UserBarDelegator extends UserBar
             return '';
         }
 
+        /** @var \Omeka\Entity\User $user */
         $user = $view->identity();
         if ($showUserBar != 1 && !$user) {
             return '';
@@ -58,10 +59,14 @@ class UserBarDelegator extends UserBar
 
         $locale = null;
 
+        $hasAdminRights = $user && $view->userIsAllowed('Omeka\Controller\Admin\Index');
+        if (!$hasAdminRights && !$view->siteSetting('guest_show_user_bar')) {
+            return '';
+        }
+
         if ($user) {
-            $hasAdminRights = $view->userIsAllowed('Omeka\Controller\Admin\Index', 'index');
             if ($hasAdminRights) {
-                $locale = $view->userSetting('locale') ?: ($view->setting('locale') ?: null);
+                $locale = $view->userSetting('locale', null, $user->getId()) ?: ($view->setting('locale') ?: null);
                 $links = $this->links($view, $site, $user, $locale);
                 $partialName = $partialName ?: self::PARTIAL_NAME;
             } else {

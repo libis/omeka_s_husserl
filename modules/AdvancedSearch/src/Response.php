@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2018-2024
+ * Copyright Daniel Berthereau, 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -42,6 +42,11 @@ class Response implements JsonSerializable
      * @var \Omeka\Api\Manager
      */
     protected $api;
+
+    /**
+     * @var \AdvancedSearch\Query
+     */
+    protected $query;
 
     /**
      * @var bool
@@ -113,6 +118,17 @@ class Response implements JsonSerializable
     {
         $this->api = $api;
         return $this;
+    }
+
+    public function setQuery(Query $query): self
+    {
+        $this->query = $query;
+        return $this;
+    }
+
+    public function getQuery(): ?Query
+    {
+        return $this->query;
     }
 
     public function setIsSuccess(bool $isSuccess): self

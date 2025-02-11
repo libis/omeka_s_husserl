@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /*
- * Copyright Daniel Berthereau 2018-2024
+ * Copyright Daniel Berthereau 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -90,7 +90,7 @@ class Advanced extends Fieldset
                 'type' => Element\Select::class,
                 'options' => [
                     'value_options' => $filterFields,
-                ]  + ($filterOptions['field']['options'] ?? []),
+                ] + ($filterOptions['field']['options'] ?? []),
                 'attributes' => [
                     'value' => (string) key($filterFields),
                     // TODO Manage width for chosen select (but useless: the number of options is small).
@@ -182,11 +182,11 @@ class Advanced extends Fieldset
         }
         /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
         $searchConfig = $this->getOption('search_config');
-        $searchAdapter = $searchConfig ? $searchConfig->searchAdapter() : null;
-        if (!$searchAdapter) {
+        $engineAdapter = $searchConfig ? $searchConfig->engineAdapter() : null;
+        if (!$engineAdapter) {
             return [];
         }
-        $availableFields = $searchAdapter->getAvailableFields();
+        $availableFields = $engineAdapter->getAvailableFields();
         if (!$availableFields) {
             return [];
         }

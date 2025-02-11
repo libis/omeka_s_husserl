@@ -6,6 +6,7 @@
  * @var \AdvancedSearch\Query $query
  * @var \AdvancedSearch\Response $response
  * @var ?string $resourceType The resource type may be "resources" or a specific one.
+ * @var \Omeka\Api\Representation\ItemSetRepresentation|null $itemSet
  */
 
 // A check is done: when page is not first, the resources may be empty even with results.
@@ -18,6 +19,9 @@ $translate = $plugins->get('translate');
 $hyperlink = $plugins->get('hyperlink');
 $thumbnail = $plugins->get('thumbnail');
 $escapeValueOrGetHtml = $plugins->get('escapeValueOrGetHtml');
+
+$selectionButton = $site && $plugins->has('selectionButton') && $this->siteSetting('selection_append_items_browse_individual') ? $plugins->get('selectionButton') : null;
+$contactUsSelector = $site && $plugins->has('contactUsSelector') && $this->siteSetting('contactus_append_items_browse_individual') ? $plugins->get('contactUsSelector') : null;
 
 // Can be simplified in a public theme.
 $setting = $plugins->get(isset($site) ? 'siteSetting' : 'setting');
@@ -33,19 +37,19 @@ $untitled = $translate('[Untitled]');
 $headingTerm = $setting('browse_heading_property_term');
 $bodyTerm = $setting('browse_body_property_term');
 
-$gridListMode = $searchConfig->subSetting('display', 'grid_list_mode', 'auto');
+$gridListMode = $searchConfig->subSetting('results', 'grid_list_mode', 'auto');
 
-// A list has not html-code in a consistant user interface.
-$allowHtml = (bool) $searchConfig->subSetting('display', 'allow_html');
+// A list does not have html-code in a consistant user interface.
+$allowHtml = (bool) $searchConfig->subSetting('results', 'allow_html');
 
-$thumbnailMode = $searchConfig->subSetting('display', 'thumbnail_mode', 'default');
+$thumbnailMode = $searchConfig->subSetting('results', 'thumbnail_mode', 'default');
 $noThumbnail = $thumbnailMode === 'none';
 $allThumbnail = $thumbnailMode === 'all';
 $defaultThumbnail = $allThumbnail
     ? sprintf('<img loading="lazy" src="%1$s" title="%2$s"/>', $assetUrl('thumbnails/default.png', 'Omeka', true), $translate('No media'))
     : '';
 
-$thumbnailType = $searchConfig->subSetting('display', 'thumbnail_type', 'medium');
+$thumbnailType = $searchConfig->subSetting('results', 'thumbnail_type', 'medium');
 ?>
 
 <ul class="resource-list search-results-list<?= $gridListMode === 'list_only' ? ' list' : ($gridListMode === 'grid_only' ? ' grid' : '') ?>">
@@ -53,10 +57,13 @@ $thumbnailType = $searchConfig->subSetting('display', 'thumbnail_type', 'medium'
     foreach ($resources as $resource):
         $resourceUrl = isset($site) ? $resource->siteUrl($siteSlug) : $resource->adminUrl();
         $resourceType = $resource->getControllerName();
-        $heading = $headingTerm ? $resource->value($headingTerm, ['default' => $untitled, 'lang' => $langValue]) : $resource->displayTitle(null, $langValue);
+        $heading = $headingTerm ? $resource->value($headingTerm, ['default' => $untitled, 'lang' => $langValue]) : $resource->displayTitle($untitled, $langValue);
         $body = $bodyTerm ? $resource->value($bodyTerm, ['lang' => $langValue, 'default' => '']) : $resource->displayDescription(null, $langValue);
         ?>
     <li class="resource <?= $resourceType ?>">
+        <div class="resource-heading">
+            <?= $hyperlink->raw($escapeValueOrGetHtml($heading), $resourceUrl, ['class' => 'resource-link']) ?>
+        </div>
         <?php if (!$noThumbnail): ?>
         <?php $resourceThumbnail = $thumbnail($resource, $thumbnailType); ?>
         <div class="resource-thumbnail<?= $resourceThumbnail ? '' : ($allThumbnail ? ' default-thumbnail' : '') ?>">
@@ -65,9 +72,6 @@ $thumbnailType = $searchConfig->subSetting('display', 'thumbnail_type', 'medium'
             <?php endif; ?>
         </div>
         <?php endif; ?>
-        <div class="resource-heading">
-            <?= $hyperlink->raw($escapeValueOrGetHtml($heading), $resourceUrl, ['class' => 'resource-link']) ?>
-        </div>
         <div class="resource-body resource-metadata">
             <?php if (strlen($body)): ?>
             <div class="description">
@@ -75,6 +79,12 @@ $thumbnailType = $searchConfig->subSetting('display', 'thumbnail_type', 'medium'
             </div>
             <?php endif; ?>
         </div>
+        <?php if ($selectionButton): ?>
+        <?= $selectionButton($resource) ?>
+        <?php endif; ?>
+        <?php if ($contactUsSelector): ?>
+        <?= $contactUsSelector($resource) ?>
+        <?php endif; ?>
     </li>
     <?php endforeach; ?>
 </ul>

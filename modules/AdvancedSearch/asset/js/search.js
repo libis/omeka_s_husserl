@@ -2,7 +2,7 @@
 
 /**
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2017-2024
+ * Copyright Daniel Berthereau, 2017-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -28,8 +28,12 @@
  * knowledge of the CeCILL license and that you accept its terms.
  */
 
-const hasChosenSelect = typeof $.fn.chosen === 'function';
-const hasOmekaTranslate = typeof Omeka !== 'undefined' && typeof Omeka.jsTranslate === 'function';
+if (typeof hasChosenSelect === 'undefined') {
+    var hasChosenSelect = typeof $.fn.chosen === 'function';
+}
+if (typeof hasOmekaTranslate === 'undefined') {
+    var hasOmekaTranslate = typeof Omeka !== 'undefined' && typeof Omeka.jsTranslate === 'function';
+}
 
 const $searchFiltersAdvanced = $('#search-filters');
 const $searchFacets = $('#search-facets');
@@ -71,6 +75,8 @@ var Search = (function() {
             'nlres',
             'lkq',
             'nlkq',
+            'dt',
+            'ndt',
             'dtp',
             'ndtp',
             'tp',
@@ -195,7 +201,12 @@ var Search = (function() {
             // @see https://solr.apache.org/guide/suggester.html#example-usages
             if (response.suggest) {
                 const answer = response.suggest[Object.keys(response.suggest)[0]];
-                const searchString = answer[Object.keys(answer)[0]];
+                const searchString = answer[Object.keys(answer)[0]] instanceof String
+                    ? answer[Object.keys(answer)[0]]
+                    : Object.keys(answer)[0];
+                if (!Object.keys(answer[searchString]).find((key) => 'suggestions' === key)) {
+                    return {};
+                }
                 return {
                     query: searchString,
                     suggestions: $.map(answer[searchString].suggestions, function(dataItem) {
@@ -345,8 +356,9 @@ var Search = (function() {
 
         /**
          * Modes may be "click a button to apply facets" or "reload the page directly".
+         * .apply-facets is kept for compatibility with old themes.
          */
-        self.useApplyFacets = $searchFacets.find('.apply-facets').length > 0;
+        self.useApplyFacets = $searchFacets.find('.facets-apply, .apply-facets').length > 0;
 
         self.expandOrCollapse = function(button) {
             button = $(button);
@@ -497,6 +509,8 @@ var Search = (function() {
                 case 'checkbox':
                 case 'radio':
                     element.checked = false;
+                    // Fix reset issue with some config.
+                    $(element).prop('checked', false);
                     break;
                 case 'select-one':
                 case 'select-multiple':

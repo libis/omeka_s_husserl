@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /*
- * Copyright Daniel Berthereau 2018-2024
+ * Copyright Daniel Berthereau 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -30,6 +30,7 @@
 namespace AdvancedSearch\Form;
 
 use AdvancedSearch\Form\Element as AdvancedSearchElement;
+use AdvancedSearch\Stdlib\SearchResources;
 use Common\Form\Element as CommonElement;
 use Common\Stdlib\EasyMeta;
 use Doctrine\ORM\EntityManager;
@@ -179,6 +180,7 @@ class MainSearchForm extends Form
         // TODO Make q a standard filter, managed like all other ones, since all fields have them features.
         // TODO Allow to order and to skip "q" (include it as a standard filter).
         $filter = $this->formSettings['q'] ?? [];
+        $filter['rft'] ??= $this->formSettings['form']['rft'] ?? null;
         $element = $this->searchSearch($filter + [
             'has_variant' => $hasVariant,
         ]);
@@ -321,7 +323,9 @@ class MainSearchForm extends Form
         if (!empty($this->formSettings['form']['button_reset']) && !in_array($this->variant, ['quick', 'simple', 'csrf'])) {
             $this
                 ->add([
-                    'name' => 'reset',
+                    // Don't use "reset" as name, it is not usable via js:
+                    // the method reset() won't be available.
+                    'name' => 'form-reset',
                     'type' => Element\Button::class,
                     'options' => [
                         'label' => $this->formSettings['form']['label_reset'] ?? 'Reset fields', // @translate
@@ -628,7 +632,7 @@ class MainSearchForm extends Form
                 ] + $filter['options'],
             ])
             ->setAttributes([
-                'placeholder' => 'YYYY', // @translate
+                'placeholder' => $filter['attributes']['placeholder'] ?? 'YYYY', // @translate
             ] + $filter['attributes'])
         ;
         return $element;
@@ -667,7 +671,10 @@ class MainSearchForm extends Form
         }
 
         // Add the button for record or full text search.
-        $recordOrFullText = in_array($this->variant, ['simple', 'csrf']) ? null : ($filter['fulltext_search'] ?? null);
+        $recordOrFullText = in_array($this->variant, ['simple', 'csrf'])
+            ? null
+            // Key "fulltext_search" is normally removed.
+            : ($filter['rft'] ?? $filter['fulltext_search'] ?? null);
         $this->appendRecordOrFullText($recordOrFullText);
 
         $element = new Element\Search('q');
@@ -689,10 +696,11 @@ class MainSearchForm extends Form
                 'empty_option' => '',
             ] + $filter['options'])
         ;
-        // Use chosen-select by default, but without placeholder.
+        // Use chosen-select by default, but without placeholder, except when
+        // set manually.
         if (!isset($filter['attributes']['class'])) {
             $filter['attributes']['class'] = 'chosen-select';
-            $filter['attributes']['data-placeholder'] = ' ';
+            $filter['attributes']['data-placeholder'] ??= ' ';
         }
         $element
             ->setAttributes($filter['attributes']);
@@ -755,7 +763,7 @@ class MainSearchForm extends Form
                     'multiple' => false,
                     'class' => $filter['type'] === 'MultiCheckbox' ? '' : 'chosen-select',
                     // End users understand "collections" more than "item sets".
-                    'data-placeholder' => 'Select collections…', // @translate
+                    'data-placeholder' => $filter['attributes']['data-placeholder'] ?? 'Select collections…', // @translate
                 ] + $filter['attributes'],
             ])
         ;
@@ -815,7 +823,7 @@ class MainSearchForm extends Form
                 'id' => 'search-thesaurus',
                 'multiple' => true,
                 'class' => 'chosen-select',
-                'data-placeholder' => ' ',
+                'data-placeholder' => $filter['attributes']['data-placeholder'] ?? ' ',
             ] + $filter['attributes'])
         ;
 
@@ -851,7 +859,7 @@ class MainSearchForm extends Form
                     'id' => 'search-owner-id',
                     'multiple' => true,
                     'class' => $filter['type'] === 'MultiCheckbox' ? '' : 'chosen-select',
-                    'data-placeholder' => 'Select owners…', // @translate
+                    'data-placeholder' => $filter['attributes']['data-placeholder'] ?? 'Select owners…', // @translate
                 ] + $filter['attributes'],
             ])
         ;
@@ -885,7 +893,7 @@ class MainSearchForm extends Form
                     'id' => 'search-site-id',
                     'multiple' => true,
                     'class' => $filter['type'] === 'MultiCheckbox' ? '' : 'chosen-select',
-                    'data-placeholder' => 'Select sites…', // @translate
+                    'data-placeholder' => $filter['attributes']['data-placeholder'] ?? 'Select sites…', // @translate
                 ] + $filter['attributes'],
             ])
         ;
@@ -968,7 +976,7 @@ class MainSearchForm extends Form
                     'multiple' => true,
                     'class' => $filter['type'] === 'MultiCheckbox' ? '' : 'chosen-select',
                     // End users understand "collections" more than "item sets".
-                    'data-placeholder' => 'Select collections…', // @translate
+                    'data-placeholder' => $filter['attributes']['data-placeholder'] ?? 'Select collections…', // @translate
                 ] + $filter['attributes'],
             ])
         ;
@@ -1010,7 +1018,7 @@ class MainSearchForm extends Form
                     'id' => 'search-access',
                     // 'multiple' => false,
                     'class' => $filter['type'] === 'Radio' ? '' : 'chosen-select',
-                    'data-placeholder' => 'Select access…', // @translate
+                    'data-placeholder' => $filter['attributes']['data-placeholder'] ?? 'Select access…', // @translate
                 ] + $filter['attributes'],
             ])
         ;
@@ -1142,6 +1150,7 @@ class MainSearchForm extends Form
             ];
         }
         $values = $this->listValues($filter);
+
         // Negative numbers are accepted in all cases (int parsing).
         $firstDigits = isset($filter['options']['first_digits'])
             && in_array($filter['options']['first_digits'], [1, true, '1', 'true'], true);
@@ -1221,19 +1230,41 @@ class MainSearchForm extends Form
 
         $qb = $this->entityManager->createQueryBuilder();
         $expr = $qb->expr();
-        $qb
-            ->select('COALESCE(value.value, valueResource.title, value.uri) AS val')
-            ->from(\Omeka\Entity\Value::class, 'value')
-            // This join allow to check visibility automatically too.
-            ->innerJoin(\Omeka\Entity\Item::class, 'resource', Join::WITH, $expr->eq('value.resource', 'resource'))
-            // The values should be distinct for each type.
-            ->leftJoin(\Omeka\Entity\Item::class, 'valueResource', Join::WITH, $expr->eq('value.valueResource', 'valueResource'))
-            ->andWhere($expr->in('value.property', ':properties'))
-            ->setParameter('properties', implode(',', $propertyIds))
-            ->groupBy('val')
-            ->orderBy('val', 'asc')
-        ;
+
+        // For example to list all authors that are a resource.
+        $fieldQueryArgs = $searchConfig->subSetting('index', 'query_args', []);
+        $isResourceQuery = $fieldQueryArgs
+            && isset($fieldQueryArgs[$field]['type'])
+            && isset($fieldQueryArgs[$fieldQueryArgs[$field]['type']])
+            && in_array($fieldQueryArgs[$fieldQueryArgs[$field]['type']], SearchResources::FIELD_QUERY['main_type']['resource']);
+
+        if ($isResourceQuery) {
+            $qb
+                ->select('valueResource.title AS val')
+                ->from(\Omeka\Entity\Value::class, 'value')
+                // This join allow to check visibility automatically too.
+                ->innerJoin(\Omeka\Entity\Item::class, 'resource', Join::WITH, $expr->eq('value.resource', 'resource'))
+                ->innerJoin(\Omeka\Entity\Item::class, 'valueResource', Join::WITH, $expr->eq('value.valueResource', 'valueResource'))
+                ->andWhere($expr->in('value.property', ':properties'))
+                ->setParameter('properties', implode(',', $propertyIds))
+                ->groupBy('val')
+                ->orderBy('val', 'asc');
+        } else {
+            $qb
+                ->select('COALESCE(value.value, valueResource.title, value.uri) AS val')
+                ->from(\Omeka\Entity\Value::class, 'value')
+                // This join allow to check visibility automatically too.
+                ->innerJoin(\Omeka\Entity\Item::class, 'resource', Join::WITH, $expr->eq('value.resource', 'resource'))
+                // The values should be distinct for each type.
+                ->leftJoin(\Omeka\Entity\Item::class, 'valueResource', Join::WITH, $expr->eq('value.valueResource', 'valueResource'))
+                ->andWhere($expr->in('value.property', ':properties'))
+                ->setParameter('properties', implode(',', $propertyIds))
+                ->groupBy('val')
+                ->orderBy('val', 'asc');
+        }
+
         $list = array_column($qb->getQuery()->getScalarResult(), 'val', 'val');
+
         // Fix false empty duplicate or values without title.
         $list = array_keys(array_flip($list));
         unset($list['']);
@@ -1300,8 +1331,8 @@ class MainSearchForm extends Form
             'annotations',
         ];
         if ($this->searchConfig) {
-            $engine = $this->searchConfig->engine();
-            $resourceTypes = $engine->setting('resource_types');
+            $searchEngine = $this->searchConfig->searchEngine();
+            $resourceTypes = $searchEngine->setting('resource_types');
         }
         $result = [];
         foreach ($resourceTypes ?: $resourceTypesDefault as $resourceType) {
@@ -1328,10 +1359,10 @@ class MainSearchForm extends Form
         if (!$this->searchConfig) {
             return ['resources'];
         }
-        $engine = $this->searchConfig->engine();
-        $engineTypes = $engine->setting('resource_types');
-        return $engineTypes
-            ? array_intersect_key($types, array_flip($engineTypes))
+        $searchEngine = $this->searchConfig->searchEngine();
+        $searchEngineTypes = $searchEngine->setting('resource_types');
+        return $searchEngineTypes
+            ? array_intersect_key($types, array_flip($searchEngineTypes))
             : ['resources'];
     }
 
@@ -1423,7 +1454,7 @@ class MainSearchForm extends Form
 
     protected function getAvailableFields(): array
     {
-        $adapter = $this->searchConfig ? $this->searchConfig->searchAdapter() : null;
+        $adapter = $this->searchConfig ? $this->searchConfig->engineAdapter() : null;
         return $adapter ? $adapter->getAvailableFields() : [];
     }
 

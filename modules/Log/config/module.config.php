@@ -3,6 +3,8 @@
 namespace Log;
 
 return [
+    // Important: don't modify this file, but copy the keys you want in config/local.config.php at the root of Omeka.
+
     'logger' => [
         // The default config in Omeka is false, but this module is designed to log.
         'log' => true,
@@ -15,6 +17,7 @@ return [
         'path' => null,
         // This is the default level in the standard config. Should not be null
         // when upgrade (so check the file config/local.config.php).
+        // It is used only for the stream logger.
         'priority' => null,
 
         // Enable/disable the output writers.
@@ -30,7 +33,7 @@ return [
             // This is the default log file of Omeka (logs/application.log).
             'stream' => true,
             // Log for Omeka jobs (useless with this module).
-            // This is a standard Zend writer, but there is no more parameters.
+            // This is a standard Laminas writer, but there is no more parameters.
             // Note: the default log of job is a big text field (4GB), so it may
             // prevent to restore a database if they a row is too big (bigger than
             // the param "max_allowed_packet" in the config of mariadb/mysql).
@@ -39,8 +42,8 @@ return [
             // like /var/log/nginx/ssl-vhost1.error.log, /var/log/apache2/error.log, /var/log/lastlog, or
             // /tmp/systemd-private-xxx-apache2.service-xxx/tmp/php_errors.log, etc.
             'syslog' => false,
-            // Config for sentry, an error tracking service (https://sentry.io).
-            // See readme to enable it.
+            // Config for sentry, an error monitoring service (https://sentry.io).
+            // The module LogSentry is required.
             'sentry' => false,
             // Note: External logs (db, sentry, etc.) are not fully checked, so their
             // config should be checked separately.
@@ -55,7 +58,7 @@ return [
                     'name' => 'db',
                     'options' => [
                         'filters' => \Laminas\Log\Logger::DEBUG,
-                        'formatter' => Formatter\PsrLogDb::class,
+                        'formatter' => Log\Formatter\PsrLogDb::class,
                         'db' => null,
                         // 'db' => new \Laminas\Db\Adapter\Adapter([
                         //     'driver' => 'mysqli',
@@ -85,8 +88,9 @@ return [
                     'name' => 'stream',
                     'options' => [
                         // This is the default level in the standard config.
+                        // It may be bypassed by the shortcut key set in ['logger']['priority'] when not null.
                         'filters' => \Laminas\Log\Logger::NOTICE,
-                        'formatter' => Formatter\PsrLogSimple::class,
+                        'formatter' => \Common\Log\Formatter\PsrLogSimple::class,
                         'stream' => OMEKA_PATH . '/logs/application.log',
                     ],
                 ],
@@ -94,29 +98,15 @@ return [
                     'name' => 'syslog',
                     'options' => [
                         'filters' => \Laminas\Log\Logger::ERR,
-                        'formatter' => Formatter\PsrLogSimple::class,
+                        'formatter' => \Common\Log\Formatter\PsrLogSimple::class,
                         'application' => 'omeka-s',
                         'facility' => LOG_USER,
-                    ],
-                ],
-                // See https://github.com/facile-it/sentry-module#log-writer
-                'sentry' => [
-                    'name' => \Facile\SentryModule\Log\Writer\Sentry::class,
-                    'options' => [
-                        'filters' => [
-                            [
-                                'name' => 'priority',
-                                'options' => [
-                                    'priority' => \Laminas\Log\Logger::INFO,
-                                ],
-                            ],
-                        ],
                     ],
                 ],
             ],
             'processors' => [
                 'userid' => [
-                    'name' => Processor\UserId::class,
+                    'name' => Log\Processor\UserId::class,
                 ],
             ],
             // Special options for exceptions, errors and fatal errors, disabled by Laminas by default.
@@ -150,8 +140,6 @@ return [
     'view_helpers' => [
         'invokables' => [
             'logSearchFilters' => View\Helper\LogSearchFilters::class,
-            // Required to manage PsrMessage.
-            'messages' => View\Helper\Messages::class,
         ],
     ],
     'form_elements' => [
@@ -179,14 +167,14 @@ return [
     ],
     'log_processors' => [
         'invokables' => [
-            Processor\JobId::class => Processor\JobId::class,
+            Log\Processor\JobId::class => Log\Processor\JobId::class,
         ],
         'factories' => [
-            Processor\UserId::class => Service\Processor\UserIdFactory::class,
+            Log\Processor\UserId::class => Service\Log\Processor\UserIdFactory::class,
         ],
         'aliases' => [
-            'jobid' => Processor\JobId::class,
-            'userid' => Processor\UserId::class,
+            'jobid' => Log\Processor\JobId::class,
+            'userid' => Log\Processor\UserId::class,
         ],
     ],
     'router' => [
@@ -233,6 +221,50 @@ return [
                         ],
                     ],
                 ],
+            ],
+        ],
+    ],
+    'column_types' => [
+        'invokables' => [
+            'log_id' => ColumnType\Id::class,
+            'log_owner' => ColumnType\Owner::class,
+            'log_job' => ColumnType\Job::class,
+            'log_reference' => ColumnType\Reference::class,
+            'log_severity' => ColumnType\Severity::class,
+            'log_message' => ColumnType\Message::class,
+            'log_created' => ColumnType\Created::class,
+        ],
+    ],
+    'column_defaults' => [
+        'admin' => [
+            'logs' => [
+                // ['type' => 'log_message'],
+                ['type' => 'log_created'],
+                ['type' => 'log_severity'],
+                ['type' => 'log_reference'],
+                ['type' => 'log_job'],
+            ],
+        ],
+    ],
+    'browse_defaults' => [
+        'admin' => [
+            'logs' => [
+                'sort_by' => 'id',
+                'sort_order' => 'desc',
+            ],
+        ],
+    ],
+    'sort_defaults' => [
+        'admin' => [
+            'logs' => [
+                'id' => 'Id', // @translate
+                'owner_id' => 'Owner', // @translate
+                'job_id' => 'Job', // @translate
+                'reference' => 'Reference', // @translate
+                'severity' => 'Severity', // @translate
+                'message' => 'Message', // @translate
+                // 'context' => 'Context', // @translate,
+                'created' => 'Created', // @translate
             ],
         ],
     ],

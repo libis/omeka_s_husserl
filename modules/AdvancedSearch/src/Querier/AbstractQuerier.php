@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2017-2024
+ * Copyright Daniel Berthereau, 2017-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -51,9 +51,9 @@ abstract class AbstractQuerier implements QuerierInterface
     protected $services;
 
     /**
-     * @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation $engine
+     * @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation
      */
-    protected $engine;
+    protected $searchEngine;
 
     /**
      * @var \AdvancedSearch\Query
@@ -67,9 +67,9 @@ abstract class AbstractQuerier implements QuerierInterface
         return $this;
     }
 
-    public function setSearchEngine(SearchEngineRepresentation $engine): self
+    public function setSearchEngine(SearchEngineRepresentation $searchEngine): self
     {
-        $this->engine = $engine;
+        $this->searchEngine = $searchEngine;
         return $this;
     }
 

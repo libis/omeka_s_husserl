@@ -24,8 +24,8 @@ return [
     'o:id' => null,
     'o:name' => $translate('Default'),
     'o:slug' => 'find',
-    'o:engine' => ['o:id' => 1],
-    'o:form' => 'main',
+    'o:search_engine' => ['o:id' => 1],
+    'o:form_adapter' => 'main',
     'o:settings' => [
         'request' => [
             'default_results' => 'default',
@@ -34,18 +34,6 @@ return [
             'default_query_post' => '',
             'hidden_query_filters' => [],
             'validate_form' => false,
-        ],
-
-        // To be moved in filters? This is only the first form filter q and nothing really specific, once auto-indexing for filters will be implemented.
-        'q' => [
-            'suggester' => 1,
-            'suggest_url' => '',
-            'suggest_url_param_name' => '',
-            'suggest_limit' => null,
-            'suggest_fill_input' => false,
-            'fulltext_search' => null,
-            'remove_diacritics' => false,
-            'default_search_partial_word' => false,
         ],
 
         'index' => [
@@ -267,8 +255,8 @@ return [
                         'dcterms:educationLevel',
                     ],
                 ],
-                'rightsHolder' => [
-                    'name' => 'rightsHolder',
+                'rights_holder' => [
+                    'name' => 'rights_holder',
                     'label' => 'Rights holder',
                     'fields' => [
                         'dcterms:rightsHolder',
@@ -279,8 +267,8 @@ return [
                 // These groups don't follow rdf rules.
 
                 // Group similar and rarely used unrefined data.
-                'accrualAndInstructional' => [
-                    'name' => 'accrualAndInstructional',
+                'accrual_and_instructional' => [
+                    'name' => 'accrual_and_instructional',
                     'label' => 'Accrual and instructional metadata',
                     'fields' => [
                         'dcterms:accrualMethod',
@@ -289,8 +277,8 @@ return [
                         'dcterms:instructionalMethod',
                     ],
                 ],
-                'bibliographicData' => [
-                    'name' => 'bibliographicData',
+                'bibliographic_data' => [
+                    'name' => 'bibliographic_data',
                     'label' => 'Bibliographic data',
                     'fields' => [
                         'bibo:chapter',
@@ -307,7 +295,41 @@ return [
                         'bibo:volume',
                     ],
                 ],
+                'full_text' => [
+                    'name' => 'full_text',
+                    'label' => 'Full text',
+                    'fields' => [
+                        'bibo:content',
+                        'extracttext:extracted_text',
+                    ],
+                ],
             ],
+            'query_args' => [
+                /**
+                 * Default options for filters are: join = and, type = eq.
+                 * The keys and values are the filter ones: join, field, type, except, datatype.
+                 * @see \AdvancedSearch\Stdlib\SearchResources::buildFilterQuery()
+                 */
+                /*
+                'author' => [
+                    'join' => 'and',
+                    'type' => 'res',
+                ],
+                */
+            ],
+        ],
+
+        // TODO To be moved in form.
+        // This is only the first form filter q and nothing really specific, once auto-indexing for filters will be implemented.
+        'q' => [
+            'label' => $translate('Search'),
+            'suggester' => 1,
+            'suggest_url' => '',
+            'suggest_url_param_name' => '',
+            'suggest_limit' => null,
+            'suggest_fill_input' => false,
+            'remove_diacritics' => false,
+            'default_search_partial_word' => false,
         ],
 
         // All filters except "advanced" are managed the same via querier:
@@ -318,6 +340,8 @@ return [
             'button_reset' => false,
             'label_reset' => $translate('Reset fields'),
             'attribute_form' => false,
+
+            'rft' => null,
 
             'filters' => [
                 // Ordered list of specific filters.
@@ -463,7 +487,7 @@ return [
             ],
         ],
 
-        'display' => [
+        'results' => [
             'by_resource_type' => false,
             'template' => null,
             'breadcrumbs' => false,
@@ -481,6 +505,7 @@ return [
             'thumbnail_type' => 'medium',
             'allow_html' => false,
             'facets' => 'before',
+            'pagination_per_page' => 0,
             'per_page_list' => [
                 // For translation only.
                 10 => $translate('Results by %d'), // @translate
@@ -530,6 +555,8 @@ return [
             'label_submit' => $translate('Apply facets'),
             'display_reset' => 'above',
             'label_reset' => $translate('Reset facets'),
+            'display_refine' => true,
+            'label_refine' => $translate('Refine search'),
             // The mode is the always the same, but passed with each facet for simplicity.
             'facets' => [
                 'item_set_id' => [

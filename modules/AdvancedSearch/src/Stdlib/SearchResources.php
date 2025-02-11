@@ -9,6 +9,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
+use Laminas\Log\Logger;
 use Omeka\Api\Adapter\AbstractResourceEntityAdapter;
 use Omeka\Api\Adapter\ItemAdapter;
 use Omeka\Api\Adapter\ItemSetAdapter;
@@ -46,10 +47,10 @@ class SearchResources
             'lte' => 'gt',
             'gte' => 'lt',
             'gt' => 'lte',
-            '<' => '<',
-            '≤' => '≤',
-            '≥' => '≥',
-            '>' => '>',
+            '<' => '≥',
+            '≤' => '>',
+            '≥' => '<',
+            '>' => '≤',
             // Date (year).
             'yreq' => 'nyreq',
             'nyreq' => 'yreq',
@@ -57,7 +58,7 @@ class SearchResources
             'yrlte' => 'yrgt',
             'yrgte' => 'yrlt',
             'yrgt' => 'yrlte',
-            // Internal.
+            // Internal and deprecated.
             'list' => 'nlist',
             'nlist' => 'list',
             // Resource.
@@ -80,6 +81,10 @@ class SearchResources
             'exm' => 'nexm',
             'nexm' => 'exm',
             // Data type.
+            'dt' => 'ndt',
+            'ndt' => 'dt',
+            'dtp' => 'ndtp',
+            'ndtp' => 'dtp',
             'tp' => 'ntp',
             'ntp' => 'tp',
             'tpl' => 'ntpl',
@@ -88,8 +93,6 @@ class SearchResources
             'ntpr' => 'tpr',
             'tpu' => 'ntpu',
             'ntpu' => 'tpu',
-            'dtp' => 'ndtp',
-            'ndtp' => 'dtp',
             // Curation (duplicates).
             'dup' => 'ndup',
             'ndup' => 'dup',
@@ -147,11 +150,12 @@ class SearchResources
             'nexs',
             'nexm',
             // Data type.
+            'ndt',
+            'ndtp',
             'ntp',
             'ntpl',
             'ntpr',
             'ntpu',
-            'ndtp',
             // Curation (duplicates).
             'ndup',
             'ndupl',
@@ -170,31 +174,16 @@ class SearchResources
             'nduput',
             'nduputl',
         ],
-        'value_array' => [
-            'list',
-            'nlist',
-            'res',
-            'nres',
+        // These types allow only one value, but it may be an array.
+        'value_single_array_or_string' => [
             'resq',
             'nresq',
-            'lres',
-            'nlres',
             'lkq',
             'nlkq',
-            'dtp',
-            'ndtp',
         ],
-        'value_integer' => [
-            'yreq',
-            'nyreq',
-            'yrlt',
-            'yrlte',
-            'yrgte',
-            'yrgt',
-            'res',
-            'nres',
-            'lres',
-            'nlres',
+        'value_single' => [
+            'tp',
+            'ntp',
         ],
         'value_none' => [
             'ex',
@@ -244,6 +233,18 @@ class SearchResources
             'duputl',
             'nduputl',
         ],
+        'value_integer' => [
+            'yreq',
+            'nyreq',
+            'yrlt',
+            'yrlte',
+            'yrgte',
+            'yrgt',
+            'res',
+            'nres',
+            'lres',
+            'nlres',
+        ],
         'value_subject' => [
             'lex',
             'nlex',
@@ -258,9 +259,107 @@ class SearchResources
             'lkq',
             'nlkq',
         ],
+        // Deprecated. Optimize for properties.
         'optimize' => [
             'eq' => 'list',
             'neq' => 'nlist',
+            'list' => 'list',
+            'nlist' => 'nlist',
+        ],
+        // The main type may be value, resource or uri.
+        // Only resource is useful for now.
+        'main_type' => [
+            // The
+            'value' => [
+            ],
+            'resource' => [
+                // Resource.
+                'res',
+                'nres',
+                'resq',
+                'nresq',
+                // Linked resource.
+                'lex',
+                'nlex',
+                'lres',
+                'nlres',
+                'lkq',
+                'nlkq',
+            ],
+            'uri' => [
+            ],
+        ],
+        'value_linked_resource' => [
+            'lex',
+            'nlex',
+            'lres',
+            'nlres',
+            'lkq',
+            'nlkq',
+        ],
+        'value_data_type' => [
+            'dt',
+            'ndt',
+            'dtp',
+            'ndtp',
+            'tp',
+            'ntp',
+            'tpl',
+            'ntpl',
+            'tpr',
+            'ntpr',
+            'tpu',
+            'ntpu',
+        ],
+        'value_duplicate' => [
+            'dup',
+            'ndup',
+            'dupl',
+            'ndupl',
+            'dupt',
+            'ndupt',
+            'duptl',
+            'nduptl',
+            'dupv',
+            'ndupv',
+            'dupvl',
+            'ndupvl',
+            'dupvt',
+            'ndupvt',
+            'dupvtl',
+            'ndupvtl',
+            'dupr',
+            'ndupr',
+            'duprl',
+            'nduprl',
+            'duprt',
+            'nduprt',
+            'duprtl',
+            'nduprtl',
+            'dupu',
+            'ndupu',
+            'dupul',
+            'ndupul',
+            'duput',
+            'nduput',
+            'duputl',
+            'nduputl',
+        ],
+        'core' => [
+            'eq',
+            'neq',
+            'in',
+            'nin',
+            'ex',
+            'nex',
+            'sw',
+            'nsw',
+            'ew',
+            'new',
+            'res',
+            'nres',
+            'dt',
+            'ndt',
         ],
     ];
 
@@ -281,10 +380,32 @@ class SearchResources
      */
     protected $easyMeta;
 
-    public function __construct(Connection $connection, EasyMeta $easyMeta)
-    {
+    /**
+     * @var \Laminas\Log\Logger
+     */
+    protected $logger;
+
+    /**
+     * Contains two keys: aliases and query_args.
+     *
+     * @var array
+     */
+    protected $searchIndex = [
+        'aliases' => [],
+        'query_args' => [],
+        'form_filters_fields' => [],
+    ];
+
+    public function __construct(
+        Connection $connection,
+        EasyMeta $easyMeta,
+        Logger $logger,
+        array $searchIndex
+    ) {
         $this->connection = $connection;
         $this->easyMeta = $easyMeta;
+        $this->logger = $logger;
+        $this->searchIndex = $searchIndex;
     }
 
     public function __invoke(): self
@@ -305,6 +426,11 @@ class SearchResources
     public function startOverrideRequest(Request $request): self
     {
         $query = $request->getContent();
+
+        // Check if the request is already overridden.
+        if ($request->getOption('override') !== null) {
+            return $this;
+        }
 
         $override = [];
         $query = $this->startOverrideQuery($query, $override);
@@ -339,7 +465,7 @@ class SearchResources
      *
      * @see \AdvancedSearch\Api\ManagerDelegator::search()
      */
-    public function startOverrideQuery(array $query, array &$override): array
+    public function startOverrideQuery(array $query, ?array &$override): array
     {
         $override = [];
 
@@ -419,27 +545,40 @@ class SearchResources
      */
     public function buildInitialQuery(QueryBuilder $qb, array $query): void
     {
-        // Process advanced search plus keys.
+        $query = $this->cleanQuery($query);
+
+        // Process advanced search plus features.
         $this
+            // Override for multiple sites. Replaced upstream by "in_sites".
             ->searchSites($qb, $query)
+            // Override for without owner, resource class id, and resource
+            // template id (with value "0").
             ->searchResources($qb, $query)
+            ->searchResourceAssets($qb, $query)
             ->searchResourceClassTerm($qb, $query)
+            // Partially implemented upstream.
             ->searchDateTime($qb, $query)
+            // Override property with many features, replaced by filter.
             ->buildPropertyQuery($qb, $query)
             ->buildFilterQuery($qb, $query);
         if ($this->adapter instanceof ItemAdapter) {
             $this
+                // Override for without item set id (with value "0").
+                ->searchItemItemSets($qb, $query)
                 ->searchItemMediaData($qb, $query);
         } elseif ($this->adapter instanceof MediaAdapter) {
             $this
                 ->searchMediaByItemSet($qb, $query)
                 ->searchHasOriginal($qb, $query)
                 ->searchHasThumbnails($qb, $query)
+                // Override for multiple and main media type.
                 ->searchByMediaType($qb, $query);
         } elseif ($this->adapter instanceof ResourceAdapter) {
             $this
                 ->searchResourcesByType($qb, $query);
         }
+        $this
+            ->sortQuery($qb, $query);
     }
 
     /**
@@ -455,12 +594,59 @@ class SearchResources
      */
     public function cleanQuery(array $query): array
     {
+        // Most of the time, there is only one query, but it can be used for
+        // results, count, search filters, etc.
+        static $cleanQueries = [];
+
+        if (array_key_exists('__original_query', $query)) {
+            return $query;
+        }
+
+        $originalQuery = $query;
+        unset($originalQuery['__searchConfig']);
+        unset($originalQuery['__searchQuery']);
+
+        $sum = md5(serialize($originalQuery));
+        if (isset($cleanQueries[$sum])) {
+            return $cleanQueries[$sum];
+        }
+
+        $query = $this->expandFieldQueryArgs($query);
+
+        // Add warning before cleaning. The right queries are still processed.
+        foreach ($query['property'] ?? [] as $queryRow) {
+            if (isset($queryRow['property']) && is_array($queryRow['property'])) {
+                $this->logger->warn(
+                    'The query arg "property" won’t support multiple properties in a future version, because it’s overriding the default behavior. Use arg "filter" instead. Check your queries: {url}', // @translate
+                    ['url' => $_SERVER['REQUEST_URI']]
+                );
+            }
+            if (isset($queryRow['type']) && !in_array($queryRow['type'], self::FIELD_QUERY['core'])) {
+                $this->logger->warn(
+                    'The query arg "property" won’t support type {type} in a future version, because it’s overriding the default behavior. Use arg "filter" instead. Check your queries: {url}', // @translate
+                    ['type' => $queryRow['type'], 'url' => $_SERVER['REQUEST_URI']]
+                );
+            }
+            if (isset($queryRow['text']) && is_array($queryRow['text'])) {
+                $this->logger->warn(
+                    'The query arg "property" won’t support multiple values in a future version, because it’s overriding the default behavior. Use arg "filter" instead. Check your queries: {url}', // @translate
+                    ['url' => $_SERVER['REQUEST_URI']]
+                );
+            }
+        }
+
         foreach ($query as $key => $value) {
             if ($key === 'sort_by_default' || $key === 'sort_order_default') {
                 // Keep these keys.
                 continue;
-            } elseif ($value === '' || $value === null || $value === []
-                || !$key || $key === 'submit' || $key === 'numeric-toggle-time-checkbox'
+            } elseif (
+                $value === ''
+                || $value === null
+                || $value === []
+                || !$key
+                || is_numeric($key)
+                || $key === 'submit'
+                || $key === 'numeric-toggle-time-checkbox'
             ) {
                 unset($query[$key]);
             } elseif ($key === 'id') {
@@ -504,141 +690,13 @@ class SearchResources
                 }
             } elseif ($key === 'property') {
                 if (is_array($value)) {
-                    // Short properties allows to prepare optimization.
-                    $shortProperties = [];
-                    foreach ($query['property'] as $k => $queryRow) {
-                        if (!is_array($queryRow)
-                            || empty($queryRow['type'])
-                            || !isset(self::FIELD_QUERY['reciprocal'][$queryRow['type']])
-                        ) {
-                            unset($query['property'][$k]);
-                            continue;
-                        }
-                        $queryType = $queryRow['type'];
-                        $queryValue = $queryRow['text'] ?? '';
-                        // Quick check of value.
-                        // A empty string "" is not a value, but "0" is a value.
-                        if (in_array($queryType, self::FIELD_QUERY['value_none'], true)) {
-                            $queryValue = null;
-                        }
-                        // Check array of values.
-                        elseif (in_array($queryType, self::FIELD_QUERY['value_array'], true)) {
-                            if ((is_array($queryValue) && !count($queryValue))
-                                || (!is_array($queryValue) && !strlen((string) $queryValue))
-                            ) {
-                                unset($query['property'][$k]);
-                                continue;
-                            }
-                            if (!is_array($queryValue)) {
-                                $queryValue = [$queryValue];
-                            }
-                            $queryValue = in_array($queryType, self::FIELD_QUERY['value_integer'])
-                                ? array_unique(array_map('intval', $queryValue))
-                                : array_unique(array_filter(array_map('trim', array_map('strval', $queryValue)), 'strlen'));
-                            if (empty($queryValue)) {
-                                unset($query['property'][$k]);
-                                continue;
-                            } else {
-                                $query['property'][$k]['text'] = $queryValue;
-                            }
-                        }
-                        // The value should be a scalar in all other cases.
-                        elseif (is_array($queryValue) || !strlen((string) $queryValue)) {
-                            unset($query['property'][$k]);
-                            continue;
-                        }
-                        $queryRowProp = $queryRow['property'] ?? null;
-                        if (is_array($queryRowProp)) {
-                            $query['property'][$k]['property'] = array_unique($query['property'][$k]['property']);
-                        }
-                        if (in_array($query['property'][$k]['type'], ['eq', 'list', 'neq', 'nlist'])) {
-                            // TODO Manage the case where the property is numeric or term (simplify above instead of in the process below).
-                            $queryRowProperty = is_array($queryRowProp) ? implode(',', $queryRowProp) : $queryRowProp;
-                            $short = $queryRowProperty . '/' . $queryRow['type'] . '/' . ($queryRow['joiner'] ?? 'and');
-                            if (isset($shortProperties[$short])) {
-                                ++$shortProperties[$short]['total'];
-                            } else {
-                                $shortProperties[$short]['property_string'] = $queryRowProperty;
-                                $shortProperties[$short]['property'] = $queryRowProp;
-                                $shortProperties[$short]['type'] = $queryRow['type'];
-                                $shortProperties[$short]['joiner'] = $queryRow['joiner'] ?? 'and';
-                                $shortProperties[$short]['total'] = 1;
-                            }
-                            $shortProperties[$short]['keys'][] = $k;
-                            $shortProperties[$short]['texts'][] = $queryRow['text'];
-                        }
-                    }
-                    $query = $this->optimizeQueryProperty($query, $shortProperties);
+                    $query = $this->optimizeQueryProperty($query);
                 } else {
                     unset($query['property']);
                 }
             } elseif ($key === 'filter') {
                 if (is_array($value)) {
-                    // Short filters allows to prepare optimization.
-                    $shortFilters = [];
-                    foreach ($query['filter'] as $k => $queryRow) {
-                        if (!is_array($queryRow)
-                            || empty($queryRow['type'])
-                            || !isset(self::FIELD_QUERY['reciprocal'][$queryRow['type']])
-                        ) {
-                            unset($query['filter'][$k]);
-                            continue;
-                        }
-                        $queryType = $queryRow['type'];
-                        $queryVal = $queryRow['val'] ?? '';
-                        // Quick check of value.
-                        // A empty string "" is not a value, but "0" is a value.
-                        if (in_array($queryType, self::FIELD_QUERY['value_none'], true)) {
-                            $queryVal = null;
-                        }
-                        // Check array of values.
-                        elseif (in_array($queryType, self::FIELD_QUERY['value_array'], true)) {
-                            if ((is_array($queryVal) && !count($queryVal))
-                                || (!is_array($queryVal) && !strlen((string) $queryVal))
-                            ) {
-                                unset($query['filter'][$k]);
-                                continue;
-                            }
-                            if (!is_array($queryVal)) {
-                                $queryVal = [$queryVal];
-                            }
-                            $queryVal = in_array($queryType, self::FIELD_QUERY['value_integer'])
-                                ? array_unique(array_map('intval', $queryVal))
-                                : array_unique(array_filter(array_map('trim', array_map('strval', $queryVal)), 'strlen'));
-                            if (empty($queryVal)) {
-                                unset($query['filter'][$k]);
-                                continue;
-                            } else {
-                                $query['filter'][$k]['val'] = $queryVal;
-                            }
-                        }
-                        // The value should be a scalar in all other cases.
-                        elseif (is_array($queryVal) || !strlen((string) $queryVal)) {
-                            unset($query['filter'][$k]);
-                            continue;
-                        }
-                        $queryRowField = $queryRow['field'] ?? null;
-                        if (is_array($queryRowField)) {
-                            $query['filter'][$k]['field'] = array_unique($query['filter'][$k]['field']);
-                        }
-                        if (in_array($query['filter'][$k]['type'], ['eq', 'list', 'neq', 'nlist'])) {
-                            // TODO Manage the case where the filter is numeric or term (simplify above instead of in the process below).
-                            $queryRowFieldString = is_array($queryRowField) ? implode(',', $queryRowField) : $queryRowField;
-                            $short = $queryRowFieldString . '/' . $queryRow['type'] . '/' . ($queryRow['join'] ?? 'and');
-                            if (isset($shortFilters[$short])) {
-                                ++$shortFilters[$short]['total'];
-                            } else {
-                                $shortFilters[$short]['field_string'] = $queryRowFieldString;
-                                $shortFilters[$short]['field'] = $queryRowField;
-                                $shortFilters[$short]['type'] = $queryRow['type'];
-                                $shortFilters[$short]['join'] = $queryRow['join'] ?? 'and';
-                                $shortFilters[$short]['total'] = 1;
-                            }
-                            $shortFilters[$short]['keys'][] = $k;
-                            $shortFilters[$short]['vals'][] = $queryRow['val'];
-                        }
-                    }
-                    $query = $this->optimizeQueryFilter($query, $shortFilters);
+                    $query = $this->optimizeQueryFilter($query);
                 } else {
                     unset($query['filter']);
                 }
@@ -648,10 +706,26 @@ class SearchResources
                     $query['datetime'] = [[
                         'join' => 'and',
                         'field' => 'created',
-                        'type' => 'eq',
+                        'type' => '=',
                         'val' => $query['datetime'],
                     ]];
                 } else {
+                    $dateTimeQueryTypes = [
+                        '<' => '<',
+                        '≤' => '≤',
+                        '=' => '=',
+                        '≠' => '≠',
+                        '≥' => '≥',
+                        '>' => '>',
+                        'lt' => '<',
+                        'lte' => '≤',
+                        'eq' => '=',
+                        'neq' => '≠',
+                        'gte' => '≥',
+                        'gt' => '>',
+                        'ex' => 'ex',
+                        'nex' => 'nex',
+                    ];
                     foreach ($query['datetime'] as $key => &$queryRow) {
                         if (empty($queryRow)) {
                             unset($query['datetime'][$key]);
@@ -680,13 +754,14 @@ class SearchResources
                             }
 
                             if (empty($queryRow['type'])) {
-                                $queryRow['type'] = 'eq';
+                                $queryRow['type'] = '=';
                             } else {
                                 // "ex" and "nex" are useful only for the modified time.
-                                if (!in_array($queryRow['type'], ['lt', 'lte', 'eq', 'gte', 'gt', 'neq', 'ex', 'nex'])) {
+                                if (!isset($dateTimeQueryTypes[$queryRow['type']])) {
                                     unset($query['datetime'][$key]);
                                     continue;
                                 }
+                                $queryRow['type'] = $dateTimeQueryTypes[$queryRow['type']];
                             }
 
                             if (in_array($queryRow['type'], ['ex', 'nex'])) {
@@ -702,7 +777,7 @@ class SearchResources
                             $queryRow = [
                                 'join' => 'and',
                                 'field' => 'created',
-                                'type' => 'eq',
+                                'type' => '=',
                                 'val' => $queryRow,
                             ];
                         }
@@ -776,6 +851,9 @@ class SearchResources
             }
         }
 
+        $cleanQueries[$sum] = $query;
+        $query['__original_query'] = $originalQuery;
+
         return $query;
     }
 
@@ -784,48 +862,143 @@ class SearchResources
      *
      * @deprecated Use optimizeQueryFilter() instead.
      */
-    protected function optimizeQueryProperty(array $query, array $shortProperties): array
+    protected function optimizeQueryProperty(array $query): array
     {
-        if (!count($shortProperties) || count($query['property']) <= 1) {
+        if (empty($query['property']) || !is_array($query['property'])) {
+            unset($query['property']);
             return $query;
         }
 
-        // Replace multiple "subject = x OR subject = y" by "subject in list [x, y]"
-        // and variants: not equal to not in list, and types "and" and "except".
+        $shortProperties = [];
+
+        $valueArray = [
+            'list',
+            'nlist',
+            'res',
+            'nres',
+            'resq',
+            'nresq',
+            'lres',
+            'nlres',
+            'lkq',
+            'nlkq',
+            'dtp',
+            'ndtp',
+        ];
+
+        foreach ($query['property'] as $k => $queryRow) {
+            if (!is_array($queryRow)
+                || empty($queryRow['type'])
+                || !isset(self::FIELD_QUERY['reciprocal'][$queryRow['type']])
+            ) {
+                unset($query['property'][$k]);
+                continue;
+            }
+
+            $queryType = $queryRow['type'];
+            $queryValue = $queryRow['text'] ?? '';
+
+            // Quick check of value.
+            // A empty string "" is not a value, but "0" is a value.
+            if (in_array($queryType, self::FIELD_QUERY['value_none'], true)) {
+                $queryValue = null;
+            }
+            // Check array of values.
+            // This feature is deprecated.
+            // TODO Copy and deduplicate cleaning and buildPropertyQuery().
+            elseif (in_array($queryType, $valueArray, true)) {
+                if ((is_array($queryValue) && !count($queryValue))
+                    || (!is_array($queryValue) && !strlen((string) $queryValue))
+                ) {
+                    unset($query['property'][$k]);
+                    continue;
+                }
+                if (!is_array($queryValue)) {
+                    $queryValue = [$queryValue];
+                }
+                $queryValue = in_array($queryType, self::FIELD_QUERY['value_integer'])
+                    ? array_unique(array_map('intval', $queryValue))
+                    : array_unique(array_filter(array_map('trim', array_map('strval', $queryValue)), 'strlen'));
+                if (empty($queryValue)) {
+                    unset($query['property'][$k]);
+                    continue;
+                } else {
+                    $query['property'][$k]['text'] = $queryValue;
+                }
+            }
+            // The value should be a scalar in all other cases.
+            elseif (is_array($queryValue) || !strlen((string) $queryValue)) {
+                unset($query['property'][$k]);
+                continue;
+            }
+
+            $queryRowProp = $queryRow['property'] ?? null;
+            if (is_array($queryRowProp)) {
+                $query['property'][$k]['property'] = array_unique($query['property'][$k]['property']);
+            }
+
+            // Init the short properties to prepare optimization.
+            // Joiner should be "OR", because "AND" cannot be used with sql "IN()".
+            // @see https://github.com/Daniel-KM/Omeka-S-module-AdvancedSearch/issues/4
+            if (isset($query['property'][$k]['joiner'])
+                && $query['property'][$k]['joiner'] === 'or'
+                && in_array($queryType, ['eq', 'list', 'neq', 'nlist'])
+            ) {
+                // TODO Manage the case where the property is numeric or term (simplify above instead of in the process below).
+                $queryRowProperty = is_array($queryRowProp) ? implode(',', $queryRowProp) : $queryRowProp;
+                $short = '/or'
+                    . '/' . $queryRowProperty
+                    . '/' . (empty($queryRow['except']) ? '' : serialize($queryRow['except']))
+                    . '/' . (in_array($queryRow['type'], ['neq', 'nlist']) ? 'nlist' : 'list')
+                    . '/' . (empty($queryRow['datatype']) ? '' : serialize($queryRow['datatype']))
+                    . '/';
+                if (isset($shortProperties[$short])) {
+                    ++$shortProperties[$short]['total'];
+                    $shortProperties[$short]['texts'] = array_values(array_unique(array_merge(
+                        $shortProperties[$short]['texts'],
+                        is_array($queryRow['text']) ? array_values($queryRow['text']) : [$queryRow['text']]
+                    )));
+                } else {
+                    $shortProperties[$short]['property_string'] = $queryRowProperty;
+                    $shortProperties[$short]['joiner'] = 'or';
+                    $shortProperties[$short]['property'] = $queryRowProp;
+                    $shortProperties[$short]['except'] = $queryRow['except'] ?? '';
+                    $shortProperties[$short]['type'] = $queryRow['type'];
+                    $shortProperties[$short]['texts'] = is_array($queryRow['text']) ? array_values($queryRow['text']) : [$queryRow['text']];
+                    $shortProperties[$short]['datatype'] = $queryRow['datatype'] ?? '';
+                    $shortProperties[$short]['total'] = 1;
+                }
+                $shortProperties[$short]['keys'][] = $k;
+            }
+        }
+
+        if (count($shortProperties) <= 1) {
+            return $query;
+        }
+
+        // Replace multiple "subject = x OR subject = y" by "subject = [x, y]".
         // On a base > 10000 items and more than three or four subjects with OR,
         // mysql never ends request.
         // The issue is fixed in Omeka S v4.1.
         /** @see https://github.com/omeka/omeka-s/commits/consecutive-or-optimize */
         foreach ($shortProperties as $shortProperty) {
-            if ($shortProperty['total'] < 2 || !isset(self::FIELD_QUERY['optimize'][$shortProperty['type']])) {
+            if ($shortProperty['total'] < 2) {
                 continue;
             }
-            // Joiner should be "OR", because "AND" cannot be used with sql "IN()".
-            // @see https://github.com/Daniel-KM/Omeka-S-module-AdvancedSearch/issues/4
-            if ($shortProperty['joiner'] !== 'or') {
-                continue;
-            }
-            $optimizedType = self::FIELD_QUERY['optimize'][$shortProperty['type']];
-            $shortList = $shortProperty['property_string'] . '/' . $optimizedType . '/' . $shortProperty['joiner'];
-            if (isset($shortProperties[$shortList])) {
-                // TODO Replace multiple "subject in list [x] OR subject in list [y]" by "subject in list [x, y]" first (but rare).
-                // if (count($shortProperties[$shortList]['keys']) > 1) {}
-                reset($shortProperties[$shortList]['keys']);
-                $kShortList = key($shortProperties[$shortList]['keys']);
-            } else {
-                $query['property'][] = [
-                    'property' => $shortProperty['property'],
-                    'type' => $optimizedType,
-                    'joiner' => $shortProperty['joiner'],
-                    'text' => [],
-                ];
-                end($query['property']);
-                $kShortList = key($query['property']);
-            }
-            $query['property'][$kShortList]['text'] = $shortProperty['texts'];
+            // Remove optimized filters.
             foreach ($shortProperty['keys'] as $shortPropertyKey) {
                 unset($query['property'][$shortPropertyKey]);
             }
+            // Replace the last key.
+            $propertyFilter = [
+                'joiner' => $shortProperty['joiner'],
+                'property' => $shortProperty['property'],
+                'except' => $shortProperty['except'],
+                'type' => $shortProperty['type'],
+                'text' => $shortProperty['texts'],
+                'datatype' => $shortProperty['datatype'],
+            ];
+            $query['property'][$shortPropertyKey] = array_filter($propertyFilter, fn ($v) => $v !== null);
         }
 
         return $query;
@@ -833,50 +1006,273 @@ class SearchResources
 
     /**
      * Helper to optimize query for filters.
+     *
+     * The main point is to avoid issues with mysql and too much joins.
+     * Second, it improves performance on big bases.
+     *
+     * @todo Check workflow with buildQueryForRow() (for now use a flag).
      */
-    protected function optimizeQueryFilter(array $query, array $shortFilters): array
+    protected function optimizeQueryFilter(array $query): array
     {
+        $shortFilters = [];
+
+        foreach ($query['filter'] as $k => $queryRow) {
+            if (!is_array($queryRow)
+                || empty($queryRow['type'])
+                || !isset(self::FIELD_QUERY['reciprocal'][$queryRow['type']])
+            ) {
+                unset($query['filter'][$k]);
+                continue;
+            }
+
+            if ($queryRow['type'] === 'list') {
+                $queryRow['type'] = 'eq';
+            } elseif ($queryRow['type'] === 'nlist') {
+                $queryRow['type'] = 'neq';
+            }
+
+            $queryType = $queryRow['type'];
+            $queryVal = $queryRow['val'] ?? '';
+
+            // Quick check of value.
+            // A empty string "" is not a value, but "0" is a value.
+            if (in_array($queryType, self::FIELD_QUERY['value_none'], true)) {
+                $queryVal = null;
+            }
+            // Check array of values.
+            elseif (!in_array($queryType, self::FIELD_QUERY['value_single'], true)) {
+                if ((is_array($queryVal) && !count($queryVal))
+                    || (!is_array($queryVal) && !strlen((string) $queryVal))
+                ) {
+                    unset($query['filter'][$k]);
+                    continue;
+                }
+                if (!in_array($queryType, self::FIELD_QUERY['value_single_array_or_string'])) {
+                    if (!is_array($queryVal)) {
+                        $queryVal = [$queryVal];
+                    }
+                    // Normalize as array of integers or strings for next process.
+                    // To use array_values() avoids doctrine issue with string keys.
+                    if (in_array($queryType, self::FIELD_QUERY['value_integer'])) {
+                        $queryVal = array_values(array_unique(array_map('intval', array_filter($queryVal, fn ($v) => is_numeric($v) && $v == (int) $v))));
+                    } elseif (in_array($queryType, ['<', '≤', '≥', '>'])) {
+                        // Casting to float is complex and rarely used, so only integer.
+                        $queryVal = array_values(array_unique(array_map(fn ($v) => is_numeric($v) && $v == (int) $v ? (int) $v : $v, $queryVal)));
+                        // When there is at least one string, set all values as
+                        // string for doctrine.
+                        if (count(array_filter($queryVal, 'is_int')) !== count($queryVal)) {
+                            $queryVal = array_map('strval', $queryVal);
+                        }
+                    } else {
+                        $queryVal = array_values(array_unique(array_filter(array_map('trim', array_map('strval', $queryVal)), 'strlen')));
+                    }
+                    if (empty($queryVal)) {
+                        unset($query['filter'][$k]);
+                        continue;
+                    } else {
+                        $query['filter'][$k]['val'] = $queryVal;
+                    }
+                }
+            }
+            // The value should be a scalar in all other cases.
+            elseif (is_array($queryVal) || !strlen((string) $queryVal)) {
+                unset($query['filter'][$k]);
+                continue;
+            } else {
+                $queryVal = trim((string) $queryVal);
+                if (!strlen($queryVal)) {
+                    unset($query['filter'][$k]);
+                    continue;
+                }
+                if (in_array($queryType, self::FIELD_QUERY['value_integer'])) {
+                    if (!is_numeric($queryVal) || $queryVal != (int) $queryVal) {
+                        unset($query['filter'][$k]);
+                        continue;
+                    }
+                    $query['filter'][$k]['val'] = (int) $queryVal;
+                } elseif (in_array($queryType, ['<', '≤', '≥', '>'])) {
+                    // The types "integer" and "string" are automatically
+                    // infered from the php type.
+                    // Warning: "float" is managed like string in mysql via pdo.
+                    if (is_numeric($queryVal) && $queryVal == (int) $queryVal) {
+                        $query['filter'][$k]['val'] = (int) $queryVal;
+                    }
+                }
+            }
+
+            $queryRowField = $queryRow['field'] ?? null;
+            if (is_array($queryRowField)) {
+                $query['filter'][$k]['field'] = array_unique($query['filter'][$k]['field']);
+            }
+
+            // Init the short filters to prepare optimization.
+            // Unlike properties, many types support multiple values.
+            if (count($query['filter']) > 1
+                && !in_array($queryType, self::FIELD_QUERY['value_none'])
+                && !in_array($queryType, self::FIELD_QUERY['value_single'])
+                && !in_array($queryType, self::FIELD_QUERY['value_single_array_or_string'])
+            ) {
+                // The joiner should be "OR", because "AND" cannot be used with sql
+                // "IN()". But some types for min/max don't use it.
+                // @see https://github.com/Daniel-KM/Omeka-S-module-AdvancedSearch/issues/4
+                if (!(
+                    (isset($query['filter'][$k]['join']) && $query['filter'][$k]['join'] === 'or')
+                    || in_array($queryType, ['lt', 'lte', 'gte', 'gt', '<', '≤', '≥', '>', 'yreq', 'yrlt', 'yrlte', 'yrgte', 'yrgt', 'nyreq', 'nyrlt', 'nyrlte', 'nyrgte', 'nyrgt'])
+                )) {
+                    continue;
+                }
+                // TODO Manage the case where the filter is numeric or term (simplify above instead of in the process below).
+                $queryRowFieldString = is_array($queryRowField) ? implode(',', $queryRowField) : $queryRowField;
+                $short = '/' . ($queryRow['join'] ?? 'and')
+                    . '/' . $queryRowFieldString
+                    . '/' . (empty($queryRow['except']) ? '' : serialize($queryRow['except']))
+                    . '/' . $queryRow['type']
+                    . '/' . (empty($queryRow['datatype']) ? '' : serialize($queryRow['datatype']))
+                    . '/';
+                if (isset($shortFilters[$short])) {
+                    ++$shortFilters[$short]['total'];
+                    $shortFilters[$short]['vals'] = array_values(array_unique(array_merge(
+                        $shortFilters[$short]['vals'],
+                        is_array($queryRow['val']) ? array_values($queryRow['val']) : [$queryRow['val']]
+                    )));
+                } else {
+                    $shortFilters[$short]['join'] = $queryRow['join'] ?? 'and';
+                    $shortFilters[$short]['field_string'] = $queryRowFieldString;
+                    $shortFilters[$short]['field'] = $queryRowField;
+                    $shortFilters[$short]['except'] = $queryRow['except'] ?? '';
+                    $shortFilters[$short]['type'] = $queryRow['type'];
+                    $shortFilters[$short]['vals'] = is_array($queryRow['val']) ? array_values($queryRow['val']) : [$queryRow['val']];
+                    $shortFilters[$short]['datatype'] = $queryRow['datatype'] ?? '';
+                    $shortFilters[$short]['total'] = 1;
+                }
+                $shortFilters[$short]['keys'][] = $k;
+            }
+        }
+
         if (!count($shortFilters) || count($query['filter']) <= 1) {
             return $query;
         }
 
-        // Replace multiple "subject = x OR subject = y" by "subject in list [x, y]"
-        // and variants: not equal to not in list, and types "and" and "except".
-        // On a base > 10000 items and more than three or four subjects with OR,
-        // mysql never ends request.
-        // The issue is fixed in Omeka S v4.1.
-        /** @see https://github.com/omeka/omeka-s/commits/consecutive-or-optimize */
+        // Replace multiple "subject = x OR subject = y" by "subject = [x, y]"
+        // and variants. For lower/greater, the joiner may be any of them.
         foreach ($shortFilters as $shortFilter) {
-            if ($shortFilter['total'] < 2 || !isset(self::FIELD_QUERY['optimize'][$shortFilter['type']])) {
+            if ($shortFilter['total'] < 2) {
                 continue;
             }
-            // Joiner should be "OR", because "AND" cannot be used with sql "IN()".
-            // @see https://github.com/Daniel-KM/Omeka-S-module-AdvancedSearch/issues/4
-            if ($shortFilter['join'] !== 'or') {
-                continue;
-            }
-            $optimizedType = self::FIELD_QUERY['optimize'][$shortFilter['type']];
-            $shortList = $shortFilter['field_string'] . '/' . $optimizedType . '/' . $shortFilter['join'];
-            if (isset($shortFilters[$shortList])) {
-                // TODO Replace multiple "subject in list [x] OR subject in list [y]" by "subject in list [x, y]" first (but rare).
-                // if (count($shortFilters[$shortList]['keys']) > 1) {}
-                reset($shortFilters[$shortList]['keys']);
-                $kShortList = key($shortFilters[$shortList]['keys']);
-            } else {
-                $query['filter'][] = [
-                    'field' => $shortFilter['field'],
-                    'type' => $optimizedType,
-                    'join' => $shortFilter['join'],
-                    'val' => [],
-                ];
-                end($query['filter']);
-                $kShortList = key($query['filter']);
-            }
-            $query['filter'][$kShortList]['val'] = $shortFilter['vals'];
+            // Remove optimized filters.
             foreach ($shortFilter['keys'] as $shortFilterKey) {
                 unset($query['filter'][$shortFilterKey]);
             }
+            // Replace the last key.
+            $filter = [
+                'join' => $shortFilter['join'],
+                'field' => $shortFilter['field'],
+                'except' => $shortFilter['except'],
+                'type' => $shortFilter['type'],
+                'val' => $shortFilter['vals'],
+                'datatype' => $shortFilter['datatype'],
+            ];
+            $query['filter'][$shortFilterKey] = array_filter($filter, fn ($v) => $v !== null);
         }
+
+        return $query;
+    }
+
+    /**
+     * Expand form fields according to the config.
+     *
+     * This method is used early by the form adapter.
+     */
+    public function expandFieldQueryArgs(array $query): array
+    {
+        static $expandedQueries = [];
+
+        $originalQuery = $query;
+        unset($originalQuery['__searchConfig']);
+        unset($originalQuery['__searchQuery']);
+
+        $sum = md5(serialize($originalQuery));
+        if (isset($expandedQueries[$sum])) {
+            return $expandedQueries[$sum];
+        }
+
+        // TODO Use an option to specify the default type (eq or in) to have the same than field query args.
+        // For now, use "in" in main search form filters and "eq" in standard
+        // advanced form (see TraitFormAdapterClassic).
+
+        $typeDefault = 'in';
+
+        foreach ($query['filter'] ?? [] as $key => $filter) {
+            if (empty($filter['field']) || is_array($filter['field'])) {
+                continue;
+            }
+            // TODO Fill except? Useless for now, it is an internal key, so a list of terms.
+            $field = $filter['field'];
+            if (isset($this->searchIndex['query_args'][$field])) {
+                $filter = [
+                    'join' => $this->searchIndex['query_args'][$field]['join'] ?? 'and',
+                    'field' => $this->searchIndex['aliases'][$field]['fields'] ?? $field,
+                    'except' => $this->searchIndex['query_args'][$field]['except'] ?? null,
+                    'type' => $this->searchIndex['query_args'][$field]['type'] ?? $typeDefault,
+                    'val' => $query['filter'][$key]['val'] ?? null,
+                    'datatype' => $this->searchIndex['query_args'][$field]['datatype'] ?? null,
+                    'label' => $this->searchIndex['form_filters_fields'][$field]
+                        ?? $this->searchIndex['aliases'][$field]['label']
+                        ?? null,
+                    'is_form_filter' => !empty($this->searchIndex['form_filters_fields'][$field]),
+                    'replaced_field' => $field,
+                    'replaced_value' => $filter,
+                    'replaced_filter_key' => $key,
+                ];
+                $query['filter'][$key] = array_filter($filter, fn ($v) => $v !== null);
+            }
+        }
+
+        $typeDefault = 'eq';
+
+        // The label is used for the search filters.
+
+        foreach ($query as $field => $value) {
+            if (isset($this->searchIndex['query_args'][$field])) {
+                $filter = [
+                    'join' => $this->searchIndex['query_args'][$field]['join'] ?? 'and',
+                    'field' => $this->searchIndex['aliases'][$field]['fields'] ?? $field,
+                    'except' => $this->searchIndex['query_args'][$field]['except'] ?? null,
+                    'type' => $this->searchIndex['query_args'][$field]['type'] ?? $typeDefault,
+                    'val' => $value,
+                    'datatype' => $this->searchIndex['query_args'][$field]['datatype'] ?? null,
+                    // Label and next data  are kept for search filters.
+                    'label' => $this->searchIndex['form_filters_fields'][$field]
+                        ?? $this->searchIndex['aliases'][$field]
+                        ?? null,
+                    'is_form_filter' => !empty($this->searchIndex['form_filters_fields'][$field]),
+                    'replaced_field' => $field,
+                    'replaced_value' => $value,
+                    'replaced_filter_key' => null,
+                ];
+                $query['filter'][] = array_filter($filter, fn ($v) => $v !== null);
+                unset($query[$field]);
+            } elseif ($term = $this->easyMeta->propertyTerm($field)) {
+                // When the shortcut is not listed, it means a standard query.
+                $filter = [
+                    'join' => 'and',
+                    'field' => $term,
+                    'type' => $typeDefault,
+                    'val' => $value,
+                    'label' => $this->searchIndex['form_filters_fields'][$field]
+                        ?? $this->searchIndex['aliases'][$field]['label']
+                        ?? null,
+                    'is_form_filter' => !empty($this->searchIndex['form_filters_fields'][$field]),
+                    'replaced_field' => $field,
+                    'replaced_value' => $value,
+                    'replaced_filter_key' => null,
+                ];
+                $query['filter'][] = $filter;
+                unset($query[$field]);
+            }
+        }
+
+        $expandedQueries[$sum] = $query;
 
         return $query;
     }
@@ -1016,7 +1412,8 @@ class SearchResources
      */
     public function searchResourcesFullText(QueryBuilder $qb, array $query): self
     {
-        if (empty($query['fulltext_search'])) {
+        // A full text search cannot be "*" alone. Anyway it has no meaning.
+        if (empty($query['fulltext_search']) || $query['fulltext_search'] === '*') {
             return $this;
         }
 
@@ -1163,44 +1560,12 @@ class SearchResources
             }
         }
 
-        if ($this->adapter instanceof ItemAdapter
-            && isset($query['item_set_id'])
-            && $query['item_set_id'] !== ''
-            && $query['item_set_id'] !== []
-        ) {
-            $itemSetIds = is_array($query['item_set_id'])
-                ? array_values($query['item_set_id'])
-                : [$query['item_set_id']];
-            $itemSetAlias = $this->adapter->createAlias();
-            if (array_values($itemSetIds) === [0]) {
-                $qb
-                    ->leftJoin(
-                        'omeka_root.itemSets',
-                        $itemSetAlias
-                    )
-                    ->andWhere($expr->isNull("$itemSetAlias.id"));
-            } elseif (in_array(0, $itemSetIds, true)) {
-                $qb
-                    ->leftJoin(
-                        'omeka_root.itemSets',
-                        $itemSetAlias
-                    )
-                    ->andWhere($expr->orX(
-                        $expr->isNull("$itemSetAlias.id"),
-                        $expr->in(
-                            "$itemSetAlias.id",
-                            $this->adapter->createNamedParameter($qb, $itemSetIds)
-                        )
-                    ));
-            } else {
-                $qb
-                    ->innerJoin(
-                        'omeka_root.itemSets',
-                        $itemSetAlias, Join::WITH,
-                        $expr->in("$itemSetAlias.id", $this->adapter->createNamedParameter($qb, $itemSetIds))
-                    );
-            }
-        }
+        return $this;
+    }
+
+    protected function searchResourceAssets(QueryBuilder $qb, array $query): self
+    {
+        $expr = $qb->expr();
 
         if (isset($query['has_asset']) && (string) $query['has_asset'] !== '') {
             if ($query['has_asset']) {
@@ -1240,73 +1605,6 @@ class SearchResources
                         $this->adapter->createNamedParameter($qb, $assetIds)
                     ));
             }
-        }
-
-        // Order by is the last part or a sql query.
-        // Sort by listed id.
-        // The list is the one set in key "sort_ids" or in main query key "id".
-        // The sort order is "desc" for resource/browse (see plugin SetBrowseDefault::__invoke())
-        // and as "asc" in api (see AbstractEntityAdapter::buildQuery()).
-        if (isset($query['sort_by'])
-            && $query['sort_by'] === 'ids'
-            && (!empty($query['sort_ids']) || !empty($query['id']))
-        ) {
-            /** @see \Omeka\Api\Adapter\AbstractEntityAdapter::buildBaseQuery() */
-            // Avoid a strict type issue, so convert ids as string.
-            // Normally, the query is cleaned before.
-            $ids = empty($query['sort_ids']) ? $query['id'] : $query['sort_ids'];
-            if (is_int($ids)) {
-                $ids = [(string) $ids];
-            } elseif (is_string($ids)) {
-                $ids = strpos($ids, ',') === false ? [$ids] : explode(',', $ids);
-            } elseif (!is_array($ids)) {
-                $ids = [];
-            }
-            $ids = array_map('trim', $ids);
-            $ids = array_filter($ids, 'strlen');
-            if ($ids) {
-                $idsAlias = $this->adapter->createAlias();
-                $idsPlaceholder = ':' . $idsAlias;
-                $qb
-                    ->setParameter($idsAlias, $ids, Connection::PARAM_INT_ARRAY)
-                    ->addOrderBy("FIELD(omeka_root.id, $idsPlaceholder)", $query['sort_order'])
-                    // In AbstractEntityAdapter::search(), the countQb is a
-                    // clone of this qb that removes the orderBy part, but not
-                    // the parameters associated to it. So a fake argument Where
-                    // is added , to avoid a doctrine issue.
-                    // TODO Patch omeka: get the dql part orderBy, get the parameter associated to it, check if is used somewhere before removing it.
-                    ->andWhere($expr->in(
-                        $this->adapter->createNamedParameter($qb, reset($ids)),
-                        $idsPlaceholder
-                    ));
-            }
-        } elseif (isset($query['sort_by'])
-            // The event "api.search.query.finalize is skipped In scalar search,
-            // so pass it here.
-            /** @see \Omeka\Module::searchFullText() */
-            && isset($query['fulltext_search'])
-            && in_array($query['sort_by'], ['relevance', 'relevance desc', 'relevance asc'])
-            && trim($query['fulltext_search']) !== ''
-        ) {
-            // The order is slightly different from the standard one, because
-            // an order by id desc is appended automatically, so all results
-            // with the same score are sorted by id desc and not randomly.
-            // Don't use "`" here for doctrine.
-            $matchOrder = 'MATCH(omeka_fulltext_search.title, omeka_fulltext_search.text) AGAINST (:omeka_fulltext_search)';
-            $sortOrder = $query['sort_by'] === 'relevance asc' ? 'ASC' : 'DESC';
-            $qb
-                // The hidden select and "group by" avoids issue with mysql mode "only_full_group_by".
-                // But the select is not available when returning scalar ids.
-                // And to add it in AbstractEntityAdapter does not help, because
-                // the paginator requires a total count and remove all select
-                // to get it.
-                // ->addSelect($matchOrder . ' AS HIDDEN orderMatch')
-                // ->addGroupBy('orderMatch')
-                // So add a hidden select and remove order before count, but
-                // directly in the adapter.
-                // When requesting scalar results, the fix is included via a
-                // later event, awaiting integration of fix omeka/omeka-s#2224.
-                ->addOrderBy($matchOrder, $sortOrder);
         }
 
         return $this;
@@ -1351,10 +1649,18 @@ class SearchResources
      *
      * Query format:
      *
+     * - property[{index}][joiner]: "and" OR "or" joiner with previous query
+     * - property[{index}][property]: property ID or term
+     * - property[{index}][type]: search type
+     * - property[{index}][text]: search text
+     *
+     * Improved query format (deprecated: use filters for portability):
+     *
      * - property[{index}][joiner]: "and" OR "or" OR "not" joiner with previous query
      * - property[{index}][property]: property ID or term or array of property IDs or terms
-     * - property[{index}][text]: search text or array of texts or values
+     * - property[{index}][except]: list of property IsD or terms to exclude
      * - property[{index}][type]: search type
+     * - property[{index}][text]: search text or array of texts or values
      * - property[{index}][datatype]: filter on data type(s)
      *
      * @see self::buildQueryForRow() for details.
@@ -1364,6 +1670,8 @@ class SearchResources
         if (empty($query['property']) || !is_array($query['property'])) {
             return $this;
         }
+
+        $isFilter = false;
 
         $valuesJoin = 'omeka_root.values';
         $where = '';
@@ -1381,9 +1689,10 @@ class SearchResources
                 continue;
             }
 
-            $propertyIds = $queryRow['property'] ?? null;
-            $queryType = $queryRow['type'];
             $joiner = $queryRow['joiner'] ?? '';
+            $propertyIds = $queryRow['property'] ?? null;
+            $except = $queryRow['except'] ?? null;
+            $queryType = $queryRow['type'];
             $value = $queryRow['text'] ?? '';
             $dataType = $queryRow['datatype'] ?? '';
 
@@ -1397,14 +1706,20 @@ class SearchResources
                     'valuesJoin',
                     'where',
                     'queryRow',
-                    'propertyIds',
-                    'queryType',
                     'joiner',
+                    'propertyIds',
+                    'except',
+                    'queryType',
                     'value',
-                    'dataType'
+                    'dataType',
+                    'isFilter'
                 ),
                 true
             );
+
+            if (!$result) {
+                continue;
+            }
 
             [
                 // The only output required.
@@ -1428,7 +1743,7 @@ class SearchResources
     }
 
     /**
-     * Build query filter on value.
+     * Build query filter on value on a field (property, term or index).
      *
      * @see \Omeka\Api\Adapter\AbstractResourceEntityAdapter::buildPropertyQuery()
      * @see \AdvancedSearch\Stdlib\SearchResources::buildPropertyQuery()
@@ -1437,9 +1752,11 @@ class SearchResources
      * Query format:
      *
      * - filter[{index}][join]: "and" OR "or" OR "not" joiner with previous query
-     * - filter[{index}][field]: property ID or term or array of property IDs or terms
-     * - filter[{index}][val]: search text or array of texts or values
+     * - filter[{index}][field]: property ID, term or indexed field, or array of
+     *   property IDs, terms or indexed fields
+     * - filter[{index}][except]: list of property IsD or terms to exclude
      * - filter[{index}][type]: search type
+     * - filter[{index}][val]: search text or array of texts or values
      * - filter[{index}][datatype]: filter on data type(s)
      *
      * @see self::buildQueryForRow() for details.
@@ -1449,6 +1766,8 @@ class SearchResources
         if (empty($query['filter']) || !is_array($query['filter'])) {
             return $this;
         }
+
+        $isFilter = true;
 
         $valuesJoin = 'omeka_root.values';
         $where = '';
@@ -1466,9 +1785,10 @@ class SearchResources
                 continue;
             }
 
-            $propertyIds = $queryRow['field'] ?? null;
-            $queryType = $queryRow['type'];
             $joiner = $queryRow['join'] ?? '';
+            $propertyIds = $queryRow['field'] ?? null;
+            $except = $queryRow['except'] ?? null;
+            $queryType = $queryRow['type'];
             $value = $queryRow['val'] ?? '';
             $dataType = $queryRow['datatype'] ?? '';
 
@@ -1482,11 +1802,13 @@ class SearchResources
                     'valuesJoin',
                     'where',
                     'queryRow',
-                    'propertyIds',
-                    'queryType',
                     'joiner',
+                    'propertyIds',
+                    'except',
+                    'queryType',
                     'value',
-                    'dataType'
+                    'dataType',
+                    'isFilter'
                 ),
                 false
             );
@@ -1517,7 +1839,7 @@ class SearchResources
     }
 
     /**
-     * Manage improved query for properties and query for filters.
+     * Manage standard and improved query for properties and query for filters.
      *
      * Value
      *   - eq: is exactly (core)
@@ -1537,7 +1859,7 @@ class SearchResources
      *   - lte: lower than or equal
      *   - gte: greater than or equal
      *   - gt: greater than
-     *   Comparisons (numerical, with casting to float/integer):
+     *   Comparisons (numerical, with casting to integer for numbers):
      *   - <: lower than
      *   - ≤: lower than or equal
      *   - ≥: greater than or equal
@@ -1549,7 +1871,7 @@ class SearchResources
      *   - yrlte: until year
      *   - yrgte: since year
      *   - yrgt: since year (excluded)
-     *   Internal, deprecated (any type can have multiple values)
+     *   Internal, deprecated (any type can have multiple values with filters)
      *   - list: is in list
      *   - nlist: is not in list
      * Resource
@@ -1568,57 +1890,59 @@ class SearchResources
      *   - ex: has any value (core)
      *   - nex: has no values (core)
      *   - exs: has a single value
-     *   - nexs: has not a single value
+     *   - nexs: does not have a single value
      *   - exm: has multiple values
-     *   - nexm: has not multiple values
+     *   - nexm: does not have multiple values
      * Data type
+     *   - dt: has data type (core)
+     *   - ndt: does not have data type (core)
      *   - dtp: has data type
-     *   - ndtp: has not data type
+     *   - ndtp: does not have data type
      *   - tp: has main type
-     *   - ntp: has not main type
+     *   - ntp: does not have main type
      *   - tpl: has type literal-like
-     *   - ntpl: has not type literal-like
+     *   - ntpl: does not have type literal-like
      *   - tpr: has type resource-like
-     *   - ntpr: has not type resource-like
+     *   - ntpr: does not have type resource-like
      *   - tpu: has type uri-like
-     *   - ntpu: has not type uri-like
+     *   - ntpu: does not have type uri-like
      * Curation (duplicates)
      *   Curation duplicate all (values as generic)
      *   - dup: has duplicate values
-     *   - ndup: has not duplicate values
+     *   - ndup: does not have duplicate values
      *   - dupt: has duplicate values and type
-     *   - ndupt: has not duplicate values and type
+     *   - ndupt: does not have duplicate values and type
      *   - dupl: has duplicate values and language
-     *   - ndupl: has not duplicate values and language
+     *   - ndupl: does not have duplicate values and language
      *   - duptl: has duplicate values, type and language
-     *   - nduptl: has not duplicate values, type and language
+     *   - nduptl: does not have duplicate values, type and language
      *   Curation duplicate values (values as strict)
      *   - dupv: has duplicate simple values
-     *   - ndupv: has not duplicate simple values
+     *   - ndupv: does not have duplicate simple values
      *   - dupvt: has duplicate simple values and type
-     *   - ndupvt: has not duplicate simple values and type
+     *   - ndupvt: does not have duplicate simple values and type
      *   - dupvl: has duplicate simple values and language
-     *   - ndupvl: has not duplicate simple values and language
+     *   - ndupvl: does not have duplicate simple values and language
      *   - dupvtl: has duplicate simple values, type and language
-     *   - ndupvtl: has not duplicate simple values, type and language
+     *   - ndupvtl: does not have duplicate simple values, type and language
      *   Curation duplicate linked resources
      *   - dupr: has duplicate linked resources
-     *   - ndupr: has not duplicate linked resources
+     *   - ndupr: does not have duplicate linked resources
      *   - duprt: has duplicate linked resources and type
-     *   - nduprt: has not duplicate linked resources and type
+     *   - nduprt: does not have duplicate linked resources and type
      *   - duprl: has duplicate linked resources and language
-     *   - nduprl: has not duplicate linked resources and language
+     *   - nduprl: does not have duplicate linked resources and language
      *   - duprtl: has duplicate linked resources, type and language
-     *   - nduprtl: has not duplicate linked resources, type and language
+     *   - nduprtl: does not have duplicate linked resources, type and language
      *   Curation duplicate uris
      *   - dupu: has duplicate uris
-     *   - ndupu: has not duplicate uris
+     *   - ndupu: does not have duplicate uris
      *   - duput: has duplicate uris and type
-     *   - nduput: has not duplicate uris and type
+     *   - nduput: does not have duplicate uris and type
      *   - dupul: has duplicate uris and language
-     *   - ndupul: has not duplicate uris and language
+     *   - ndupul: does not have duplicate uris and language
      *   - duputl: has duplicate uris, type and language
-     *   - nduputl: has not duplicate uris, type and language
+     *   - nduputl: does not have duplicate uris, type and language
      *
      * @todo Add specific types to compare date and time (probably useless: alphabetical is enough with formatted date, or use module NumericDataTypes).
      * @todo The multiple types of duplicates are related to the database structure, only first should be needed.
@@ -1641,13 +1965,17 @@ class SearchResources
          * @var string $valuesJoin
          * @var string $where
          * @var array $queryRow
-         * @var array $propertyIds
-         * @var string $queryType
          * @var string $joiner
+         * @var array $propertyIds
+         * @var array|string $except
+         * @var string $queryType
          * @var mixed $value
          * @var string $dataType
+         * @var bool $isFilter
          */
         extract($vars);
+
+        // TODO Normally, the rows are cleaned, so clarify workflow and remove these lastest checks.
 
         /**
          * @see \Doctrine\ORM\QueryBuilder::expr().
@@ -1658,31 +1986,45 @@ class SearchResources
 
         $escapeSqlLike = fn ($string) => str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], (string) $string);
 
+        // Adapted in SearchSolr.
         // Quick check of value.
-        // A empty string "" is not a value, but "0" is a value.
+        // An empty string "" is not a value, but "0" is a value.
         if (in_array($queryType, self::FIELD_QUERY['value_none'], true)) {
             $value = null;
         }
-        // Check array of values.
-        elseif (in_array($queryType, self::FIELD_QUERY['value_array'], true)) {
+        // Check array of values, that are allowed only by filters.
+        elseif (!in_array($queryType, self::FIELD_QUERY['value_single'], true)) {
             if ((is_array($value) && !count($value))
                 || (!is_array($value) && !strlen((string) $value))
             ) {
                 return null;
             }
-            if (!is_array($value)) {
-                $value = [$value];
-            }
-            // To use array_values() avoids doctrine issue with string keys.
-            $value = in_array($queryType, self::FIELD_QUERY['value_integer'])
-                ? array_values(array_unique(array_map('intval', $value)))
-                : array_values(array_unique(array_filter(array_map('trim', array_map('strval', $value)), 'strlen')));
-            if (empty($value)) {
-                return null;
+            if (!in_array($queryType, self::FIELD_QUERY['value_single_array_or_string'])) {
+                if (!is_array($value)) {
+                    $value = [$value];
+                }
+                // Normalize as array of integers or strings for next process.
+                // To use array_values() avoids doctrine issue with string keys.
+                if (in_array($queryType, self::FIELD_QUERY['value_integer'])) {
+                    $value = array_values(array_unique(array_map('intval', array_filter($value, fn ($v) => is_numeric($v) && $v == (int) $v))));
+                } elseif (in_array($queryType, ['<', '≤', '≥', '>'])) {
+                    // Casting to float is complex and rarely used, so only integer.
+                    $value = array_values(array_unique(array_map(fn ($v) => is_numeric($v) && $v == (int) $v ? (int) $v : $v, $value)));
+                    // When there is at least one string, set all values as
+                    // string for doctrine.
+                    if (count(array_filter($value, 'is_int')) !== count($value)) {
+                        $value = array_map('strval', $value);
+                    }
+                } else {
+                    $value = array_values(array_unique(array_filter(array_map('trim', array_map('strval', $value)), 'strlen')));
+                }
+                if (empty($value)) {
+                    return null;
+                }
             }
         }
-        // The value should be scalar in all other cases (int or string).
-        elseif (is_array($value)) {
+        // The value should be scalar in all other cases (integer or string).
+        elseif (is_array($value) || $value === '') {
             return null;
         } else {
             $value = trim((string) $value);
@@ -1690,7 +2032,7 @@ class SearchResources
                 return null;
             }
             if (in_array($queryType, self::FIELD_QUERY['value_integer'])) {
-                if (!is_numeric($value)) {
+                if (!is_numeric($value) || $value != (int) $value) {
                     return null;
                 }
                 $value = (int) $value;
@@ -1698,10 +2040,15 @@ class SearchResources
                 // The types "integer" and "string" are automatically
                 // infered from the php type.
                 // Warning: "float" is managed like string in mysql via pdo.
-                if (is_numeric($value)) {
-                    $int = (int) $value;
-                    $value = $int == $value ? $int : $value;
+                if (is_numeric($value) && $value == (int) $value) {
+                    $value = (int) $value;
                 }
+            }
+            // Convert single values into array except if array isn't supported.
+            if (!in_array($queryType, self::FIELD_QUERY['value_single_array_or_string'], true)
+                && !in_array($queryType, self::FIELD_QUERY['value_single'], true)
+            ) {
+                $value = [$value];
             }
         }
 
@@ -1739,6 +2086,7 @@ class SearchResources
         // Note: a list of "or" with the same property should be optimized
         // early with type "list".
         // TODO Optimize early search type "or" with same properties and type.
+        // TODO Remove this optimization since it is done during cleaning and value array building.
 
         // Consecutive OR optimization
         //
@@ -1770,193 +2118,280 @@ class SearchResources
 
         switch ($queryType) {
             case 'eq':
-                $param = $this->adapter->createNamedParameter($qb, $value);
+            case 'list':
                 $subqueryAlias = $this->adapter->createAlias();
                 $subquery = $entityManager
                     ->createQueryBuilder()
                     ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias)
-                    ->where($expr->eq("$subqueryAlias.title", $param));
-                $predicateExpr = $expr->orX(
-                    $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
-                    $expr->eq("$valuesAlias.value", $param),
-                    $expr->eq("$valuesAlias.uri", $param)
-                );
+                    ->from('Omeka\Entity\Resource', $subqueryAlias);
+                if (count($value) <= 1) {
+                    $value = reset($value);
+                    $param = $this->adapter->createNamedParameter($qb, $value);
+                    $subquery
+                        ->where($expr->eq("$subqueryAlias.title", $param));
+                    $predicateExpr = $expr->orX(
+                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                        $expr->eq("$valuesAlias.value", $param),
+                        $expr->eq("$valuesAlias.uri", $param)
+                    );
+                } else {
+                    $param = $this->adapter->createNamedParameter($qb, $value);
+                    $qb->setParameter(substr($param, 1), $value, Connection::PARAM_STR_ARRAY);
+                    $subquery
+                        ->where($expr->in("$subqueryAlias.title", $param));
+                    $predicateExpr = $expr->orX(
+                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                        $expr->in("$valuesAlias.value", $param),
+                        $expr->in("$valuesAlias.uri", $param)
+                    );
+                }
                 break;
 
             case 'in':
-                $param = $this->adapter->createNamedParameter($qb, '%' . $escapeSqlLike($value) . '%');
                 $subqueryAlias = $this->adapter->createAlias();
                 $subquery = $entityManager
                     ->createQueryBuilder()
                     ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias)
-                    ->where($expr->like("$subqueryAlias.title", $param));
-                $predicateExpr = $expr->orX(
-                    $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
-                    $expr->like("$valuesAlias.value", $param),
-                    $expr->like("$valuesAlias.uri", $param)
-                );
-                break;
-
-            case 'list':
-                $param = $this->adapter->createNamedParameter($qb, $value);
-                $qb->setParameter(substr($param, 1), $value, Connection::PARAM_STR_ARRAY);
-                $subqueryAlias = $this->adapter->createAlias();
-                $subquery = $entityManager
-                    ->createQueryBuilder()
-                    ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias)
-                    ->where($expr->in("$subqueryAlias.title", $param));
-                $predicateExpr = $expr->orX(
-                    $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
-                    $expr->in("$valuesAlias.value", $param),
-                    $expr->in("$valuesAlias.uri", $param)
-                );
+                    ->from('Omeka\Entity\Resource', $subqueryAlias);
+                $sub = [];
+                foreach ($value as $val) {
+                    $param = $this->adapter->createNamedParameter($qb, '%' . $escapeSqlLike($val) . '%');
+                    $subquery
+                        ->where($expr->like("$subqueryAlias.title", $param));
+                    $sub[] = $expr->orX(
+                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                        $expr->like("$valuesAlias.value", $param),
+                        $expr->like("$valuesAlias.uri", $param)
+                    );
+                }
+                $predicateExpr = count($value) <= 1
+                    ? reset($sub)
+                    : $expr->orX(...$sub);
                 break;
 
             case 'sw':
-                $param = $this->adapter->createNamedParameter($qb, $escapeSqlLike($value) . '%');
                 $subqueryAlias = $this->adapter->createAlias();
                 $subquery = $entityManager
                     ->createQueryBuilder()
                     ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias)
-                    ->where($expr->like("$subqueryAlias.title", $param));
-                $predicateExpr = $expr->orX(
-                    $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
-                    $expr->like("$valuesAlias.value", $param),
-                    $expr->like("$valuesAlias.uri", $param)
-                );
+                    ->from('Omeka\Entity\Resource', $subqueryAlias);
+                $sub = [];
+                foreach ($value as $val) {
+                    $param = $this->adapter->createNamedParameter($qb, $escapeSqlLike($value) . '%');
+                    $subquery
+                        ->where($expr->like("$subqueryAlias.title", $param));
+                    $sub[] = $expr->orX(
+                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                        $expr->like("$valuesAlias.value", $param),
+                        $expr->like("$valuesAlias.uri", $param)
+                    );
+                }
+                $predicateExpr = count($value) <= 1
+                    ? reset($sub)
+                    : $expr->orX(...$sub);
                 break;
 
             case 'ew':
-                $param = $this->adapter->createNamedParameter($qb, '%' . $escapeSqlLike($value));
                 $subqueryAlias = $this->adapter->createAlias();
                 $subquery = $entityManager
                     ->createQueryBuilder()
                     ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias)
-                    ->where($expr->like("$subqueryAlias.title", $param));
-                $predicateExpr = $expr->orX(
-                    $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
-                    $expr->like("$valuesAlias.value", $param),
-                    $expr->like("$valuesAlias.uri", $param)
-                );
+                    ->from('Omeka\Entity\Resource', $subqueryAlias);
+                $sub = [];
+                foreach ($value as $val) {
+                    $param = $this->adapter->createNamedParameter($qb, '%' . $escapeSqlLike($value));
+                    $subquery
+                        ->where($expr->like("$subqueryAlias.title", $param));
+                    $sub[]= $expr->orX(
+                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                        $expr->like("$valuesAlias.value", $param),
+                        $expr->like("$valuesAlias.uri", $param)
+                    );
+                }
+                $predicateExpr = count($value) <= 1
+                    ? reset($sub)
+                    : $expr->orX(...$sub);
                 break;
 
             case 'near':
-                // The mysql soundex() is not standard, because it returns
-                // more than four characters, so the comparaison cannot be
-                // done with a static value from the php soundex() function.
-                $param = $this->adapter->createNamedParameter($qb, $value);
+                // The mysql soundex() is not standard, because it returns more
+                // than four characters, so the comparaison cannot be done with
+                // a static value from the php soundex() function.
                 $subqueryAlias = $this->adapter->createAlias();
                 $subquery = $entityManager
                     ->createQueryBuilder()
                     ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias)
-                    ->where($expr->eq("SOUNDEX($subqueryAlias.title)", "SOUNDEX($param)"));
-                $predicateExpr = $expr->orX(
-                    $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
-                    $expr->eq("SOUNDEX($valuesAlias.value)", "SOUNDEX($param)")/*,
-                    // A soundex on a uri has no meaning.
-                    $expr->eq("SOUNDEX($valuesAlias.uri)", "SOUNDEX($param)")
-                    */
-                );
+                    ->from('Omeka\Entity\Resource', $subqueryAlias);
+                $sub = [];
+                foreach ($value as $val) {
+                    $param = $this->adapter->createNamedParameter($qb, $value);
+                    $subquery
+                        ->where($expr->eq("SOUNDEX($subqueryAlias.title)", "SOUNDEX($param)"));
+                    $sub[] = $expr->orX(
+                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                        $expr->eq("SOUNDEX($valuesAlias.value)", "SOUNDEX($param)") /*,
+                        // A soundex on a uri has no meaning.
+                        $expr->eq("SOUNDEX($valuesAlias.uri)", "SOUNDEX($param)")
+                        */
+                    );
+                }
+                $predicateExpr = count($value) <= 1
+                    ? reset($sub)
+                    : $expr->orX(...$sub);
                 break;
 
             case 'ma':
-                // The doctrine dql requires "true" and will be converted to
-                // a standard mysql query.
-                $param = $this->adapter->createNamedParameter($qb, $value);
+                // The doctrine dql requires "TRUE" and will be converted to a
+                // standard mysql query.
                 $subqueryAlias = $this->adapter->createAlias();
                 $subquery = $entityManager
                     ->createQueryBuilder()
                     ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias)
-                    ->where("REGEXP($subqueryAlias.title, $param) = TRUE");
-                $predicateExpr = $expr->orX(
-                    $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
-                    "REGEXP($valuesAlias.value, $param) = TRUE",
-                    "REGEXP($valuesAlias.uri, $param) = TRUE"
-                );
+                    ->from('Omeka\Entity\Resource', $subqueryAlias);
+                $sub = [];
+                foreach ($value as $val) {
+                    $subquery
+                        ->where("REGEXP($subqueryAlias.title, $param) = TRUE");
+                    $param = $this->adapter->createNamedParameter($qb, $value);
+                    $sub[] = $expr->orX(
+                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                        "REGEXP($valuesAlias.value, $param) = TRUE",
+                        "REGEXP($valuesAlias.uri, $param) = TRUE"
+                    );
+                }
+                $predicateExpr = count($value) <= 1
+                    ? reset($sub)
+                    : $expr->orX(...$sub);
                 break;
 
-            // TODO Manage uri and resources with lt, lte, gte, gt (it has a meaning at least for resource ids, but separate).
             case 'lt':
-                $predicateExpr = $expr->lt(
-                    "$valuesAlias.value",
-                    $this->adapter->createNamedParameter($qb, $value)
-                );
-                break;
             case 'lte':
-                $predicateExpr = $expr->lte(
-                    "$valuesAlias.value",
-                    $this->adapter->createNamedParameter($qb, $value)
-                );
-                break;
             case 'gte':
-                $predicateExpr = $expr->gte(
-                    "$valuesAlias.value",
-                    $this->adapter->createNamedParameter($qb, $value)
-                );
-                break;
             case 'gt':
-                $predicateExpr = $expr->gt(
-                    "$valuesAlias.value",
-                    $this->adapter->createNamedParameter($qb, $value)
-                );
+                // With a list of lt/lte/gte/gt, get the right value first in order
+                // to avoid multiple sql conditions.
+                // But the language cannot be determined: language of the site? of
+                // the data? of the user who does query?
+                // Practically, mysql/mariadb sort with generic unicode rules by
+                // default, so use a generic sort.
+                /** @see https://www.unicode.org/reports/tr10/ */
+                if (count($value) > 1) {
+                    if (extension_loaded('intl')) {
+                        $col = new \Collator('root');
+                        $col->sort($value);
+                    } else {
+                        natcasesort($value);
+                    }
+                }
+                // TODO Manage uri and resources with lt, lte, gte, gt (it has a meaning at least for resource ids, but separate).
+                if ($queryType === 'lt') {
+                    $value = reset($value);
+                    $predicateExpr = $expr->lt(
+                        "$valuesAlias.value",
+                        $this->adapter->createNamedParameter($qb, $value)
+                    );
+                } elseif ($queryType === 'lte') {
+                    $value = reset($value);
+                    $predicateExpr = $expr->lte(
+                        "$valuesAlias.value",
+                        $this->adapter->createNamedParameter($qb, $value)
+                    );
+                } elseif ($queryType === 'gte') {
+                    $value = array_pop($value);
+                    $predicateExpr = $expr->gte(
+                        "$valuesAlias.value",
+                        $this->adapter->createNamedParameter($qb, $value)
+                    );
+                } elseif ($queryType === 'gt') {
+                    $value = array_pop($value);
+                    $predicateExpr = $expr->gt(
+                        "$valuesAlias.value",
+                        $this->adapter->createNamedParameter($qb, $value)
+                    );
+                }
                 break;
 
             case '<':
+            case '≤':
+                // The values are already cleaned.
+                $first = reset($value);
+                if (count($value) > 1) {
+                    if (is_int($first)) {
+                        $value = min($value);
+                    } else {
+                        extension_loaded('intl') ? (new \Collator('root'))->sort($value, \Collator::SORT_NUMERIC) : sort($value);
+                        $value = reset($value);
+                    }
+                } else {
+                    $value = $first;
+                }
                 // Use adapter method in order to increment internal index.
                 $param = $this->adapter->createNamedParameter($qb, $value);
                 $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
-                $predicateExpr = $expr->lt("$valuesAlias.value", $param);
-                break;
-            case '≤':
-                $param = $this->adapter->createNamedParameter($qb, $value);
-                $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
-                $predicateExpr = $expr->lte("$valuesAlias.value", $param);
+                $predicateExpr = $queryType === '<'
+                    ? $expr->lt("$valuesAlias.value", $param)
+                    : $expr->lte("$valuesAlias.value", $param);
                 break;
             case '≥':
-                $param = $this->adapter->createNamedParameter($qb, $value);
-                $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
-                $predicateExpr = $expr->gte("$valuesAlias.value", $param);
-                break;
             case '>':
+                $first = reset($value);
+                if (count($value) > 1) {
+                    if (is_int($first)) {
+                        $value = max($value);
+                    } else {
+                        extension_loaded('intl') ? (new \Collator('root'))->sort($value, \Collator::SORT_NUMERIC) : sort($value);
+                        $value = array_pop($value);
+                    }
+                } else {
+                    $value = $first;
+                }
                 $param = $this->adapter->createNamedParameter($qb, $value);
                 $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
-                $predicateExpr = $expr->gt("$valuesAlias.value", $param);
+                $predicateExpr = $queryType === '>'
+                    ? $expr->gt("$valuesAlias.value", $param)
+                    : $expr->gte("$valuesAlias.value", $param);
                 break;
 
             case 'yreq':
                 // The casting to integer is the simplest way to get the year:
                 // it avoids multiple substring_index, replace, etc. and it
                 // works fine in most of the real cases, except when the date
-                // does not look like a standard date.
-                $param = $this->adapter->createNamedParameter($qb, $value);
-                $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
-                $predicateExpr = $expr->eq("$valuesAlias.value + 0", $param);
+                // does not look like a standard date, but normally it is
+                // checked earlier.
+                // Values are already casted to int.
+                if (count($value) <= 1) {
+                    $value = reset($value);
+                    $param = $this->adapter->createNamedParameter($qb, $value);
+                    $qb->setParameter(substr($param, 1), $value, ParameterType::INTEGER);
+                    $predicateExpr = $expr->eq("$valuesAlias.value + 0", $param);
+                } else {
+                    $param = $this->adapter->createNamedParameter($qb, $value);
+                    $qb->setParameter(substr($param, 1), $value, Connection::PARAM_INT_ARRAY);
+                    $predicateExpr = $expr->in("$valuesAlias.value + 0", $param);
+                }
                 break;
             case 'yrlt':
+                $value = min($value);
                 $param = $this->adapter->createNamedParameter($qb, $value);
-                $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
+                $qb->setParameter(substr($param, 1), $value, ParameterType::INTEGER);
                 $predicateExpr = $expr->lt("$valuesAlias.value + 0", $param);
                 break;
             case 'yrlte':
+                $value = min($value);
                 $param = $this->adapter->createNamedParameter($qb, $value);
-                $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
+                $qb->setParameter(substr($param, 1), $value, ParameterType::INTEGER);
                 $predicateExpr = $expr->lte("$valuesAlias.value + 0", $param);
                 break;
             case 'yrgte':
+                $value = max($value);
                 $param = $this->adapter->createNamedParameter($qb, $value);
-                $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
+                $qb->setParameter(substr($param, 1), $value, ParameterType::INTEGER);
                 $predicateExpr = $expr->gte("$valuesAlias.value + 0", $param);
                 break;
             case 'yrgt':
+                $value = max($value);
                 $param = $this->adapter->createNamedParameter($qb, $value);
-                $qb->setParameter(substr($param, 1), $value, is_int($value) ? ParameterType::INTEGER : ParameterType::STRING);
+                $qb->setParameter(substr($param, 1), $value, ParameterType::INTEGER);
                 $predicateExpr = $expr->gt("$valuesAlias.value + 0", $param);
                 break;
 
@@ -1973,9 +2408,10 @@ class SearchResources
 
             case 'resq':
                 // TODO For now, only one sub-query (and the sub-query may be a complex one and it is largely enough in most of the cases).
-                // TODO Allow to pass an array instead of encoded url args (but it is cleaned above).
-                // $value = is_numeric(key($value)) ? reset($value) : $value;
-                $value = reset($value);
+                // TODO Allow to pass an array instead of encoded url args (but it is cleaned above). See 'lkq' too.
+                if (is_array($value) && is_numeric(key($value))) {
+                    $value = reset($value);
+                }
                 if (!is_array($value)) {
                     $aValue = null;
                     parse_str($value, $aValue);
@@ -2040,7 +2476,9 @@ class SearchResources
                     }
                 } elseif (in_array($queryType, ['lkq', 'nlkq'])) {
                     // Only a single level: see above "resq"/"nresq".
-                    $value = reset($value);
+                    if (is_array($value) && is_numeric(key($value))) {
+                        $value = reset($value);
+                    }
                     if (!is_array($value)) {
                         $aValue = null;
                         parse_str($value, $aValue);
@@ -2114,6 +2552,7 @@ class SearchResources
                 );
                 break;
 
+            case 'dt':
             case 'dtp':
                 if (count($value) <= 1) {
                     $dataTypeAlias = $this->adapter->createNamedParameter($qb, reset($value));
@@ -2232,9 +2671,9 @@ class SearchResources
             }
         } else {
             // TODO What if a property is ""?
-            $excludePropertyIds = $propertyIds || empty($queryRow['except'])
+            $excludePropertyIds = $propertyIds || empty($except)
                 ? false
-                : array_values(array_unique($this->easyMeta->propertyIds($queryRow['except'])));
+                : array_values(array_unique($this->easyMeta->propertyIds($except)));
             // Use standard query if nothing to exclude, else limit search.
             if ($excludePropertyIds) {
                 // The aim is to search anywhere except ocr content.
@@ -2319,7 +2758,7 @@ class SearchResources
     }
 
     /**
-     * Build query on date time (created/modified), partial date/time allowed.
+     * Build query on created/modified date time with partial date/time allowed.
      *
      * The query format is inspired by Doctrine and properties.
      *
@@ -2328,12 +2767,12 @@ class SearchResources
      * - datetime[{index}][join]: "and" OR "or" joiner with previous query
      * - datetime[{index}][field]: the field "created" or "modified"
      * - datetime[{index}][type]: search type
-     *   - lt: lower than (before)
-     *   - lte: lower than or equal
-     *   - eq: is exactly
-     *   - neq: is not exactly
-     *   - gte: greater than or equal
-     *   - gt: greater than (after)
+     *   - < / lt: lower than (before)
+     *   - ≤ / lte: lower than or equal
+     *   - = / eq: is exactly
+     *   - ≠ / neq: is not exactly
+     *   - ≥ / gte: greater than or equal
+     *   - > / gt: greater than (after)
      *   - ex: has any value
      *   - nex: has no value
      * - datetime[{index}][val]: search date time (sql format: "2017-11-07 17:21:17",
@@ -2352,35 +2791,57 @@ class SearchResources
         $where = '';
         $expr = $qb->expr();
 
+        $dateTimeQueryTypes = [
+            '<' => '<',
+            'lt' => '<',
+            '≤' => '≤',
+            'lte' => '≤',
+            '=' => '=',
+            'eq' => '=',
+            '≠' => '≠',
+            'neq' => '≠',
+            '≥' => '≥',
+            'gte' => '≥',
+            '>' => '>',
+            'gt' => '>',
+            'ex' => 'ex',
+            'nex' => 'nex',
+        ];
+
         foreach ($query['datetime'] as $queryRow) {
+            $type = $queryRow['type'] ?? null;
+            if (!isset($dateTimeQueryTypes[$type])) {
+                continue;
+            }
+
+            $type = $dateTimeQueryTypes[$type];
             $joiner = $queryRow['join'] ?? null;
             $field = $queryRow['field'] ?? null;
-            $type = $queryRow['type'] ?? null;
             $value = $queryRow['val'] ?? null;
             $incorrectValue = false;
 
             // By default, sql replace missing time by 00:00:00, but this is not
             // clear for the user. And it doesn't allow partial date/time.
             switch ($type) {
-                case 'gt':
-                    $valueNorm = $this->getDateTimeFromValue($value, false) ?? $this->getDateTimeViaAnyString($value);
-                    if ($valueNorm === null) {
-                        $incorrectValue = true;
-                    } else {
-                        $param = $this->adapter->createNamedParameter($qb, $valueNorm);
-                        $predicateExpr = $expr->gt('omeka_root.' . $field, $param);
-                    }
-                    break;
-                case 'gte':
+                case '<':
                     $valueNorm = $this->getDateTimeFromValue($value, true) ?? $this->getDateTimeViaAnyString($value);
                     if ($valueNorm === null) {
                         $incorrectValue = true;
                     } else {
                         $param = $this->adapter->createNamedParameter($qb, $valueNorm);
-                        $predicateExpr = $expr->gte('omeka_root.' . $field, $param);
+                        $predicateExpr = $expr->lt('omeka_root.' . $field, $param);
                     }
                     break;
-                case 'eq':
+                case '≤':
+                    $valueNorm = $this->getDateTimeFromValue($value, false) ?? $this->getDateTimeViaAnyString($value);
+                    if ($valueNorm === null) {
+                        $incorrectValue = true;
+                    } else {
+                        $param = $this->adapter->createNamedParameter($qb, $valueNorm);
+                        $predicateExpr = $expr->lte('omeka_root.' . $field, $param);
+                    }
+                    break;
+                case '=':
                     $valueFromNorm = $this->getDateTimeFromValue($value, true) ?? $this->getDateTimeViaAnyString($value);
                     $valueToNorm = $this->getDateTimeFromValue($value, false) ?? $this->getDateTimeViaAnyString($value);
                     if ($valueFromNorm === null || $valueToNorm === null) {
@@ -2396,7 +2857,7 @@ class SearchResources
                         }
                     }
                     break;
-                case 'neq':
+                case '≠':
                     $valueFromNorm = $this->getDateTimeFromValue($value, true) ?? $this->getDateTimeViaAnyString($value);
                     $valueToNorm = $this->getDateTimeFromValue($value, false) ?? $this->getDateTimeViaAnyString($value);
                     if ($valueFromNorm === null || $valueToNorm === null) {
@@ -2414,22 +2875,22 @@ class SearchResources
                         }
                     }
                     break;
-                case 'lte':
-                    $valueNorm = $this->getDateTimeFromValue($value, false) ?? $this->getDateTimeViaAnyString($value);
-                    if ($valueNorm === null) {
-                        $incorrectValue = true;
-                    } else {
-                        $param = $this->adapter->createNamedParameter($qb, $valueNorm);
-                        $predicateExpr = $expr->lte('omeka_root.' . $field, $param);
-                    }
-                    break;
-                case 'lt':
+                case '≥':
                     $valueNorm = $this->getDateTimeFromValue($value, true) ?? $this->getDateTimeViaAnyString($value);
                     if ($valueNorm === null) {
                         $incorrectValue = true;
                     } else {
                         $param = $this->adapter->createNamedParameter($qb, $valueNorm);
-                        $predicateExpr = $expr->lt('omeka_root.' . $field, $param);
+                        $predicateExpr = $expr->gte('omeka_root.' . $field, $param);
+                    }
+                    break;
+                case '>':
+                    $valueNorm = $this->getDateTimeFromValue($value, false) ?? $this->getDateTimeViaAnyString($value);
+                    if ($valueNorm === null) {
+                        $incorrectValue = true;
+                    } else {
+                        $param = $this->adapter->createNamedParameter($qb, $valueNorm);
+                        $predicateExpr = $expr->gt('omeka_root.' . $field, $param);
                     }
                     break;
                 case 'ex':
@@ -2461,6 +2922,127 @@ class SearchResources
 
         if ($where) {
             $qb->andWhere($where);
+        }
+
+        return $this;
+    }
+
+    protected function sortQuery(QueryBuilder $qb, array $query): self
+    {
+        // Order by is the last part or a sql query.
+        // Sort by listed id.
+        // The list is the one set in key "sort_ids" or in main query key "id".
+        // The sort order is "desc" for resource/browse (see plugin SetBrowseDefault::__invoke())
+        // and as "asc" in api (see AbstractEntityAdapter::buildQuery()).
+        if (isset($query['sort_by'])
+            && $query['sort_by'] === 'ids'
+            && (!empty($query['sort_ids']) || !empty($query['id']))
+        ) {
+            $expr = $qb->expr();
+            /** @see \Omeka\Api\Adapter\AbstractEntityAdapter::buildBaseQuery() */
+            // Avoid a strict type issue, so convert ids as string.
+            // Normally, the query is cleaned before.
+            $ids = empty($query['sort_ids']) ? $query['id'] : $query['sort_ids'];
+            if (is_int($ids)) {
+                $ids = [(string) $ids];
+            } elseif (is_string($ids)) {
+                $ids = strpos($ids, ',') === false ? [$ids] : explode(',', $ids);
+            } elseif (!is_array($ids)) {
+                $ids = [];
+            }
+            $ids = array_map('trim', $ids);
+            $ids = array_filter($ids, 'strlen');
+            if ($ids) {
+                $idsAlias = $this->adapter->createAlias();
+                $idsPlaceholder = ':' . $idsAlias;
+                $qb
+                    ->setParameter($idsAlias, $ids, Connection::PARAM_INT_ARRAY)
+                    ->addOrderBy("FIELD(omeka_root.id, $idsPlaceholder)", $query['sort_order'])
+                    // In AbstractEntityAdapter::search(), the countQb is a
+                    // clone of this qb that removes the orderBy part, but not
+                    // the parameters associated to it. So a fake argument Where
+                    // is added , to avoid a doctrine issue.
+                    // TODO Patch omeka: get the dql part orderBy, get the parameter associated to it, check if is used somewhere before removing it.
+                    ->andWhere($expr->in(
+                        $this->adapter->createNamedParameter($qb, reset($ids)),
+                        $idsPlaceholder
+                    ));
+            }
+        } elseif (isset($query['sort_by'])
+            // The event "api.search.query.finalize is skipped In scalar search,
+            // so pass it here.
+            /** @see \Omeka\Module::searchFullText() */
+            && isset($query['fulltext_search'])
+            && in_array($query['sort_by'], ['relevance', 'relevance desc', 'relevance asc'])
+            && !in_array(trim($query['fulltext_search']), ['', '*'], true)
+        ) {
+            // The order is slightly different from the standard one, because
+            // an order by id desc is appended automatically, so all results
+            // with the same score are sorted by id desc and not randomly.
+            // Don't use "`" here for doctrine.
+            $matchOrder = 'MATCH(omeka_fulltext_search.title, omeka_fulltext_search.text) AGAINST (:omeka_fulltext_search)';
+            $sortOrder = $query['sort_by'] === 'relevance asc' ? 'ASC' : 'DESC';
+            $qb
+                // The hidden select and "group by" avoids issue with mysql mode "only_full_group_by".
+                // But the select is not available when returning scalar ids.
+                // And to add it in AbstractEntityAdapter does not help, because
+                // the paginator requires a total count and remove all select
+                // to get it.
+                // ->addSelect($matchOrder . ' AS HIDDEN orderMatch')
+                // ->addGroupBy('orderMatch')
+                // So add a hidden select and remove order before count, but
+                // directly in the adapter.
+                // When requesting scalar results, the fix is included via a
+                // later event, awaiting integration of fix omeka/omeka-s#2224.
+                ->addOrderBy($matchOrder, $sortOrder);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Build query to check data of empty item sets for items.
+     */
+    protected function searchItemItemSets(QueryBuilder $qb, array $query): self
+    {
+        if ($this->adapter instanceof ItemAdapter
+            && isset($query['item_set_id'])
+            && $query['item_set_id'] !== ''
+            && $query['item_set_id'] !== []
+        ) {
+            $expr = $qb->expr();
+            $itemSetIds = is_array($query['item_set_id'])
+                ? array_values($query['item_set_id'])
+                : [$query['item_set_id']];
+            $itemSetAlias = $this->adapter->createAlias();
+            if (array_values($itemSetIds) === [0]) {
+                $qb
+                    ->leftJoin(
+                        'omeka_root.itemSets',
+                        $itemSetAlias
+                        )
+                    ->andWhere($expr->isNull("$itemSetAlias.id"));
+            } elseif (in_array(0, $itemSetIds, true)) {
+                $qb
+                    ->leftJoin(
+                        'omeka_root.itemSets',
+                        $itemSetAlias
+                    )
+                    ->andWhere($expr->orX(
+                        $expr->isNull("$itemSetAlias.id"),
+                        $expr->in(
+                            "$itemSetAlias.id",
+                            $this->adapter->createNamedParameter($qb, $itemSetIds)
+                        )
+                    ));
+            } else {
+                $qb
+                    ->innerJoin(
+                        'omeka_root.itemSets',
+                        $itemSetAlias, Join::WITH,
+                        $expr->in("$itemSetAlias.id", $this->adapter->createNamedParameter($qb, $itemSetIds))
+                    );
+            }
         }
 
         return $this;
@@ -2572,7 +3154,7 @@ class SearchResources
     }
 
     /**
-     * Build query to check by media types.
+     * Build query to check by multiple media types.
      */
     protected function searchByMediaType(QueryBuilder $qb, array $query): self
     {
@@ -2723,8 +3305,13 @@ class SearchResources
     {
         $yearMin = -292277022656;
         $yearMax = 292277026595;
-        $patternIso8601 = '^(?<date>(?<year>-?\d{1,})(-(?<month>\d{1,2}))?(-(?<day>\d{1,2}))?)(?<time>((?:T| )(?<hour>\d{1,2}))?(:(?<minute>\d{1,2}))?(:(?<second>\d{1,2}))?)(?<offset>((?<offset_hour>[+-]\d{1,2})?(:(?<offset_minute>\d{1,2}))?)|Z?)$';
+        $patternIso8601 = '^(?<date>(?<year>-?\d{1,})(-(?<month>\d{1,2}))?(-(?<day>\d{1,2}))?)(?<time>((?:T| )(?<hour>\d{1,2}))?(:(?<minute>\d{1,2}))?(:(?<second>\d{1,2}))?)(?<offset>((?<offset_hour>[+-]\d{1,2})?(:?(?<offset_minute>\d{1,2}))?)|Z?)$';
+
         static $dateTimes = [];
+
+        if (!$value) {
+            return null;
+        }
 
         $firstOrLast = $defaultFirst ? 'first' : 'last';
         if (array_key_exists($value, $dateTimes) && array_key_exists($firstOrLast, $dateTimes[$value])) {

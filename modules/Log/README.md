@@ -16,12 +16,18 @@ to send an email when a critical error occurs.
 The logs are [PSR-3] compliant: they can managed by any other tool that respects
 this standard (see below). They can be translated too.
 
+The error monitoring service [Sentry] is now available as a separate module [Log Sentry].
+It allows to log end user errors and to profile and to trace exceptions,
+allowing to find issues hard to reproduce quicker.
+
 
 Installation
 ------------
 
 The module uses an external library, [webui-popover], so use the release zip
 to install it, or use and init the source.
+
+This module requires the module [Common], that should be installed first.
 
 See general end user documentation for [installing a module].
 
@@ -42,12 +48,20 @@ composer install --no-dev
 If an issue appears after upgrade of Omeka, don’t forget to update the packages
 of Omeka: `rm -rf vendor && composer install --no-dev`.
 
+* Server with php 8.2 or greater
+
+To support php 8.2 or greate, run this command first:
+
+```sh
+composer update
+```
+
 
 Config
 ------
 
-The config is a pure Laminas log config: see the [Laminas Framework Log] documentation
-for the format. Only common settings are explained here.
+The config is a pure Laminas log config: see the [Laminas Framework Log]
+documentation for the format. Only common settings are explained here.
 
 To enable or disable an option or a writer, it is recommended to copy the wanted
 keys inside your own `config/local.config.php`, so the maintenance will be
@@ -149,8 +163,8 @@ logger, add the options, at your choice:
     ],
 ```
 
-Note that this will disable the default error logging of php and debug tools, so
-if you want to keep it, add a writer for it.
+Note that **this will disable the default error logging of php and debug tools**,
+so if you want to keep it, add a writer for it.
 
 Furthermore, they are managed automatically for background jobs.
 
@@ -172,8 +186,18 @@ host     = ""
 ;driver   =
 ```
 
+Extended options are supported via keys `driverOptions[xxx]`, in particular
+when the ssl option is on:
+
+```ini
+driverOptions[1014] = 0
+driverOptions[1009] = "/path/to/domain.certificate.cer"
+```
+
+Here, `1014` is `PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT` and `1009` is `PDO::MYSQL_ATTR_SSL_CA`.
+
 Note that when the logs are logged externally, the admin interface cannot be
-used.
+used for now.
 
 ### Additionnal logging
 
@@ -183,117 +207,45 @@ documentation for the format of the config.
 
 ### Sentry
 
-[Sentry] is an error tracking service. It should be installed in a particular
-way, following these steps, from the root of Omeka S:
+Install module [Log Sentry] and update the config.
 
-- Sentry requires the library `php-curl`, that should be enabled on the server.
-- Sentry should be installed via composer in the root of Omeka.
-- Include the library:
+**Warning**: the free Sentry subscription plan is limited to 5000 errors or
+exceptions by month.
 
-```bash
-# Note: Omeka uses composer version 1, so you may have to download it.
-composer require facile-it/sentry-module php-http/curl-client laminas/laminas-diactoros
+### Delete old logs
+
+When the table is growing too much, it's time to clear them. It can be done with
+a task of the module [Easy Admin] or via these SQL queries:
+
+```sql
+# To delete all messages lower or equal to info:
+DELETE FROM `log`
+WHERE `severity` <= 6;
+
+# To delete only duplicate messages:
+DELETE FROM `log`
+WHERE `message` IN (select message from (SELECT message FROM log GROUP BY message ORDER BY COUNT(id) DESC limit 12) as s);
 ```
-
-- The psr formatter `facile-it/sentry-psr-log` may be added too (need config).
-- Copy the default config file (see // https://github.com/facile-it/sentry-module#client),
-  and set your Sentry dsn:
-
-```sh
-cp modules/Log/config/sentry.config.local.php.dist config/sentry.config.local.php
-sed -i -r "s|'dsn' => '',|'dsn' => 'https://abcdefabcdefabcdefabcdefabcdefab@sentry.io/1234567',|" config/sentry.config.local.php
-```
-
-In the file `application/config/application.config.php`, add the module
-`Facile\SentryModule` as the last module, plus the config file as new config_glob_paths
-of module_listener_options:
-
-```php
-return [
-    'modules' => [
-        'Laminas\Form',
-        'Laminas\I18n',
-        'Laminas\Mvc\I18n',
-        'Laminas\Mvc\Plugin\Identity',
-        'Laminas\Navigation',
-        'Laminas\Router',
-        'Omeka',
-        'Facile\SentryModule',
-    ],
-    'module_listener_options' => [
-        'module_paths' => [
-            'Omeka' => OMEKA_PATH . '/application',
-            OMEKA_PATH . '/modules',
-        ],
-        'config_glob_paths' => [
-            OMEKA_PATH . '/config/local.config.php',
-            OMEKA_PATH . '/config/sentry.config.local.php',
-        ],
-    […]
-```
-
-Finally, enable Sentry via your `config/local.config.php`:
-
-```php
-        'writers' => [
-            'sentry' => true,
-        ],
-```
-
-That's all!
-
 
 PSR-3 and logging
 -----------------
 
-### PSR-3
+With [PSR-3], the message uses placeholders that are not in C-style of the
+function `sprintf` (`%s`, `%d`, etc.), but in moustache-style, identified with
+`{` and `}`, without spaces.
 
-The PHP Framework Interop Group ([PHP-FIG]) represents the majority of php
-frameworks, in particular all main CMS.
-
-[PSR-3] means that the message and its context may be separated in the logs, so
-they can be translated and managed by any other compliant tools. This is useful
-in particular when an external database is used to store logs.
-
-The message uses placeholders that are not in C-style of the function `sprintf`
-(`%s`, `%d`, etc.), but in moustache-style, identified with `{` and `}`, without
-spaces.
-
-So, instead of logging like this:
-
-```php
-// Classic logging (not translatable).
-$this->logger()->info(sprintf($message, ...$args));
-$this->logger()->info(sprintf('The %s #%d has been updated.', 'item', 43));
-// output: The item #43 has been updated.
-```
-
-a PSR-3 standard log is:
-
-```php
-// PSR-3 logging.
-$this->logger()->info($message, $context);
-$this->logger()->info(
-    'The {resource} #{id} has been updated.', // @translate
-    ['resource' => 'item', 'id' => 43]
-);
-// output: The item #43 has been updated.
-```
-
-If an Exception object is passed in the context data, it must be in the `exception`
-key.
-
-Because the logs are translatable at user level, with a message and context, the
-message must not be translated when logging.
+These features depend on the module [Common]. Only specific features from the
+current module are presented here.
 
 ### Logging extra data
 
 The module adds three extra data to improve management of logs inside Omeka: the
 current user, the job and a reference. The user and the job are automatically
 added via the extra keys `userId` and `jobId`, that replace manually set keys.
-The reference can be added as additional key `referenceId`. If the context uses
-these keys as placeholders, they are mapped in the message, else they are
-removed from the context.
+The reference can be added as additional key `referenceId`. These keys are added
+automatically in most of the cases, so you don't need to add them. If the
+context uses these keys as placeholders, they are mapped in the message, else
+they are removed from the context.
 
 ```php
 // PSR-3 logging with extra data.
@@ -324,7 +276,8 @@ The reference can be any short string. It may be a category or a unique
 identifier. If there is a job, it may repeat or not the values available in the
 job settings and metadata.
 
-It can be added at the beginning of the process to avoid to set it for each log:
+It can be added at the beginning of the process to avoid to set it for each log.
+This is the normal way to log messages:
 
 ```php
 // PSR-3 logging with reference id (a random number if not set).
@@ -339,60 +292,17 @@ $this->logger()->info(
 // output in database: The item #43 has been updated by user #1.
 ```
 
-### Compatibility
-
-* Compatibility with the default stream logger
-
-The PSR-3 messages are converted into simple messages for the default logger.
-Other extra data are appended.
-
-* Compatibility with core messages
-
-The logger stores the core messages as it, without context, so they can be
-displayed. They are not translatable if they use placeholders.
-
-### Helpers
-
-- Direct database logging
-
-A controller plugin is available to log messages directly in the database and
-inside it only: `loggerDb`. If used inside a job, it should be initialized to
-keep track of the user and the job:
-
-```php
-$userJobIdProcessor = new \Log\Processor\UserJobId($this->job);
-$this->loggerDb()->addProcessor($userJobIdProcessor);
-```
-
-- PSR-3 Message
-
-If the message may be reused, the helper PsrMessage() can be used, with all the
-values:
-
-```php
-$message = new \Log\Stdlib\PsrMessage(
-    'The {resource} #{id} has been updated by user #{userId}.', // @translate
-    ['resource' => 'item', 'id' => 43, 'userId' => $user->id()]
-);
-$this->logger()->info($message->getMessage(), $message->getContext());
-echo $message;
-// With translation.
-$message->setTranslator($translator);
-echo $message;
-```
-
-- Plural
-
-By construction, the plural is not managed: only one message is saved in the
-log. So, if any, the plural message should be prepared before the logging.
-
 
 TODO
 ----
 
+- [ ] Use key "psr_log" instead of "log" (see https://docs.laminas.dev/laminas-log/service-manager/#psrloggerabstractadapterfactory).
 - [ ] Use the second entity manager in all cases.
 - [ ] Add an option to copy logs inside jobs when the module is uninstalled.
 - [ ] Fix incompatibility between authentication modules (Ldap, Cas, Shibboleth). The user id is currently disabled in such a case.
+- [ ] Replace laminas-db by doctrine and a second entity manager.
+- [x] Separate Sentry into another module? It will be cleaner, but heavier in fact because only two small checks are needed, not a full module process.
+- [ ] Improve display for messages like "item #xxx", "media #yyy", "resources #zz1, #zz2" with or without context.
 
 
 Warning
@@ -440,7 +350,6 @@ The fact that you are presently reading this means that you have had knowledge
 of the CeCILL license and that you accept its terms.
 
 * The library [webui-popover] is published under the license [MIT].
-* The library [facile/sentry] is published under the license [MIT].
 
 
 Copyright
@@ -449,20 +358,19 @@ Copyright
 * Copyright Daniel Berthereau, 2017-2023 [Daniel-KM] on GitLab)
 
 * Library [webui-popover]: Sandy Walker
-* Library [facile/sentry]: Copyright 2016 Thomas Mauro Vargiu
 
 
 [Log]: https://gitlab.com/Daniel-KM/Omeka-S-module-Log
+[Log Sentry]: https://gitlab.com/Daniel-KM/Omeka-S-module-LogSentry
 [Omeka S]: https://omeka.org/s
 [PSR-3]: http://www.php-fig.org/psr/psr-3
-[PHP-FIG]: http://www.php-fig.org
+[Common]: https://gitlab.com/Daniel-KM/Omeka-S-module-Common
 [webui-popover]: https://github.com/sandywalker/webui-popover
-[Installing a module]: https://omeka.org/s/docs/user-manual/modules/#installing-modules
+[installing a module]: https://omeka.org/s/docs/user-manual/modules/#installing-modules
 [Log.zip]: https://gitlab.com/Daniel-KM/Omeka-S-module-Log/-/releases
 [Laminas Framework Log]: https://docs.laminas.dev/laminas-log
-[config of the module]: https://gitlab.com/Daniel-KM/Omeka-S-module-Log/-/blob/master/config/module.config.php#L5-117
+[config of the module]: https://gitlab.com/Daniel-KM/Omeka-S-module-Log/-/blob/master/config/module.config.php#L6-126
 [Sentry]: https://sentry.io
-[facile/sentry]: https://github.com/facile-it/sentry-module
 [module issues]: https://gitlab.com/Daniel-KM/Omeka-S-module-Log/-/issues
 [CeCILL v2.1]: https://www.cecill.info/licences/Licence_CeCILL_V2.1-en.html
 [GNU/GPL]: https://www.gnu.org/licenses/gpl-3.0.html

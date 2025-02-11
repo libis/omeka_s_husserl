@@ -66,9 +66,9 @@ class IndexSuggestions extends AbstractJob
         /** @var \AdvancedSearch\Api\Representation\SearchSuggesterRepresentation $suggester */
         $suggester = $this->api->read('search_suggesters', $suggesterId)->getContent();
 
-        $engine = $suggester->engine();
-        $searchAdapter = $engine->adapter();
-        if (!$searchAdapter || !($searchAdapter instanceof \AdvancedSearch\Adapter\InternalAdapter)) {
+        $searchEngine = $suggester->searchEngine();
+        $engineAdapter = $searchEngine->engineAdapter();
+        if (!$engineAdapter || !($engineAdapter instanceof \AdvancedSearch\EngineAdapter\Internal)) {
             $this->logger->err(
                 'Suggester #{search_suggester_id} ("{name}"): Only search engine with the intenal adapter (sql) can be indexed currently.', // @translate
                 ['search_suggester_id' => $suggester->id(), 'name' => $suggester->name()]
@@ -76,7 +76,7 @@ class IndexSuggestions extends AbstractJob
             return;
         }
 
-        $resourceTypes = $engine->setting('resource_types', []);
+        $resourceTypes = $searchEngine->setting('resource_types', []);
         $mapResources = [
             'resources' => \Omeka\Entity\Resource::class,
             'items' => \Omeka\Entity\Item::class,
@@ -94,20 +94,25 @@ class IndexSuggestions extends AbstractJob
             return;
         }
 
-        $totalJobs = $services->get('ControllerPluginManager')->get('totalJobs');
-        $totalJobs = $totalJobs(self::class, true);
+        $listJobStatusesByIds = $services->get('ControllerPluginManager')->get('listJobStatusesByIds');
+        $listJobStatusesByIds = $listJobStatusesByIds(self::class, true, null, $this->job->getId());
         $force = $this->getArg('force');
-        if ($totalJobs > 1) {
+        if (count($listJobStatusesByIds)) {
             if (!$force) {
                 $this->logger->err(
-                    'Suggester #{search_suggester_id} ("{name}"): There are already {count} other jobs "Index Suggestions" and the current one is not forced.', // @translate
-                    ['search_suggester_id' => $suggester->id(), 'name' => $suggester->name(), 'count' => $totalJobs - 1]
+                    'Suggester #{search_suggester_id} ("{name}"): There are already {total} other jobs "Index Suggestion" (#{list}) and the current one is not forced.', // @translate
+                    [
+                        'search_suggester_id' => $suggester->id(),
+                        'name' => $suggester->name(),
+                        'total' => count($listJobStatusesByIds),
+                        'list' => implode(', #', array_keys($listJobStatusesByIds)),
+                    ]
                 );
                 return;
             }
             $this->logger->warn(
-                'There are already {count} other jobs "Index Suggestions". Slowdowns may occur on the site.', // @translate
-                ['count' => $totalJobs - 1]
+                'There are already {total} other jobs "Index Suggestions". Slowdowns may occur on the site.', // @translate
+                ['total' => $listJobStatusesByIds]
             );
         }
 
@@ -147,7 +152,7 @@ class IndexSuggestions extends AbstractJob
 
         // TODO Index value annotations with resources (for now, they can't be selected individually in the config).
 
-        $resourceTypes = $suggester->engine()->setting('resource_types', []);
+        $resourceTypes = $suggester->searchEngine()->setting('resource_types', []);
         $mapResourcesToClasses = [
             'items' => \Omeka\Entity\Item::class,
             'item_sets' => \Omeka\Entity\ItemSet::class,

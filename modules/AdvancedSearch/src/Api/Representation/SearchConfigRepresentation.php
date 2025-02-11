@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2017-2024
+ * Copyright Daniel Berthereau, 2017-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -50,9 +50,8 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
         return [
             'o:name' => $this->resource->getName(),
             'o:slug' => $this->resource->getSlug(),
-            'o:engine' => $this->engine()->getReference(),
-            // TODO Don't use "o:form" for the form adapter.
-            'o:form' => $this->resource->getFormAdapter(),
+            'o:search_engine' => $this->searchEngine()->getReference(),
+            'o:form_adapter' => $this->resource->getFormAdapter(),
             'o:settings' => $this->resource->getSettings(),
             'o:created' => $this->getDateTime($this->resource->getCreated()),
             'o:modified' => $modified ? $this->getDateTime($modified) : null,
@@ -116,7 +115,7 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
         return $this->resource->getSlug();
     }
 
-    public function engine(): ?\AdvancedSearch\Api\Representation\SearchEngineRepresentation
+    public function searchEngine(): ?\AdvancedSearch\Api\Representation\SearchEngineRepresentation
     {
         $searchEngine = $this->resource->getEngine();
         return $searchEngine
@@ -124,13 +123,13 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
             : null;
     }
 
-    public function searchAdapter(): ?\AdvancedSearch\Adapter\AdapterInterface
+    public function engineAdapter(): ?\AdvancedSearch\EngineAdapter\EngineAdapterInterface
     {
-        $searchEngine = $this->engine();
+        $searchEngine = $this->searchEngine();
         if ($searchEngine) {
-            $adapter = $searchEngine->adapter();
-            if ($adapter) {
-                return $adapter->setSearchConfig($this);
+            $engineAdapter = $searchEngine->engineAdapter();
+            if ($engineAdapter) {
+                return $engineAdapter->setSearchConfig($this);
             }
         }
         return null;
@@ -212,12 +211,21 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
             $name = $news[$name] ?? $name;
             $logger->err($message->getMessage(), $message->getContext());
             return ['q', $name, $subName];
+        } elseif ($mainName === 'display') {
+            $services = $this->getServiceLocator();
+            $logger = $services->get('Omeka\Logger');
+            $message = new PsrMessage(
+                'The search config setting "{old}" was renamed "{new}". You should update your theme.', // @translate
+                ['old' => 'display', 'new' => 'results']
+            );
+            $logger->err($message->getMessage(), $message->getContext());
+            return ['results', $name, $subName];
         } elseif ($mainName === 'sort') {
             $services = $this->getServiceLocator();
             $logger = $services->get('Omeka\Logger');
             $message = new PsrMessage(
                 'The search config setting "{old}" was renamed "{new}". You should update your theme.', // @translate
-                ['old' => 'sort', 'new' => 'display']
+                ['old' => 'sort', 'new' => 'results']
             );
             if ($name === 'label') {
                 $name = 'label_sort';
@@ -225,8 +233,18 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
                 $name = 'sort_list';
             }
             $logger->err($message->getMessage(), $message->getContext());
-            return ['display', $name, $subName];
+            return ['results', $name, $subName];
+        } elseif ($mainName === 'q' && $name ==='fulltext_search') {
+            $services = $this->getServiceLocator();
+            $logger = $services->get('Omeka\Logger');
+            $message = new PsrMessage(
+                'The search config setting "{old}" was renamed "{new}". You should update your theme.', // @translate
+                ['old' => 'q[fulltext_search]', 'new' => 'form[rft]']
+            );
+            $logger->err($message->getMessage(), $message->getContext());
+            return ['form', 'rft', null];
         }
+
         return [$mainName, $name, $subName];
     }
 
@@ -266,15 +284,17 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
      *
      * @param array $options Options are same than renderForm() in interface.
      *   Default keys:
+     *   - itemSet (ItemSetRepresentation|null): for item set redirection.
      *   - template (string): Use a specific template instead of the default one.
      *     This is the template of the form, not the main template of the search
      *     config.
      *   - skip_form_action (bool): Don't set form action, so use the current page.
      *   - skip_partial_headers (bool): Skip partial headers.
      *   - skip_values: Does not init form element values (quicker results).
-     *   - variant: Name of a variant of the form, "quick" or "simple", or
-     *     "csrf" (internal use). "quick" has "q", "rft" and hidden elements,
-     *     and "simple" has only "q" and hidden elements.
+     *   - variant: Name of a variant of the form;
+     *     - "quick": only "q", "rft" and hidden elements
+     *     - "simple": only "q" and hidden elements
+     *     - "csrf": for internal use
      *     To use a variant allows a quicker process than a template alone.
      *   Other options are passed to the partial.
      *
@@ -290,6 +310,9 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
 
     /**
      * Render the search filters of the query.
+     *
+     * The search filters are the list of the query arguments used in the
+     * request when the advanced search form is used.
      */
     public function renderSearchFilters(Query $query, array $options = []): string
     {
@@ -351,11 +374,19 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
      */
     public function suggest(string $q, ?string $field, ?SiteRepresentation $site): Response
     {
+        /**
+         * @var \Laminas\ServiceManager\ServiceLocatorInterface $services
+         * @var \Laminas\Log\Logger $logger
+         * @var \Laminas\I18n\Translator\Translator $translator
+         * @var \Omeka\Mvc\Controller\Plugin\UserIsAllowed $userIsAllowed
+         */
         $services = $this->getServiceLocator();
+        $plugins = $services->get('ControllerPluginManager');
         $api = $services->get('Omeka\ApiManager');
         $logger = $services->get('Omeka\Logger');
         $translator = $services->get('MvcTranslator');
         $easyMeta = $services->get('Common\EasyMeta');
+        $userIsAllowed = $plugins->get('userIsAllowed');
 
         $response = new Response();
         $response->setApi($api);
@@ -394,8 +425,8 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
         // When a field is set, there is no suggester for now, so use a direct
         // query.
 
-        $engine = $this->engine();
-        if (!$engine) {
+        $searchEngine = $this->searchEngine();
+        if (!$searchEngine) {
             $message = new PsrMessage(
                 'The search page "{search_page}" has no search engine.', // @translate
                 ['search_page' => $this->slug()]
@@ -410,17 +441,11 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
 
         $query->setQuery($q);
 
-        $user = $services->get('Omeka\AuthenticationService')->getIdentity();
         // TODO Manage roles from modules and visibility from modules (access resources).
-        $omekaRoles = [
-            \Omeka\Permissions\Acl::ROLE_GLOBAL_ADMIN,
-            \Omeka\Permissions\Acl::ROLE_SITE_ADMIN,
-            \Omeka\Permissions\Acl::ROLE_EDITOR,
-            \Omeka\Permissions\Acl::ROLE_REVIEWER,
-            \Omeka\Permissions\Acl::ROLE_AUTHOR,
-            \Omeka\Permissions\Acl::ROLE_RESEARCHER,
-        ];
-        if ($user && in_array($user->getRole(), $omekaRoles)) {
+        // FIXME Researcher and author may not access all private resources. So index resource owners and roles?
+        // Default is public only.
+        $accessToAdmin = $userIsAllowed('Omeka\Controller\Admin\Index', 'browse');
+        if ($accessToAdmin) {
             $query->setIsPublic(false);
         }
 
@@ -429,8 +454,10 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
         }
 
         $aliases = $this->subSetting('index', 'aliases', []);
+        $fieldQueryArgs = $this->subSetting('index', 'query_args', []);
         $query
             ->setAliases($aliases)
+            ->setFieldsQueryArgs($fieldQueryArgs)
             ->setOption('remove_diacritics', (bool) $this->subSetting('q', 'remove_diacritics', false))
             ->setOption('default_search_partial_word', (bool) $this->subSetting('q', 'default_search_partial_word', false));
 
@@ -457,10 +484,10 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
             $fields = (array) $cleanField;
         }
 
-        $engineSettings = $engine->settings();
+        $searchEngineSettings = $searchEngine->settings();
 
         $query
-            ->setResourceTypes($engineSettings['resource_types'])
+            ->setResourceTypes($searchEngineSettings['resource_types'])
             ->setLimitPage(1, \Omeka\Stdlib\Paginator::PER_PAGE)
             ->setSuggestOptions([
                 'suggester' => null,
@@ -474,7 +501,7 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
         ;
 
         /** @var \AdvancedSearch\Querier\QuerierInterface $querier */
-        $querier = $engine
+        $querier = $searchEngine
             ->querier()
             ->setQuery($query);
         try {

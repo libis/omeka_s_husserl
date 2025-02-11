@@ -6,7 +6,7 @@
  * Improve search with new fields, auto-suggest, filters, facets, specific pages, etc.
  *
  * @copyright BibLibre, 2016-2017
- * @copyright Daniel Berthereau, 2017-2024
+ * @copyright Daniel Berthereau, 2017-2025
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
  *
  * This software is governed by the CeCILL license under French law and abiding
@@ -73,13 +73,23 @@ class Module extends AbstractModule
     {
         $services = $this->getServiceLocator();
         $translate = $services->get('ControllerPluginManager')->get('translate');
+        $messenger = $services->get('ControllerPluginManager')->get('messenger');
 
-        if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.63')) {
+        if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.66')) {
             $message = new \Omeka\Stdlib\Message(
                 $translate('The module %1$s should be upgraded to version %2$s or later.'), // @translate
-                'Common', '3.4.63'
+                'Common', '3.4.66'
             );
             throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
+        }
+
+        if (!$this->isModuleActive('Reference')) {
+            $messenger->addWarning('The module Reference is required to use the facets with the default internal adapter, but not for the Solr adapter.'); // @translate
+        } elseif (!$this->isModuleVersionAtLeast('Reference', '3.4.52')) {
+            $messenger->addWarning(new PsrMessage(
+                'The module {module} should be upgraded to version {version} or later.', // @translate
+                ['module' => 'Reference', 'version' => '3.4.52']
+            ));
         }
     }
 
@@ -90,9 +100,13 @@ class Module extends AbstractModule
         $moduleManager = $services->get('Omeka\ModuleManager');
         $messenger = $services->get('ControllerPluginManager')->get('messenger');
 
-        $optionalModule = 'Reference';
-        if (!$this->isModuleActive($optionalModule)) {
+        if (!$this->isModuleActive('Reference')) {
             $messenger->addWarning('The module Reference is required to use the facets with the default internal adapter, but not for the Solr adapter.'); // @translate
+        } elseif (!$this->isModuleVersionAtLeast('Reference', '3.4.52')) {
+            $messenger->addWarning(new PsrMessage(
+                'The module {module} should be upgraded to version {version} or later.', // @translate
+                ['module' => 'Reference', 'version' => '3.4.52']
+            ));
         }
 
         // The module is automatically disabled when Search is uninstalled.
@@ -103,22 +117,94 @@ class Module extends AbstractModule
             \Omeka\Module\Manager::STATE_NEEDS_UPGRADE,
         ])) {
             $version = $module->getIni('version');
-            if (version_compare($version, '3.5.49', '<')) {
-                $message = new PsrMessage(
+            if (version_compare($version, '3.5.53', '<')) {
+                $messenger->addWarning(new PsrMessage(
                     'The module {module} should be upgraded to version {version} or later.', // @translate
-                    ['module' => 'SearchSolr', 'version' => '3.5.49']
-                );
-                $messenger->addWarning($message);
+                    ['module' => 'SearchSolr', 'version' => '3.5.53']
+                ));
             } elseif ($module->getState() !== \Omeka\Module\Manager::STATE_ACTIVE) {
-                $message = new PsrMessage(
+                $messenger->addNotice(new PsrMessage(
                     'The module {module} can be reenabled.', // @translate
                     ['module' => 'SearchSolr']
-                );
-                $messenger->addNotice($message);
+                ));
             }
         }
 
         $this->installResources();
+    }
+
+    protected function postUpgrade(?string $oldVersion, ?string $newVersion): void
+    {
+        $this->warnOverriddenSearch();
+        $this->postUpgradeAuto($oldVersion, $newVersion);
+    }
+
+    /**
+     * Adapted:
+     * @see \AdvancedSearch\Module::warnOverriddenSearch()
+     * @see \AdvancedSearch\Controller\Admin\IndexController::warnOverriddenSearch()
+     *
+     * @todo Identify modules, blocks and queries that use old features.
+     */
+    protected function warnOverriddenSearch(): bool
+    {
+        $services = $this->getServiceLocator();
+        $api = $services->get('Omeka\ApiManager');
+        $settings = $services->get('Omeka\Settings');
+        $siteSettings = $services->get('Omeka\Settings\Site');
+        $messenger = $services->get('ControllerPluginManager')->get('messenger');
+
+        /*
+        $improvedTemplates = [
+            'common/advanced-search/properties-improved'
+            'common/advanced-search/resource-class-improved',
+            'common/advanced-search/resource-template-improved',
+            'common/advanced-search/item-sets-improved',
+            'common/advanced-search/site-improved',
+            'common/advanced-search/media-type-improved',
+            'common/advanced-search/owner-improved',
+        ];
+        */
+
+        $results = [];
+        $searchFields = $settings->get('advancedsearch_search_fields') ?: [];
+        // foreach ($searchFields as $searchField) {
+        //     if (substr($searchField, -9) === '-improved') {
+        //         $results[0] = 'admin';
+        //         break;
+        //     }
+        // }
+        if (in_array('common/advanced-search/properties-improved', $searchFields)) {
+            $results[0] = 'admin';
+        }
+
+        $siteSlugs = $api->search('sites', [], ['returnScalar' => 'slug'])->getContent();
+        foreach ($siteSlugs as $siteId => $siteSlug) {
+            $siteSettings->setTargetId($siteId);
+            $searchFields = $siteSettings->get('advancedsearch_search_fields') ?: [];
+            // foreach ($searchFields as $searchField) {
+            //     if (substr($searchField, -9) === '-improved') {
+            //         $results[$siteId] = $siteSlug;
+            //         break;
+            //     }
+            // }
+            if (in_array('common/advanced-search/properties-improved', $searchFields)) {
+                $results[$siteId] = $siteSlug;
+            }
+        }
+
+        if (!count($results)) {
+            return false;
+        }
+
+        $message = new PsrMessage(
+            'The setting to override search element "property" is enabled. This feature will be removed in a future version and should be {link}replaced by the search element "filter"{link_end}. Check your pages and settings. Matching sites: {json}', // @translate
+            ['link' => '<a href="https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch#deprecated-improvements-of-the-advanced-search-elements" target="_blank" rel="noopener">', 'link_end' => '</a>', 'json' => json_encode($results, 448)]
+        );
+        $message->setEscapeHtml(false);
+        $messenger->addWarning($message);
+
+        return true;
     }
 
     public function attachListeners(SharedEventManagerInterface $sharedEventManager): void
@@ -209,24 +295,12 @@ class Module extends AbstractModule
             // TODO Add user.
         ];
         foreach ($controllers as $controller) {
-            // Add the search field to the advanced search pages.
-            $sharedEventManager->attach(
-                $controller,
-                'view.advanced_search',
-                [$this, 'handleViewAdvancedSearch']
-            );
-        }
-        $controllers = [
-            'Omeka\Controller\Site\Item',
-            'Omeka\Controller\Site\ItemSet',
-            'Omeka\Controller\Site\Media',
-        ];
-        foreach ($controllers as $controller) {
             // Specify fields to filter from the advanced search form.
+            // Let other modules append partial first.
             $sharedEventManager->attach(
                 $controller,
                 'view.advanced_search',
-                [$this, 'handleViewAdvancedSearchPost'],
+                [$this, 'handleViewAdvancedSearch'],
                 -100
             );
         }
@@ -482,9 +556,7 @@ class Module extends AbstractModule
             if ($siteSlug) {
                 $baseRoutes[] = 'search-page-';
             }
-            $adminSearchConfigs = $settings->get('advancedsearch_configs', []);
-            $adminSearchConfigs = array_intersect_key($searchConfigs, array_flip($adminSearchConfigs));
-            foreach ($baseRoutes as $baseRoute) foreach ($adminSearchConfigs as $searchConfigId => $searchConfigSlug) {
+            foreach ($baseRoutes as $baseRoute) foreach ($searchConfigs as $searchConfigId => $searchConfigSlug) {
                 $router->addRoute(
                     $baseRoute . $searchConfigSlug,
                     [
@@ -760,6 +832,12 @@ class Module extends AbstractModule
         $qb = $event->getParam('queryBuilder');
         $query = $request->getContent();
 
+        // A full text search cannot be "*" alone. Anyway it has no meaning.
+        $qValue = $qb->getParameter('omeka_fulltext_search');
+        if (in_array($qValue, [null, '', '*'], true)) {
+            return;
+        }
+
         $scalarField = $request->getOption('returnScalar') ?? $query['return_scalar'] ?? 'id';
         $matchOrder = 'MATCH(omeka_fulltext_search.title, omeka_fulltext_search.text) AGAINST (:omeka_fulltext_search)';
 
@@ -768,11 +846,11 @@ class Module extends AbstractModule
             ->select(['omeka_root.id' => 'omeka_root.' . $scalarField])
             ->addSelect($matchOrder . ' AS HIDDEN orderMatch')
             ->addGroupBy('orderMatch');
-         $content = array_column($fixQb->getQuery()->getScalarResult(), $scalarField, 'id');
+        $content = array_column($fixQb->getQuery()->getScalarResult(), $scalarField, 'id');
 
-         // The response is not yet available, so store results as options of
-         // the request.
-         $request
+        // The response is not yet available, so store results as options of
+        // the request.
+        $request
             ->setOption('results', $content)
             ->setOption('total_results', count($content));
 
@@ -803,11 +881,14 @@ class Module extends AbstractModule
     {
         $view = $event->getTarget();
 
+        $services = $this->getServiceLocator();
         $plugins = $view->getHelperPluginManager();
-        $status = $plugins->get('status');
+        $status = $services->get('Omeka\Status');
+        $config = $services->get('Config');
         $assetUrl = $plugins->get('assetUrl');
         $headLink = $plugins->get('headLink');
         $headScript = $plugins->get('headScript');
+        $searchFields = $config['advancedsearch']['search_fields'];
 
         // Include chosen-select in sites.
         $isSite = $status->isSiteRequest();
@@ -816,9 +897,6 @@ class Module extends AbstractModule
                 ->prependStylesheet($assetUrl('vendor/chosen-js/chosen.min.css', 'Omeka'));
             $headScript
                 ->appendFile($assetUrl('vendor/chosen-js/chosen.jquery.js', 'Omeka'), 'text/javascript', ['defer' => 'defer']);
-            $isPropertyImproved = (bool) $plugins->get('siteSetting')('advancedsearch_property_improved');
-        } else {
-            $isPropertyImproved = (bool) $plugins->get('setting')('advancedsearch_property_improved');
         }
 
         $headLink
@@ -826,97 +904,121 @@ class Module extends AbstractModule
         $headScript
             ->appendFile($assetUrl('js/advanced-search-form.js', 'AdvancedSearch'), 'text/javascript', ['defer' => 'defer']);
 
-        $this->handlePartialsAdvancedSearch($event, $isPropertyImproved);
-    }
-
-    protected function handlePartialsAdvancedSearch(Event $event, bool $isPropertyImproved = false): void
-    {
         // Adapted from application/view/common/advanced-search.phtml.
-
-        $query = $event->getParam('query', []);
+        /** @see application/view/common/advanced-search.phtml */
 
         $partials = $event->getParam('partials', []);
         $resourceType = $event->getParam('resourceType');
 
-        if ($resourceType === 'media') {
-            $query['item_set_id'] = isset($query['item_set_id']) ? (array) $query['item_set_id'] : [];
-            $partials[] = 'common/advanced-search/media-item-sets';
-        }
+        $resourceNames = [
+            'item' => 'items',
+            'media' => 'media',
+            'item-set' => 'item_sets',
+            'value-annotation' => 'value_annotations',
+            'annotation' => 'annotations',
+            'resource' => 'resources',
+        ];
+        $resourceName = $resourceNames[$resourceType] ?? $resourceType;
 
-        $query['datetime'] ??= '';
-        $partials[] = 'common/advanced-search/date-time';
-
-        // Visibility filter was included in Omeka S v4.0.
-
-        if ($resourceType === 'item') {
-            $query['has_media'] ??= '';
-            $partials[] = 'common/advanced-search/has-media';
-        }
-
-        $query['has_asset'] ??= '';
-        $partials[] = 'common/advanced-search/has-asset';
-
-        $query['asset_id'] ??= '';
-        $partials[] = 'common/advanced-search/asset';
-
-        if ($resourceType === 'item' || $resourceType === 'media') {
-            $query['has_original'] ??= '';
-            $partials[] = 'common/advanced-search/has-original';
-            $query['has_thumbnails'] ??= '';
-            $partials[] = 'common/advanced-search/has-thumbnails';
-        }
-
-        if ($resourceType === 'item') {
-            $query['media_types'] = isset($query['media_types']) ? (array) $query['media_types'] : [];
-            $partials[] = 'common/advanced-search/media-type';
-        }
-
-        // Insert "filter" after "properties" and manage improved properties.
-        $p = $partials;
-        $partials = [];
-        foreach ($p as $partial) {
-            if ($partial === 'common/advanced-search/properties' && $isPropertyImproved) {
-                $partial = 'common/advanced-search/properties-improved';
-            } elseif ($partial === 'common/advanced-search/properties-improved' && !$isPropertyImproved) {
-                $partial = 'common/advanced-search/properties';
-            }
-            $partials[] = $partial;
-            if ($partial === 'common/advanced-search/properties'
-                || $partial === 'common/advanced-search/properties-improved'
+        // List partials for the current resource type with AdvancedSearch.
+        // The list is reordered below.
+        $improveds = [];
+        foreach ($searchFields as $partial => $searchFieldData) {
+            if (isset($searchFieldData['module'])
+                && $searchFieldData['module'] === 'AdvancedSearch'
+                && (empty($searchFieldData['resource_type']) || in_array($resourceName, $searchFieldData['resource_type']))
             ) {
-                $partials[] = 'common/advanced-search/filters';
+                $partials[] = $partial;
+            }
+            if (!empty($searchFieldData['improve'])) {
+                $improveds[$partial] = $searchFieldData['improve'];
             }
         }
 
         $partials = array_unique($partials);
 
-        $event->setParam('query', $query);
-        $event->setParam('partials', $partials);
-    }
+        // Check improved/deprecated features.
+        $isSite = $status->isSiteRequest();
+        if ($isSite) {
+            $siteSettings = $services->get('Omeka\Settings\Site');
+            $selectedSearchFields = $siteSettings->get('advancedsearch_search_fields', array_filter($searchFields, fn ($v) => !isset($v['site']) || $v['site']));
+        } else {
+            $settings = $services->get('Omeka\Settings');
+            $selectedSearchFields = $settings->get('advancedsearch_search_fields', $searchFields);
+        }
 
-    /**
-     * Update partials (search fields) to the advanced search form.
-     *
-     * @param Event $event
-     */
-    public function handleViewAdvancedSearchPost(Event $event): void
-    {
-        $config = $this->getServiceLocator()->get('Config');
-        $defaultSearchFields = $config['advancedsearch']['search_fields'];
+        // Manage core option to restrict list of resource templates.
+        if ($isSite) {
+            if ($siteSettings->get('search_restrict_templates')) {
+                if (($key = array_search('common/advanced-search/resource-template', $partials)) !== false) {
+                    $partials[$key] = 'common/advanced-search/resource-template-restrict';
+                }
+                if (($key = array_search('common/advanced-search/resource-template-improved', $partials)) !== false) {
+                    $partials[$key] = 'common/advanced-search/resource-template-restrict';
+                }
+            } elseif (($key = array_search('common/advanced-search/resource-template-restrict', $partials)) !== false) {
+                unset($partials[$key]);
+            }
+        } elseif (($key = array_search('common/advanced-search/resource-template-restrict', $partials)) !== false) {
+            unset($partials[$key]);
+        }
 
-        $view = $event->getTarget();
-        $partials = $event->getParam('partials', []);
+        // Reorder, deduplicate the list and filter with selected list.
+        $partials = array_values(array_intersect(array_keys($searchFields), array_unique($partials), $selectedSearchFields));
 
-        $partials = array_unique($partials);
-
-        // Don't add new partials, only remove existing ones: by default, they
-        // are forbidden partials for sites.
-        $searchFields = $view->siteSetting('advancedsearch_search_fields', $defaultSearchFields) ?: [];
-        foreach ($partials as $key => $partial) {
-            if (isset($defaultSearchFields[$partial]) && !in_array($partial, $searchFields)) {
+        // Avoid duplicates on improved partials: keep improved partials only.
+        foreach ($improveds as $improved => $base) {
+            if (($key = array_search($base, $partials)) !== false
+                && array_search($improved, $partials) !== false
+            ) {
                 unset($partials[$key]);
             }
         }
+
+        // Clean query early to avoid issues and deprecation notices.
+        // In particular, some arguments support array, but only one in form.
+        $query = $event->getParam('query', []);
+        if ($query) {
+            if (!empty($query['property'])) {
+                // TODO Clean joiner and type for property.
+                if (in_array('common/advanced-search/properties-improved', $partials)) {
+                    foreach ($query['property'] as $propertyField) {
+                        if (array_key_exists('property', $propertyField) && !is_array($propertyField['property'])) {
+                            $propertyField['property'] = (array) $propertyField['property'];
+                        }
+                        if (array_key_exists('text', $propertyField) && is_array($propertyField['text'])) {
+                            $propertyField['text'] = count($propertyField['text']) === 1 ? reset($propertyField['text']) : '';
+                        }
+                    }
+                }
+                if (in_array('common/advanced-search/properties', $partials)) {
+                    foreach ($query['property'] as $propertyField) {
+                        // TODO Clean joiner and type for property.
+                        if (isset($propertyField['property']) && is_array($propertyField['property'])) {
+                            $propertyField['property'] = count($propertyField['property']) === 1 ? reset($propertyField['property']) : '';
+                        }
+                        if (isset($propertyField['text']) && is_array($propertyField['text'])) {
+                            $propertyField['text'] = count($propertyField['text']) === 1 ? reset($propertyField['text']) : '';
+                        }
+                    }
+                }
+            }
+            if (in_array('common/advanced-search/media-type-improved', $partials) && array_key_exists('media_type', $query) && !is_array($query['media_type'])) {
+                $query['media_type'] = (array) $query['media_type'];
+            } elseif (in_array('common/advanced-search/media-type', $partials) && array_key_exists('media_type', $query) && is_array($query['media_type'])) {
+                $query['media_type'] = $query['media_type'] ? reset($query['media_type']) : '';
+            }
+            if (array_key_exists('owner_id', $query) && is_array($query['owner_id'])) {
+                $query['owner_id'] = $query['owner_id'] ? (int) reset($query['owner_id']) : '';
+            }
+            if (array_key_exists('site_id', $query) && is_array($query['site_id'])) {
+                $query['site_id'] = $query['site_id'] ? (int) reset($query['site_id']) : '';
+            }
+            if (array_key_exists('asset_id', $query) && is_array($query['asset_id'])) {
+                $query['asset_id'] = $query['asset_id'] ? (int) reset($query['asset_id']) : '';
+            }
+        }
+        $event->setParam('query', $query);
 
         $event->setParam('partials', $partials);
     }
@@ -941,16 +1043,17 @@ class Module extends AbstractModule
             return;
         }
 
+        /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
         $searchConfig = $query['__searchConfig'] ?? null;
-
         if (!$searchConfig) {
             return;
         }
 
+        $view = $event->getTarget();
         $filters = $event->getParam('filters');
 
-        $view = $event->getTarget();
-        $filters = $view->searchingFilters()->filterSearchingFilters($searchConfig, $query['__searchCleanQuery'] ?? $query, $filters);
+        $filters = $view->searchingFilters()
+            ->filterSearchingFilters($searchConfig, $query, $filters);
 
         $event->setParam('filters', $filters);
     }
@@ -1370,7 +1473,7 @@ class Module extends AbstractModule
         $searchConfig = null;
         if ($searchConfigId) {
             try {
-                $searchConfig = $api->read('search_configs', [is_numeric($searchConfigId) ? 'id' : 'slug'  => $searchConfigId])->getContent();
+                $searchConfig = $api->read('search_configs', [is_numeric($searchConfigId) ? 'id' : 'slug' => $searchConfigId])->getContent();
             } catch (\Exception $e) {
             }
         }
@@ -1426,25 +1529,25 @@ class Module extends AbstractModule
 
         // Check if the internal index exists.
         $sqlSearchEngineId = <<<'SQL'
-SELECT `id`
-FROM `search_engine`
-WHERE `adapter` = "internal"
-ORDER BY `id` ASC;
-SQL;
+            SELECT `id`
+            FROM `search_engine`
+            WHERE `adapter` = "internal"
+            ORDER BY `id` ASC;
+            SQL;
         $searchEngineId = (int) $connection->fetchOne($sqlSearchEngineId);
 
         if (!$searchEngineId) {
             // Create the internal adapter.
             $sql = <<<'SQL'
-INSERT INTO `search_engine`
-(`name`, `adapter`, `settings`, `created`)
-VALUES
-(?, ?, ?, NOW());
-SQL;
+                INSERT INTO `search_engine`
+                (`name`, `adapter`, `settings`, `created`)
+                VALUES
+                (?, ?, ?, NOW());
+                SQL;
             $searchEngineConfig = require __DIR__ . '/data/configs/search_engine.internal.php';
             $connection->executeStatement($sql, [
                 $searchEngineConfig['o:name'],
-                $searchEngineConfig['o:adapter'],
+                $searchEngineConfig['o:engine_adapter'],
                 json_encode($searchEngineConfig['o:settings']),
             ]);
             $searchEngineId = $connection->fetchOne($sqlSearchEngineId);
@@ -1462,23 +1565,23 @@ SQL;
 
         // Check if the internal suggester exists.
         $sqlSuggesterId = <<<SQL
-SELECT `id`
-FROM `search_suggester`
-WHERE `engine_id` = $searchEngineId
-ORDER BY `id` ASC
-LIMIT 1;
-SQL;
+            SELECT `id`
+            FROM `search_suggester`
+            WHERE `engine_id` = $searchEngineId
+            ORDER BY `id` ASC
+            LIMIT 1;
+            SQL;
         $suggesterId = (int) $connection->fetchOne($sqlSuggesterId);
 
         if (!$suggesterId) {
             $mainIndex = $translate('Main index'); // @translate
             // Create the internal suggester.
             $sql = <<<SQL
-INSERT INTO `search_suggester`
-(`engine_id`, `name`, `settings`, `created`)
-VALUES
-($searchEngineId, "$mainIndex", ?, NOW());
-SQL;
+                INSERT INTO `search_suggester`
+                (`engine_id`, `name`, `settings`, `created`)
+                VALUES
+                ($searchEngineId, "$mainIndex", ?, NOW());
+                SQL;
             $suggesterSettings = require __DIR__ . '/data/configs/search_suggester.internal.php';
             $connection->executeStatement($sql, [
                 json_encode($suggesterSettings),
@@ -1498,25 +1601,25 @@ SQL;
 
         // Check if the default search config exists.
         $sqlSearchConfigId = <<<SQL
-SELECT `id`
-FROM `search_config`
-WHERE `engine_id` = $searchEngineId
-ORDER BY `id` ASC;
-SQL;
+            SELECT `id`
+            FROM `search_config`
+            WHERE `engine_id` = $searchEngineId
+            ORDER BY `id` ASC;
+            SQL;
         $searchConfigId = (int) $connection->fetchOne($sqlSearchConfigId);
 
         if (!$searchConfigId) {
             $sql = <<<SQL
-INSERT INTO `search_config`
-(`engine_id`, `name`, `slug`, `form_adapter`, `settings`, `created`)
-VALUES
-($searchEngineId, ?, ?, ?, ?, NOW());
-SQL;
+                INSERT INTO `search_config`
+                (`engine_id`, `name`, `slug`, `form_adapter`, `settings`, `created`)
+                VALUES
+                ($searchEngineId, ?, ?, ?, ?, NOW());
+                SQL;
             $searchConfigConfig = require __DIR__ . '/data/configs/search_config.default.php';
             $connection->executeStatement($sql, [
                 $searchConfigConfig['o:name'],
                 $searchConfigConfig['o:slug'],
-                $searchConfigConfig['o:form'],
+                $searchConfigConfig['o:form_adapter'],
                 json_encode($searchConfigConfig['o:settings']),
             ]);
 

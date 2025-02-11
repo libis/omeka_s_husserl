@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016-2017
- * Copyright Daniel Berthereau, 2018-2024
+ * Copyright Daniel Berthereau, 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -30,7 +30,7 @@
 
 namespace AdvancedSearch\Form\Admin;
 
-use AdvancedSearch\Adapter\InternalAdapter;
+use AdvancedSearch\EngineAdapter\Internal;
 use Common\Form\Element as CommonElement;
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
@@ -64,14 +64,14 @@ class SearchConfigConfigureForm extends Form
     {
         /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
         $searchConfig = $this->getOption('search_config');
-        $searchEngine = $searchConfig->engine();
+        $searchEngine = $searchConfig->searchEngine();
         if (empty($searchEngine)) {
             return;
         }
 
         // TODO Add a method or an event to modify or append specific field to each fieldset.
-        $searchAdapter = $searchEngine->adapter();
-        $isInternalEngine = $searchAdapter && $searchAdapter instanceof InternalAdapter;
+        $engineAdapter = $searchEngine->engineAdapter();
+        $isInternalEngine = $engineAdapter && $engineAdapter instanceof Internal;
 
         // This is the settings for the search config, not the search form one.
 
@@ -156,6 +156,76 @@ class SearchConfigConfigureForm extends Form
         ;
 
         $this
+            ->add([
+                'name' => 'index',
+                'type' => Fieldset::class,
+                'options' => [
+                    'label' => 'Indexes', // @translate
+                ],
+            ])
+            ->get('index')
+
+            ->add([
+                'name' => 'aliases',
+                'type' => CommonElement\DataTextarea::class,
+                'options' => [
+                    'label' => 'Aliases and aggregated fields', // @translate
+                    'info' => 'List of fields that refers to one or multiple indexes (properties with internal search engine, native indexes with Solr), formatted "name = label", then the list of properties and an empty line. The name must not be a property term or a reserved keyword. With query args below, they can be seen as simple shortcuts of filters easy to implement in forms.', // @translate
+                    'documentation' => 'https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch/-/blob/master/data/configs/search_engine.internal.php',
+                    'as_key_value' => true,
+                    'key_value_separator' => '=',
+                    'data_options' => [
+                        'name' => null,
+                        'label' => null,
+                        'fields' => ',',
+                    ],
+                    'data_text_mode' => 'last_is_list',
+                ],
+                'attributes' => [
+                    'id' => 'index_aliases',
+                    'placeholder' => <<<'STRING'
+                        author = Author
+                        dcterms:creator
+                        dcterms:contributor
+                        
+                        title = Title
+                        dcterms:title
+                        dcterms:alternative
+                        
+                        date = Date
+                        dcterms:date
+                        dcterms:created
+                        dcterms:issued
+                        STRING,
+                    'rows' => 30,
+                ],
+            ])
+            ->add([
+                'type' => CommonElement\IniTextarea::class,
+                'name' => 'query_args',
+                'options' => [
+                    'label' => 'Query arguments for fields', // @translate
+                    'info' => 'Define the query arguments to use with simple fields. Defaults are "type" = "eq" and "join" = "and". Type may be any of the query type of filters. Join may be "and", "or", "not".', // @translate
+                    'documentation' => 'https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch',
+                    'ini_typed_mode' => true,
+                ],
+                'attributes' => [
+                    'id' => 'index_query_args',
+                    'required' => false,
+                    'placeholder' => <<<'STRING'
+                        [title]
+                        type = list
+                        
+                        [author]
+                        type = res
+                        STRING,
+                    'rows' => 30,
+                ],
+            ])
+        ;
+
+        // TODO Make option "q" a standard filter.
+        $this
             // The main search field is "q", not "fulltext_search" or "search".
             ->add([
                 'name' => 'q',
@@ -196,7 +266,7 @@ class SearchConfigConfigureForm extends Form
                 'name' => 'suggest_url',
                 'type' => CommonElement\OptionalUrl::class,
                 'options' => [
-                    'label' => 'Direct endpoint', // @translate
+                    'label' => 'Direct endpoint for suggester', // @translate
                     // @see https://solr.apache.org/guide/suggester.html#suggest-request-handler-parameters
                     'info' => 'This url allows to use an external endpoint to manage keywords and is generally quicker. Needed params should be appended.', // @translate
                 ],
@@ -223,24 +293,6 @@ class SearchConfigConfigureForm extends Form
                 ],
                 'attributes' => [
                     'id' => 'q_suggest_fill_input',
-                ],
-            ])
-            ->add([
-                'name' => 'fulltext_search',
-                'type' => CommonElement\OptionalRadio::class,
-                'options' => [
-                    'label' => 'Add a button to search record or full text (for content not stored in a property)', // @translate
-                    'value_options' => [
-                        '' => 'None', // @translate
-                        'fulltext_checkbox' => 'Check box "Search full text"', // @translate
-                        'record_checkbox' => 'Check box "Record only"', // @translate
-                        'fulltext_radio' => 'Radio "Full text" and "Record only"', // @translate
-                        'record_radio' => 'Radio "Record only" and "Full text"', // @translate
-                    ],
-                ],
-                'attributes' => [
-                    'id' => 'fulltext_search',
-                    'value' => '',
                 ],
             ])
             ->add([
@@ -304,53 +356,6 @@ class SearchConfigConfigureForm extends Form
                     'placeholder' => '',
                 ],
             ]);
-
-        $this
-            ->add([
-                'name' => 'index',
-                'type' => Fieldset::class,
-                'options' => [
-                    'label' => 'Indexes', // @translate
-                ],
-            ])
-            ->get('index')
-
-            ->add([
-                'name' => 'aliases',
-                'type' => CommonElement\DataTextarea::class,
-                'options' => [
-                    'label' => 'Aliases and aggregated fields', // @translate
-                    'info' => 'List of fields that refers to one or multiple indexes (properties with internal search engine, native indexes with Solr), formatted "name = label", then the list of properties and an empty line. The name must not be a property term or a reserved keyword.', // @translate
-                    'documentation' => 'https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch/-/blob/master/data/configs/search_engine.internal.php',
-                    'as_key_value' => true,
-                    'key_value_separator' => '=',
-                    'data_options' => [
-                        'name' => null,
-                        'label' => null,
-                        'fields' => ',',
-                    ],
-                    'data_text_mode' => 'last_is_list',
-                ],
-                'attributes' => [
-                    'id' => 'index_aliases',
-                    'placeholder' => <<<'STRING'
-                        author = Author
-                        dcterms:creator
-                        dcterms:contributor
-                        
-                        title = Title
-                        dcterms:title
-                        dcterms:alternative
-                        
-                        date = Date
-                        dcterms:date
-                        dcterms:created
-                        dcterms:issued
-                        STRING,
-                    'rows' => 30,
-                ],
-            ])
-        ;
 
         // Settings for the form querier (advanced form and filters).
 
@@ -425,6 +430,25 @@ class SearchConfigConfigureForm extends Form
                     'id' => 'attribute_form',
                 ],
             ])
+            // TODO Make option "rft" a standard filter.
+            ->add([
+                'name' => 'rft',
+                'type' => CommonElement\OptionalRadio::class,
+                'options' => [
+                    'label' => 'Add a button to search record or full text (for content not stored in a property)', // @translate
+                    'value_options' => [
+                        '' => 'None', // @translate
+                        'fulltext_checkbox' => 'Check box "Search full text"', // @translate
+                        'record_checkbox' => 'Check box "Record only"', // @translate
+                        'fulltext_radio' => 'Radio "Full text" and "Record only"', // @translate
+                        'record_radio' => 'Radio "Record only" and "Full text"', // @translate
+                    ],
+                ],
+                'attributes' => [
+                    'id' => 'rft',
+                    'value' => '',
+                ],
+            ])
             ->add([
                 'name' => 'filters',
                 'type' => Element\Collection::class,
@@ -470,7 +494,7 @@ class SearchConfigConfigureForm extends Form
                 'name' => 'advanced',
                 'type' => Fieldset::class,
                 'options' => [
-                    'label' => 'Advanced  filters', // @translate
+                    'label' => 'Configuration of the element "Advanced filters"', // @translate
                 ],
             ])
             ->get('advanced')
@@ -589,13 +613,13 @@ class SearchConfigConfigureForm extends Form
 
         $this
             ->add([
-                'name' => 'display',
+                'name' => 'results',
                 'type' => Fieldset::class,
                 'options' => [
-                    'label' => 'Display', // @translate
+                    'label' => 'Results', // @translate
                 ],
             ])
-            ->get('display')
+            ->get('results')
             ->add([
                 'name' => 'by_resource_type',
                 'type' => Element\Checkbox::class,
@@ -853,6 +877,22 @@ class SearchConfigConfigureForm extends Form
                 ],
             ])
 
+            ->add([
+                'name' => 'pagination_per_page',
+                'type' => CommonElement\OptionalNumber::class,
+                'options' => [
+                    'label' => 'Pagination per page (use site settings by default)', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'pagination_per_page',
+                    'required' => false,
+                    'value' => '0',
+                    'min' => '0',
+                    // 'max' => '1000',
+                    'step' => '1',
+                ],
+            ])
+
             // TODO Add the style of pagination (prev/next or list of pages).
 
             ->add([
@@ -1030,7 +1070,7 @@ class SearchConfigConfigureForm extends Form
                 'name' => 'display_submit',
                 'type' => CommonElement\OptionalRadio::class,
                 'options' => [
-                    'label' => 'Position of the button "Apply filters"', // @translate
+                    'label' => 'Position of the button "Apply facets"', // @translate
                     'value_options' => [
                         'none' => 'None', // @translate
                         'above' => 'Above facets', // @translate
@@ -1086,6 +1126,31 @@ class SearchConfigConfigureForm extends Form
                     'required' => false,
                     'value' => 'Reset facets', // @translate
                     'placeholder' => 'Reset facets', // @translate
+                ],
+            ])
+            ->add([
+                'name' => 'display_refine',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Display the input field to refine search', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'facet_display_refine',
+                    'required' => false,
+                    'value' => true,
+                ],
+            ])
+            ->add([
+                'name' => 'label_refine',
+                'type' => Element\Text::class,
+                'options' => [
+                    'label' => 'Label for refine', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'facet_label_refine',
+                    'required' => false,
+                    'value' => 'Refine search', // @translate
+                    'placeholder' => 'Refine search', // @translate
                 ],
             ])
             ->add([
@@ -1155,9 +1220,9 @@ class SearchConfigConfigureForm extends Form
             ;
         }
 
-        if ($inputFilter->has('display')) {
+        if ($inputFilter->has('results')) {
             $inputFilter
-                ->get('display')
+                ->get('results')
                 ->add([
                     'name' => 'label_sort',
                     'required' => false,

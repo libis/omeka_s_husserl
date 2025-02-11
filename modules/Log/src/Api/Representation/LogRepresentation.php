@@ -2,7 +2,7 @@
 
 namespace Log\Api\Representation;
 
-use Log\Stdlib\PsrMessage;
+use Common\Stdlib\PsrMessage;
 use Omeka\Api\Representation\AbstractEntityRepresentation;
 
 class LogRepresentation extends AbstractEntityRepresentation
@@ -93,59 +93,91 @@ class LogRepresentation extends AbstractEntityRepresentation
      */
     public function text()
     {
+        /**
+         * @var \Omeka\View\Helper\Url $url
+         * @var \Omeka\View\Helper\Hyperlink $hyperlink
+         * @var \Omeka\I18n\Translator $translator
+         */
         $services = $this->getServiceLocator();
+        $url = $this->getViewHelper('url');
+        $escape = $this->getViewHelper('escapeHtml');
+        $hyperlink = $this->getViewHelper('hyperlink');
         $translator = $services->get('MvcTranslator');
-        $escapeHtml = true;
 
+        // For speed, use a base url so just append the controller name and the
+        // resource id without full url processing.
+        // In logs, it is recommended to use the precise context when possible.
+        $resourcesToControllers = [
+            'asset' => 'asset',
+            'assets' => 'asset',
+            'item' => 'item',
+            'items' => 'item',
+            'item set' => 'item-set',
+            'itemset' => 'item-set',
+            'itemsets' => 'item-set',
+            'job' => 'job',
+            'jobs' => 'job',
+            'media' => 'media',
+            'resourcetemplate' => 'resource-template',
+            'template' => 'resource-template',
+            'user' => 'user',
+            'users' => 'user',
+            'annotation' => 'annotation',
+            'annotations' => 'annotation',
+            // For context.
+            'itemid' => 'item',
+            'itemsetid' => 'item-set',
+            'jobid' => 'job',
+            'mediaid' => 'media',
+            'ownerid' => 'user',
+            'userid' => 'user',
+            'resourcetemplateid' => 'resource-template',
+            'templateid' => 'resource-template',
+            'annotationid' => 'annotation',
+        ];
+        $baseUrl = str_replace('/replace', '', $url('admin/default', ['controller' => 'replace']));
+
+        $escapeHtml = true;
         $message = $this->resource->getMessage();
         $context = $this->resource->getContext() ?: [];
+
         if ($context) {
-            /** @var \Omeka\View\Helper\Hyperlink $hyperlink */
-            $hyperlink = $this->getViewHelper('hyperlink');
-            $url = $this->getViewHelper('url');
+            $shouldEscapes = [];
+            $prevSiteSlug = null;
             foreach ($context as $key => $value) {
-                $cleanKey = preg_replace('~[^a-z]~', '', strtolower((string) $key));
+                $shouldEscapes[$key] = true;
+                $value = trim((string) $value);
+                $lowerKey = strtolower((string) $key);
+                $cleanKey = preg_replace('~[^a-z]~', '', $lowerKey);
                 switch ($cleanKey) {
                     case 'itemid':
                     case 'itemsetid':
-                    case 'mediaid':
-                    case 'userid':
-                    case 'ownerid':
                     case 'jobid':
+                    case 'mediaid':
+                    case 'resourcetemplateid':
+                    case 'templateid':
+                    case 'ownerid':
+                    case 'userid':
                     case 'annotationid':
-                        $resourceTypes = [
-                            'itemid' => 'item',
-                            'itemsetid' => 'item-set',
-                            'mediaid' => 'media',
-                            'userid' => 'user',
-                            'ownerid' => 'user',
-                            'jobid' => 'job',
-                            'annotationid' => 'annotation',
-                        ];
-                        $resourceType = $resourceTypes[$cleanKey];
-                        $context[$key] = $hyperlink($value, $url('admin/id', ['controller' => $resourceType, 'id' => $value]));
-                        $escapeHtml = false;
+                        $controller = $resourcesToControllers[$cleanKey];
+                        $context[$key] = $hyperlink($value, "$baseUrl/$controller/$value");
+                        $shouldEscapes[$key] = false;
+                        break;
+                    case 'assetid':
+                        $context[$key] = $hyperlink($value, "$baseUrl/asset?id=$value");
+                        $shouldEscapes[$key] = false;
                         break;
                     case 'resourceid':
                     case 'id':
                         $resourceType = $context['resource'] ?? $context['resource_name'] ?? $context['resource_type'] ?? null;
                         if ($resourceType) {
-                            $resourceTypes = [
-                                'item' => 'item',
-                                'items' => 'item',
-                                'itemset' => 'item-set',
-                                'itemsets' => 'item-set',
-                                'media' => 'media',
-                                'user' => 'user',
-                                'users' => 'user',
-                                'annotation' => 'annotation',
-                                'annotations' => 'annotation',
-                            ];
                             $resourceType = preg_replace('~[^a-z]~', '', strtolower($resourceType));
-                            if (isset($resourceTypes[$resourceType])) {
-                                $resourceType = $resourceTypes[$resourceType];
-                                $context[$key] = $hyperlink($value, $url('admin/id', ['controller' => $resourceType, 'id' => $value]));
-                                $escapeHtml = false;
+                            if (isset($resourcesToControllers[$resourceType])) {
+                                $controller = $resourcesToControllers[$resourceType];
+                                $context[$key] = $controller === 'asset'
+                                    ? $hyperlink($value, "$baseUrl/asset?id=$value")
+                                    : $hyperlink($value, "$baseUrl/$controller/$value");
+                                $shouldEscapes[$key] = false;
                                 if (isset($context['resource'])) {
                                     $context['resource'] = $translator->translate($context['resource']);
                                 }
@@ -158,13 +190,70 @@ class LogRepresentation extends AbstractEntityRepresentation
                             }
                         }
                         break;
+                    case 'siteslug':
+                        $context[$key] = $hyperlink($value, "$baseUrl/site/s/$value");
+                        $shouldEscapes[$key] = false;
+                        $prevSiteSlug = $value;
+                        break;
+                    case 'pageslug':
+                        if ($prevSiteSlug) {
+                            $context[$key] = $hyperlink($value, "$baseUrl/site/s/$prevSiteSlug/page/$value");
+                            $shouldEscapes[$key] = false;
+                        } elseif (isset($context['site_slug'])) {
+                            $context[$key] = $hyperlink($value, "$baseUrl/site/s/{$context['site_slug']}/page/$value");
+                            $shouldEscapes[$key] = false;
+                        }
+                        break;
+                    case 'siteurl':
+                    case 'pageurl':
                     case 'url':
-                        $context[$key] = $hyperlink(basename($value), $value);
-                        $escapeHtml = false;
+                    // Already managed via the clean key.
+                    // case strpos($lowerKey, 'url_') === 0:
+                        $context[$key] = $hyperlink(basename($value), $value, ['target' => '_blank']);
+                        $shouldEscapes[$key] = false;
                         break;
+                    case 'href':
                     case 'link':
-                        $escapeHtml = false;
+                        $shouldEscapes[$key] = false;
                         break;
+                    case 'thesaurusid':
+                        $context[$key] = $hyperlink($value, "$baseUrl/thesaurus/$value/structure");
+                        $shouldEscapes[$key] = false;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            $countKeys = count($context);
+            $countShouldEscape = count(array_filter($shouldEscapes));
+            $countShouldNotEscape = $countKeys - $countShouldEscape;
+            if ($countKeys === $countShouldEscape) {
+                $escapeHtml = true;
+            } elseif ($countKeys === $countShouldNotEscape) {
+                $escapeHtml = false;
+            } else {
+                // Manual escaping.
+                $escapeHtml = false;
+                foreach ($context as $key => $value) {
+                    if ($shouldEscapes[$key]) {
+                        $context[$key] = $escape($value);
+                    }
+                }
+            }
+        } else {
+            // Manage simple logs.
+            // Add resource links for logs with strings like "item #xxx".
+            // TODO Manage "resource" (or a route redirect).
+            if (mb_strpos($message, '#')) {
+                $count = 0;
+                $message = preg_replace_callback('~(?<resource>item set|item|job|media|owner|user|annotation) #(?<id>\d+)~i', function ($matches) use ($hyperlink, $baseUrl, $resourcesToControllers) {
+                $controller = $resourcesToControllers[strtolower($matches['resource'])];
+                return $matches['resource'] . ' #' . ($controller === 'asset'
+                    ? $hyperlink($matches['id'], "$baseUrl/asset?id={$matches['id']}")
+                    : $hyperlink($matches['id'], "$baseUrl/$controller/{$matches['id']}"));
+                }, $message, -1, $count);
+                if ($count) {
+                    $escapeHtml = false;
                 }
             }
         }
@@ -172,6 +261,7 @@ class LogRepresentation extends AbstractEntityRepresentation
         $psrMessage = new PsrMessage($message, $context);
         return $psrMessage
             ->setTranslator($translator)
+            // TODO Manage the case where some keys should be escaped and some keys not (may be a security issue when logs are external).
             ->setEscapeHtml($escapeHtml);
     }
 

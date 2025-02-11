@@ -4,10 +4,10 @@ namespace Log\Job;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
-use Log\Log\Writer\Job as JobWriter;
 use Omeka\Entity\Job;
 use Omeka\Job\DispatchStrategy\StrategyInterface;
 use Omeka\Job\Exception;
+use Omeka\Log\Writer\Job as JobWriter;
 
 class Dispatcher extends \Omeka\Job\Dispatcher
 {
@@ -32,7 +32,9 @@ class Dispatcher extends \Omeka\Job\Dispatcher
         }
 
         // Refresh owner and use reference only to avoid doctrine issue when a
-        // job dispatches another job.
+        // job dispatches another job. Use a new entity manager too.
+        $this->entityManager = $this->getNewEntityManager($this->entityManager);
+
         $owner = $this->auth->getIdentity();
         $owner = $owner
             ? $this->entityManager->getReference(\Omeka\Entity\User::class, $owner->getId())
@@ -64,11 +66,13 @@ class Dispatcher extends \Omeka\Job\Dispatcher
     {
         // Keep the default writer if wanted.
         if ($this->useJobWriter) {
-            $this->logger->addWriter(new JobWriter($job));
+            $writer = new JobWriter($job);
+            $writer->setFormatter(new \Common\Log\Formatter\PsrLogSimple);
+            $this->logger->addWriter($writer);
         }
 
         // Enable the user and job id in the default logger.
-        $userJobIdProcessor = new \Log\Processor\UserJobId($job);
+        $userJobIdProcessor = new \Log\Log\Processor\UserJobId($job);
         // The priority "0" fixes a precedency issue with the processor UserId.
         $this->logger->addProcessor($userJobIdProcessor, 0);
 

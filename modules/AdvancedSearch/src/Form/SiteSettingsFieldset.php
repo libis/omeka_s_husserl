@@ -3,27 +3,17 @@
 namespace AdvancedSearch\Form;
 
 use Common\Form\Element as CommonElement;
-use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
 use Omeka\Form\Element as OmekaElement;
-use Omeka\Settings\AbstractSettings;
 
 class SiteSettingsFieldset extends Fieldset
 {
-    /**
-     * @var AbstractSettings
-     */
-    protected $settings = null;
+    use TraitCommonSettings;
 
     /**
      * @var array
      */
     protected $searchConfigs = [];
-
-    /**
-     * @var array
-     */
-    protected $defaultSearchFields = [];
 
     /**
      * Warning: there is a core fieldset "Search" (before Omeka v4).
@@ -39,45 +29,11 @@ class SiteSettingsFieldset extends Fieldset
 
     public function init(): void
     {
-        $defaultSelectedFields = [];
-        foreach ($this->defaultSearchFields as $key => $defaultSearchField) {
-            if (!array_key_exists('default', $defaultSearchField) || $defaultSearchField['default'] === true) {
-                $defaultSelectedFields[] = $key;
-            }
-            $this->defaultSearchFields[$key] = $defaultSearchField['label'] ?? $key;
-        }
-
-        $searchFields = $this->settings->get('advancedsearch_search_fields') ?: $defaultSelectedFields;
-
         $this
             ->setAttribute('id', 'advanced-search')
             ->setOption('element_groups', $this->elementGroups)
-            ->add([
-                'name' => 'advancedsearch_property_improved',
-                'type' => Element\Checkbox::class,
-                'options' => [
-                    'element_group' => 'search',
-                    'label' => 'Support improved search of properties (not recommended: use filters)', // @translate
-                    'info' => 'To override the default search elements is not recommended, so the improvements are now available in the element "filter".', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_property_improved',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_search_fields',
-                'type' => CommonElement\OptionalMultiCheckbox::class,
-                'options' => [
-                    'element_group' => 'search',
-                    'label' => 'Display only following fields', // @translate
-                    'value_options' => $this->defaultSearchFields,
-                    'use_hidden_element' => true,
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_search_fields',
-                    'value' => $searchFields,
-                ],
-            ])
+
+            ->initSearchFields()
 
             ->add([
                 'name' => 'advancedsearch_main_config',
@@ -176,21 +132,9 @@ class SiteSettingsFieldset extends Fieldset
         ;
     }
 
-    public function setSettings(AbstractSettings $settings): self
-    {
-        $this->settings = $settings;
-        return $this;
-    }
-
     public function setSearchConfigs(array $searchConfigs): self
     {
         $this->searchConfigs = $searchConfigs;
-        return $this;
-    }
-
-    public function setDefaultSearchFields(array $defaultSearchFields): self
-    {
-        $this->defaultSearchFields = $defaultSearchFields;
         return $this;
     }
 }

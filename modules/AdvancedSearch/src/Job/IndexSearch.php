@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2018-2024
+ * Copyright Daniel Berthereau, 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -68,11 +68,10 @@ class IndexSearch extends AbstractJob
         $referenceIdProcessor->setReferenceId('search/index/job_' . $this->job->getId());
         $this->logger->addProcessor($referenceIdProcessor);
 
-        $batchSize = self::BATCH_SIZE;
-
         $searchEngineId = $this->getArg('search_engine_id');
         $startResourceId = (int) $this->getArg('start_resource_id');
         $resourceIds = $this->getArg('resource_ids', []) ?: [];
+        $batchSize = abs((int) $this->getArg('resources_by_step')) ?: self::BATCH_SIZE;
 
         /** @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation $searchEngine */
         $searchEngine = $api->read('search_engines', $searchEngineId)->getContent();
@@ -107,20 +106,25 @@ class IndexSearch extends AbstractJob
             return;
         }
 
-        $totalJobs = $services->get('ControllerPluginManager')->get('totalJobs');
-        $totalJobs = $totalJobs(self::class, true);
+        $listJobStatusesByIds = $services->get('ControllerPluginManager')->get('listJobStatusesByIds');
+        $listJobStatusesByIds = $listJobStatusesByIds(self::class, true, null, $this->job->getId());
         $force = $this->getArg('force');
-        if ($totalJobs > 1) {
+        if (count($listJobStatusesByIds)) {
             if (!$force) {
                 $this->logger->err(
-                    'Search index #{search_engine_id} ("{name}"): There are already {total} other jobs "Index Search" and the current one is not forced.', // @translate
-                    ['search_engine_id' => $searchEngine->id(), 'name' => $searchEngine->name(), 'total' => $totalJobs - 1]
+                    'Search index #{search_engine_id} ("{name}"): There are already {total} other jobs "Index Search" (#{list}) and the current one is not forced.', // @translate
+                    [
+                        'search_engine_id' => $searchEngine->id(),
+                        'name' => $searchEngine->name(),
+                        'total' => count($listJobStatusesByIds),
+                        'list' => implode(', #', array_keys($listJobStatusesByIds)),
+                    ]
                 );
                 return;
             }
             $this->logger->warn(
                 'There are already {total} other jobs "Index Search". Slowdowns may occur on the site.', // @translate
-                ['total' => $totalJobs - 1]
+                ['total' => $listJobStatusesByIds]
             );
         }
 

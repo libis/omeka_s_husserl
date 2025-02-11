@@ -83,9 +83,9 @@ class ApiSearch extends AbstractPlugin
     public function __construct(
         ApiManager $api,
         Acl $acl = null,
+        AdapterManager $adapterManager = null,
         ApiFormAdapter $apiFormAdapter = null,
         EasyMeta $easyMeta = null,
-        AdapterManager $adapterManager = null,
         EntityManager $entityManager = null,
         LoggerInterface $logger = null,
         Paginator $paginator = null,
@@ -234,6 +234,8 @@ class ApiSearch extends AbstractPlugin
      */
     protected function doAdapterSearch(Request $request)
     {
+        // TODO Clarify the process.
+
         // TODO Manage all standard params.
         // See \Omeka\Api\Adapter\AbstractEntityAdapter::search() to normalize params.
         // See \AdvancedSearch\Controller\SearchController::searchAction() for process.
@@ -273,27 +275,31 @@ class ApiSearch extends AbstractPlugin
         // Begin building the search query.
         $resourceType = $request->getResource();
         $searchConfigSettings = $this->searchConfig->settings();
-        $searchFormSettings = $searchConfigSettings['form'] ?? [
+        $searchConfigSettingsDefault = [
             'options' => [],
             'metadata' => [],
             'properties' => [],
             'sort_fields' => [],
         ];
+        $searchFormSettings = empty($searchConfigSettings['form'])
+            ? $searchConfigSettingsDefault
+            : $searchConfigSettings['form'] + $searchConfigSettingsDefault;
         $searchFormSettings['resource'] = $resourceType;
         // Fix to be removed.
-        $searchAdapter = $this->searchConfig->searchAdapter();
-        if ($searchAdapter) {
-            $availableFields = $searchAdapter->getAvailableFields();
+        $engineAdapter = $this->searchConfig->engineAdapter();
+        if ($engineAdapter) {
+            $availableFields = $engineAdapter->getAvailableFields();
             $searchFormSettings['available_fields'] = array_combine(array_keys($availableFields), array_keys($availableFields));
         } else {
             $searchFormSettings['available_fields'] = [];
         }
 
         // Solr doesn't allow unavailable args anymore (invalid or unknown).
-        $searchFormSettings['only_available_fields'] = $searchAdapter
-            && $searchAdapter instanceof \SearchSolr\Adapter\SolariumAdapter;
+        $searchFormSettings['only_available_fields'] = $engineAdapter
+            && $engineAdapter instanceof \SearchSolr\EngineAdapter\Solarium;
 
         $searchFormSettings['aliases'] = $this->searchConfig->subSetting('index', 'aliases', []);
+        $searchFormSettings['fields_query_args'] = $this->searchConfig->subSetting('index', 'query_args', []);
         $searchFormSettings['remove_diacritics'] = (bool) $this->searchConfig->subSetting('q', 'remove_diacritics', false);
         $searchFormSettings['default_search_partial_word'] = (bool) $this->searchConfig->subSetting('q', 'default_search_partial_word', false);
 
@@ -313,8 +319,8 @@ class ApiSearch extends AbstractPlugin
         // Finish building the search query.
         // The default sort is the one of the search engine, so it is not added,
         // except if it is specifically set.
-        $this->sortQuery($searchQuery, $query, $searchFormSettings['metadata'], $searchFormSettings['sort_fields']);
-        $this->limitQuery($searchQuery, $query, $searchFormSettings['options']);
+        $this->sortQuery($searchQuery, $query, $searchFormSettings['metadata'] ?? [], $searchFormSettings['sort_fields'] ?? []);
+        $this->limitQuery($searchQuery, $query, $searchFormSettings['options'] ?? []);
         // $searchQuery->addOrderBy("$entityClass.id", $query['sort_order']);
 
         // No filter for specific limits.

@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2018-2024
+ * Copyright Daniel Berthereau, 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -30,7 +30,7 @@
 
 namespace AdvancedSearch\Controller\Admin;
 
-use AdvancedSearch\Adapter\Manager as SearchAdapterManager;
+use AdvancedSearch\EngineAdapter\Manager as EngineAdapterManager;
 use AdvancedSearch\Form\Admin\SearchEngineConfigureForm;
 use AdvancedSearch\Form\Admin\SearchEngineForm;
 use Common\Stdlib\PsrMessage;
@@ -47,16 +47,16 @@ class SearchEngineController extends AbstractActionController
     protected $entityManager;
 
     /**
-     * @var \AdvancedSearch\Adapter\Manager
+     * @var \AdvancedSearch\EngineAdapter\Manager
      */
-    protected $searchAdapterManager;
+    protected $engineAdapterManager;
 
     public function __construct(
         EntityManager $entityManager,
-        SearchAdapterManager $searchAdapterManager
+        EngineAdapterManager $engineAdapterManager
     ) {
         $this->entityManager = $entityManager;
-        $this->searchAdapterManager = $searchAdapterManager;
+        $this->engineAdapterManager = $engineAdapterManager;
     }
 
     public function addAction()
@@ -73,12 +73,12 @@ class SearchEngineController extends AbstractActionController
                 return $view;
             }
             $formData = $form->getData();
-            $engine = $this->api()->create('search_engines', $formData)->getContent();
+            $searchEngine = $this->api()->create('search_engines', $formData)->getContent();
             $this->messenger()->addSuccess(new PsrMessage(
                 'Search index "{name}" created.', // @translate
-                ['name' => $engine->name()]
+                ['name' => $searchEngine->name()]
             ));
-            return $this->redirect()->toUrl($engine->url('edit'));
+            return $this->redirect()->toUrl($searchEngine->url('edit'));
         }
         return $view;
     }
@@ -89,21 +89,21 @@ class SearchEngineController extends AbstractActionController
 
         /**
          * @var \AdvancedSearch\Entity\SearchEngine $searchEngine
-         * @var \AdvancedSearch\Adapter\AdapterInterface $adapter
+         * @var \AdvancedSearch\EngineAdapter\EngineAdapterInterface $engineAdapter
          * @var \AdvancedSearch\Form\Admin\SearchEngineConfigureForm $form
          */
         $searchEngine = $this->entityManager->find(\AdvancedSearch\Entity\SearchEngine::class, $id);
-        $searchEngineAdapterName = $searchEngine->getAdapter();
-        if (!$this->searchAdapterManager->has($searchEngineAdapterName)) {
+        $engineAdapterName = $searchEngine->getAdapter();
+        if (!$this->engineAdapterManager->has($engineAdapterName)) {
             $this->messenger()->addError(new PsrMessage(
-                'The search adapter "{name}" is not available.', // @translate
-                ['name' => $searchEngineAdapterName]
+                'The engine adapter "{name}" is not available.', // @translate
+                ['name' => $engineAdapterName]
             ));
             return $this->redirect()->toRoute('admin/search-manager', ['action' => 'browse'], true);
         }
 
         // Passing option requires a factory to avoids the error in laminas.
-        $adapter = $this->searchAdapterManager->get($searchEngineAdapterName);
+        $adapter = $this->engineAdapterManager->get($engineAdapterName);
         $form = $this->getForm(SearchEngineConfigureForm::class, [
             'search_engine_id' => $id,
         ]);
@@ -112,8 +112,8 @@ class SearchEngineController extends AbstractActionController
         if ($adapterFieldset) {
             $adapterFieldset
                 ->setOption('search_engine_id', $id)
-                ->setName('adapter')
-                ->setLabel('Adapter settings') // @translate
+                ->setName('engine_adapter')
+                ->setLabel('Engine adapter settings') // @translate
                 ->init();
             $form->add($adapterFieldset);
         }
@@ -153,14 +153,14 @@ class SearchEngineController extends AbstractActionController
 
     public function indexConfirmAction()
     {
-        $engine = $this->api()->read('search_engines', $this->params('id'))->getContent();
+        $searchEngine = $this->api()->read('search_engines', $this->params('id'))->getContent();
 
-        $totalJobs = $this->totalJobs(\AdvancedSearch\Job\IndexSearch::class, true);
+        $listJobStatusesByIds = $this->listJobStatusesByIds(\AdvancedSearch\Job\IndexSearch::class, true);
 
         $view = new ViewModel([
             'resourceLabel' => 'search index',
-            'resource' => $engine,
-            'totalJobs' => $totalJobs,
+            'resource' => $searchEngine,
+            'listJobsStatusesByIds' => $listJobStatusesByIds,
         ]);
         return $view
             ->setTerminal(true)
@@ -180,6 +180,7 @@ class SearchEngineController extends AbstractActionController
         $searchEngine = $this->api()->read('search_engines', $searchEngineId)->getContent();
 
         $startResourceId = (int) $this->params()->fromPost('start_resource_id');
+        $resourcesByStep = (int) $this->params()->fromPost('resources_by_step');
         $resourceTypes = $this->params()->fromPost('resource_types') ?: [];
         $visibility = $this->params()->fromPost('visibility');
         $visibility = in_array($visibility, ['public', 'private']) ? $visibility : null;
@@ -188,6 +189,7 @@ class SearchEngineController extends AbstractActionController
         $jobArgs = [];
         $jobArgs['search_engine_id'] = $searchEngine->id();
         $jobArgs['start_resource_id'] = $startResourceId;
+        $jobArgs['resources_by_step'] = $resourcesByStep;
         $jobArgs['resource_types'] = $resourceTypes;
         $jobArgs['visibility'] = $visibility;
         $jobArgs['force'] = $force;
@@ -219,13 +221,13 @@ class SearchEngineController extends AbstractActionController
     public function deleteConfirmAction()
     {
         $response = $this->api()->read('search_engines', $this->params('id'));
-        $engine = $response->getContent();
+        $searchEngine = $response->getContent();
 
         // TODO Add a warning about the related configs, that will be deleted.
 
         $view = new ViewModel([
             'resourceLabel' => 'search engine',
-            'resource' => $engine,
+            'resource' => $searchEngine,
         ]);
         return $view
             ->setTerminal(true)
@@ -237,18 +239,18 @@ class SearchEngineController extends AbstractActionController
         if ($this->getRequest()->isPost()) {
             $form = $this->getForm(ConfirmForm::class);
             $form->setData($this->getRequest()->getPost());
-            $engineId = $this->params('id');
-            $engineName = $this->api()->read('search_engines', $engineId)->getContent()->name();
+            $searchEngineId = $this->params('id');
+            $searchEngineName = $this->api()->read('search_engines', $searchEngineId)->getContent()->name();
             if ($form->isValid()) {
-                $this->api()->delete('search_engines', $engineId);
+                $this->api()->delete('search_engines', $searchEngineId);
                 $this->messenger()->addSuccess(new PsrMessage(
                     'Search index "{name}" successfully deleted', // @translate
-                    ['name' => $engineName]
+                    ['name' => $searchEngineName]
                 ));
             } else {
                 $this->messenger()->addError(new PsrMessage(
                     'Search index "{name}" could not be deleted', // @translate
-                    ['name' => $engineName]
+                    ['name' => $searchEngineName]
                 ));
             }
         }

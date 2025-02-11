@@ -23,7 +23,7 @@ return [
             Mvc\MvcListeners::class => Mvc\MvcListeners::class,
         ],
         'factories' => [
-            'AdvancedSearch\AdapterManager' => Service\Adapter\ManagerFactory::class,
+            'AdvancedSearch\EngineAdapterManager' => Service\EngineAdapter\ManagerFactory::class,
             'AdvancedSearch\FormAdapterManager' => Service\FormAdapter\ManagerFactory::class,
             'AdvancedSearch\SearchResources' => Service\Stdlib\SearchResourcesFactory::class,
         ],
@@ -77,12 +77,12 @@ return [
         'factories' => [
             'apiSearch' => Service\ViewHelper\ApiSearchFactory::class,
             'apiSearchOne' => Service\ViewHelper\ApiSearchOneFactory::class,
-            'cleanQuery' => Service\ViewHelper\CleanQueryFactory::class,
             'escapeValueOrGetHtml' => Service\ViewHelper\EscapeValueOrGetHtmlFactory::class,
             'fieldSelect' => Service\ViewHelper\FieldSelectFactory::class,
             'paginationSearch' => Service\ViewHelper\PaginationSearchFactory::class,
             'queryInput' => Service\ViewHelper\QueryInputFactory::class,
             'searchEngineConfirm' => Service\ViewHelper\SearchEngineConfirmFactory::class,
+            'searchResources' => Service\ViewHelper\SearchResourcesFactory::class,
             'searchSuggesterConfirm' => Service\ViewHelper\SearchSuggesterConfirmFactory::class,
         ],
         'delegators' => [
@@ -156,14 +156,11 @@ return [
         ],
     ],
     'controller_plugins' => [
-        'invokables' => [
-            'searchRequestToResponse' => Mvc\Controller\Plugin\SearchRequestToResponse::class,
-        ],
         'factories' => [
             'apiSearch' => Service\ControllerPlugin\ApiSearchFactory::class,
             'apiSearchOne' => Service\ControllerPlugin\ApiSearchOneFactory::class,
+            'listJobStatusesByIds' => Service\ControllerPlugin\ListJobStatusesByIdsFactory::class,
             'searchResources' => Service\ControllerPlugin\SearchResourcesFactory::class,
-            'totalJobs' => Service\ControllerPlugin\TotalJobsFactory::class,
         ],
     ],
     'router' => [
@@ -361,9 +358,9 @@ return [
         'Try to map automatically the metadata and the properties that are not mapped yet with the fields of the index', // @translate
         '[Edit below]', // @translate
     ],
-    'advanced_search_adapters' => [
+    'advanced_search_engine_adapters' => [
         'factories' => [
-            'internal' => Service\Adapter\InternalAdapterFactory::class,
+            'internal' => Service\EngineAdapter\InternalFactory::class,
         ],
     ],
     'advanced_search_form_adapters' => [
@@ -376,10 +373,33 @@ return [
     ],
     'advancedsearch' => [
         'settings' => [
-            'advancedsearch_property_improved' => false,
+            'advancedsearch_search_fields' => [
+                // Any resource type.
+                'common/advanced-search/sort',
+                'common/advanced-search/fulltext',
+                'common/advanced-search/properties',
+                'common/advanced-search/filters',
+                'common/advanced-search/resource-class',
+                'common/advanced-search/resource-template',
+                // Items.
+                'common/advanced-search/item-sets',
+                'common/advanced-search/site',
+                'common/advanced-search/has-media',
+                'common/advanced-search/media-types',
+                // Media
+                'common/advanced-search/media-type',
+                // Item sets.
+                // Other common.
+                'common/advanced-search/owner',
+                'common/advanced-search/visibility-radio',
+                'common/advanced-search/ids',
+                // Modules.
+                'common/advanced-search/item-set-is-dynamic',
+                'common/advanced-search/data-type-geography',
+                'common/numeric-data-types-advanced-search',
+            ],
             'advancedsearch_fulltextsearch_alto' => false,
             'advancedsearch_main_config' => 1,
-            'advancedsearch_configs' => [1],
             'advancedsearch_api_config' => '',
             // TODO Remove this option if there is no issue with sync or async (except multiple search engines).
             'advancedsearch_index_batch_edit' => 'sync',
@@ -387,21 +407,25 @@ return [
             'advancedsearch_all_configs' => [1 => 'find'],
         ],
         'site_settings' => [
-            'advancedsearch_property_improved' => false,
+            // See the full list below.
             'advancedsearch_search_fields' => [
+                // Any resource type.
                 'common/advanced-search/sort',
                 'common/advanced-search/fulltext',
                 // 'common/advanced-search/properties',
-                // 'common/advanced-search/properties-improved',
                 'common/advanced-search/filters',
                 'common/advanced-search/resource-class',
-                // 'common/advanced-search/resource-template',
+                // Items.
                 'common/advanced-search/item-sets',
-                'common/advanced-search/date-time',
                 'common/advanced-search/has-media',
+                'common/advanced-search/media-types',
+                // Media
+                'common/advanced-search/media-type',
+                // Item sets.
+                // Other common.
+                'common/advanced-search/resource-template-restrict',
                 'common/advanced-search/ids',
                 // Modules.
-                'common/advanced-search/media-type',
                 'common/advanced-search/data-type-geography',
                 'common/numeric-data-types-advanced-search',
             ],
@@ -426,36 +450,194 @@ return [
                 'link' => '',
             ],
         ],
-        // This is the default list of all possible fields, allowing other modules
-        // to complete it. The partials that are not set in merged Config (included
-        // config/local.config.php) are not managed by this module.
+        // This list of templates for advanced search form comes from view/common/advanced-search.
+        // The partials that are not set in merged Config (included config/local.config.php)
+        // are not managed by this module. Other modules can complete it.
+        // The keys "admin_site" and "default_site" mean available on admin or
+        // site by default. Any partial can be displayed.
         'search_fields' => [
-            // From view/common/advanced-search' (except filters, from this module).
-            'common/advanced-search/sort' => ['label' => 'Sort'], // @translate
-            'common/advanced-search/fulltext' => ['label' => 'Full text'], // @translate
-            'common/advanced-search/properties' => ['label' => 'Properties'], // @translate
-            'common/advanced-search/properties-improved' => ['label' => 'Properties (improved)'], // @translate
-            'common/advanced-search/filters' => ['label' => 'Filters'], // @translate
-            'common/advanced-search/resource-class' => ['label' => 'Classes'], // @translate
-            'common/advanced-search/resource-template' => ['label' => 'Templates', 'default' => false], // @translate
-            // This partial is managed separately by a core option.
-            //'common/advanced-search/resource-template-restrict' => ['label' => 'Templates (restricted)', 'default' => false], // @translate
-            'common/advanced-search/item-sets' => ['label' => 'Item sets'], // @translate
-            'common/advanced-search/owner' => ['label' => 'Owner', 'default' => false], // @translate
-            'common/advanced-search/site' => ['label' => 'Site', 'default' => false], // @translate
-            // From module advanced search plus.
-            'common/advanced-search/date-time' => ['label' => 'Date time'], // @translate
-            'common/advanced-search/has-media' => ['label' => 'Has media'], // @translate
-            'common/advanced-search/has-original' => ['label' => 'Has original file', 'default' => false], // @translate
-            'common/advanced-search/has-thumbnails' => ['label' => 'Has thumbnails', 'default' => false], // @translate
-            'common/advanced-search/has-asset' => ['label' => 'Has asset as thumbnail', 'default' => false], // @translate
-            'common/advanced-search/asset' => ['label' => 'Has a specific asset', 'default' => false], // @translate
-            'common/advanced-search/media-type' => ['label' => 'Media types'], // @translate
-            'common/advanced-search/visibility' => ['label' => 'Visibility', 'default' => false], // @translate
+            // Any resource type.
+            'common/advanced-search/sort' => [
+                'label' => 'Sort', // @translate
+            ],
+            'common/advanced-search/fulltext' => [
+                'label' => 'Full text', // @translate
+            ],
+            'common/advanced-search/properties' => [
+                'label' => 'Properties', // @translate
+            ],
+            'common/advanced-search/properties-improved' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Properties *', // @translate
+                'default_admin' => false,
+                'default_site' => false,
+                'improve' => 'common/advanced-search/properties',
+            ],
+            'common/advanced-search/filters' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Filters', // @translate
+            ],
+            'common/advanced-search/resource-class' => [
+                'label' => 'Classes', // @translate
+            ],
+            'common/advanced-search/resource-class-improved' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Classes *', // @translate
+                'default_admin' => false,
+                'default_site' => false,
+                'improve' => 'common/advanced-search/resource-class',
+            ],
+            'common/advanced-search/resource-template' => [
+                'label' => 'Templates', // @translate
+                'default_site' => false,
+            ],
+            'common/advanced-search/resource-template-improved' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Templates *', // @translate
+                'default_admin' => false,
+                'default_site' => false,
+                'improve' => 'common/advanced-search/resource-template',
+            ],
+            // Warning: this partial is managed separately by a core option.
+            'common/advanced-search/resource-template-restrict' => [
+                'label' => 'Templates (specific option "restricted")', // @translate
+                'default_admin' => false,
+                'default_site' => false,
+            ],
+
+            // Items.
+            'common/advanced-search/item-sets' => [
+                'label' => 'Item sets', // @translate
+                'resource_type' => ['items'],
+            ],
+            'common/advanced-search/item-sets-improved' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Item sets *', // @translate
+                'resource_type' => ['items'],
+                'default_site' => false,
+                'improve' => 'common/advanced-search/item-sets',
+            ],
+            'common/advanced-search/site' => [
+                'label' => 'default_site', // @translate
+                'resource_type' => ['items', 'item_sets'],
+                'default_site' => false,
+            ],
+            'common/advanced-search/site-improved' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Site *', // @translate
+                'resource_type' => ['items', 'item_sets'],
+                'default_admin' => false,
+                'default_site' => false,
+                'improve' => 'common/advanced-search/site',
+            ],
+            'common/advanced-search/has-media' => [
+                'label' => 'Has media (select)', // @translate
+                'resource_type' => ['items'],
+                'default_admin' => false,
+                'default_site' => false,
+            ],
+            'common/advanced-search/has-media-radio' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Has media (radio)', // @translate
+                'resource_type' => ['items'],
+            ],
+            'common/advanced-search/media-types' => [
+                'label' => 'Media types', // @translate
+                'resource_type' => ['items'],
+            ],
+
+            // Medias.
+            'common/advanced-search/media-type' => [
+                'label' => 'Media type (single)', // @translate
+                'resource_type' => ['media'],
+            ],
+            'common/advanced-search/media-type-improved' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Media types *', // @translate
+                'resource_type' => ['media'],
+                'default_admin' => false,
+                'default_site' => false,
+                'improve' => 'common/advanced-search/media-type',
+            ],
+
+            // Item sets.
+
+            // Other common.
+            'common/advanced-search/owner' => [
+                'label' => 'Owner', // @translate
+                'default_site' => false,
+            ],
+            'common/advanced-search/owner-improved' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Owner *', // @translate
+                'default_admin' => false,
+                'default_site' => false,
+                'improve' => 'common/advanced-search/owner',
+            ],
+            // Visibility filter was included in Omeka S v4.0.
+            'common/advanced-search/visibility' => [
+                'label' => 'Visibility (select)', // @translate
+                'default_admin' => false,
+                'default_site' => false,
+            ],
+            'common/advanced-search/visibility-radio' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Visibility (radio)', // @translate
+                'default_site' => false,
+            ],
+            'common/advanced-search/ids' => [
+                'label' => 'Id', // @translate
+            ],
+
+            // Common for this module.
+            'common/advanced-search/date-time' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Date time', // @translate
+                'default_site' => false,
+            ],
+            'common/advanced-search/has-original' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Has original file', // @translate
+                'default_site' => false,
+            ],
+            'common/advanced-search/has-thumbnails' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Has thumbnails', // @translate
+                'default_site' => false,
+            ],
+            'common/advanced-search/has-asset' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Has asset as thumbnail', // @translate
+                'default_site' => false,
+            ],
+            'common/advanced-search/asset' => [
+                'module' => 'AdvancedSearch',
+                'label' => 'Has a specific asset', // @translate
+                'default_site' => false,
+            ],
+
             // From module data type geometry.
-            'common/advanced-search/data-type-geography' => ['module' => 'DataTypeGeometry', 'label' => 'Geography', 'default' => false], // @translate
+            'common/advanced-search/data-type-geography' => [
+                'module' => 'DataTypeGeometry',
+                'label' => 'Geography', // @translate
+            ],
+
+            // From module dynamic item sets.
+            'common/advanced-search/item-set-is-dynamic' => [
+                'module' => 'Dynamic Item Sets',
+                'label' => 'Is dynamic item set', // @translate
+                'default_site' => false,
+                'resource_type' => ['item_sets'],
+            ],
+
             // From module numeric data type.
-            'common/numeric-data-types-advanced-search' => ['module' => 'NumericDataTypes', 'label' => 'Numeric', 'default' => false], // @translate
+            // The partial is used only in search items, but data are available
+            // anywhere.
+            'common/numeric-data-types-advanced-search' => [
+                'module' => 'NumericDataTypes',
+                'label' => 'Numeric', // @translate
+                'resource_type' => ['items'],
+            ],
         ],
     ],
 ];

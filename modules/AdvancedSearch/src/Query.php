@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2018-2024
+ * Copyright Daniel Berthereau, 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software. You can use, modify and/ or
@@ -42,6 +42,11 @@ class Query implements JsonSerializable
     protected $query = '';
 
     /**
+     * @var string
+     */
+    protected $queryRefine = '';
+
+    /**
      * @var string[]
      */
     protected $resourceTypes = [];
@@ -55,6 +60,11 @@ class Query implements JsonSerializable
      * @var array
      */
     protected $aliases = [];
+
+    /**
+     * @var array
+     */
+    protected $fieldsQueryArgs;
 
     /**
      * @var bool
@@ -162,6 +172,22 @@ class Query implements JsonSerializable
     }
 
     /**
+     * The query used to refine should be stringable and is always trimmed.
+     *
+     * This type of query may be used with the facets.
+     */
+    public function setQueryRefine($queryRefine): self
+    {
+        $this->queryRefine = trim((string) $queryRefine);
+        return $this;
+    }
+
+    public function getQueryRefine(): string
+    {
+        return $this->queryRefine;
+    }
+
+    /**
      * @param string[] $resourceTypes The types are generally "items" and "item_sets".
      */
     public function setResourceTypes(array $resourceTypes): self
@@ -222,6 +248,47 @@ class Query implements JsonSerializable
     public function getAliases(): array
     {
         return $this->aliases;
+    }
+
+    public function getAlias(string $alias): ?array
+    {
+        return $this->aliases[$alias] ?? null;
+    }
+
+/**
+     * Allow to manage a list of simple query arguments with a specific query.
+     *
+     * For example "author[]=Bossuet&author[]=Rabelais" can be expanded to:
+     * ```
+     *  filter => [[
+     *      join => and,
+     *      field => [
+     *          dcterms:creator,
+     *          dcterms:contributor,
+     *      ],
+     *      type => res,
+     *      val => [
+     *          Bossuet,
+     *          Rabelais,
+     *       ],
+     *  ]]
+     * ```
+     * The default expansion is: join = and, type = eq.
+     */
+    public function setFieldsQueryArgs(array $fieldsQueryArgs): self
+    {
+        $this->fieldsQueryArgs = $fieldsQueryArgs;
+        return $this;
+    }
+
+    public function getFieldsQueryArgs(): array
+    {
+        return $this->fieldsQueryArgs;
+    }
+
+    public function getFieldQueryArgs(string $field): ?array
+    {
+        return $this->fieldsQueryArgs[$field] ?? null;
     }
 
     public function setIsPublic($isPublic): self
@@ -285,17 +352,21 @@ class Query implements JsonSerializable
     }
 
     /**
-     * Add advanced filters, that work similarly to Omeka ones.
+     * Add advanced filters, that work similarly to "filter" in SearchResources.
+     *
+     * Unlike SearchResources, the list is grouped by field first.
+     *
+     * @todo Manage filters like the SearchResources (with compatibility for old themes)?
      *
      * Note: Some types and joiners may not be managed by the querier.
-     * @todo Support multi-fields (name).
+     * @todo Support multi-fields (name) (but useless with aliases).
      */
     public function addFilterQuery(string $name, $val, ?string $type = 'in', ?string $join = 'and'): self
     {
         $this->filtersQuery[$name][] = [
-            'val' => trim((string) $val),
-            'type' => trim((string) $type),
             'join' => trim((string) $join),
+            'type' => trim((string) $type),
+            'val' => is_array($val) ? array_map('trim', array_map('strval', $val)) : trim((string) $val),
         ];
         return $this;
     }
@@ -568,6 +639,7 @@ class Query implements JsonSerializable
             'resource_types' => $this->getResourceTypes(),
             'by_resource_type' => $this->getByResourceType(),
             'aliases' => $this->getAliases(),
+            'fields_query_args' => $this->getFieldsQueryArgs(),
             'is_public' => $this->getIsPublic(),
             'filters' => $this->getFilters(),
             'filters_range' => $this->getFiltersRange(),

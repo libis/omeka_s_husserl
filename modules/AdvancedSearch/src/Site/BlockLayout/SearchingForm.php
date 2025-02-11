@@ -2,7 +2,6 @@
 
 namespace AdvancedSearch\Site\BlockLayout;
 
-use AdvancedSearch\Api\Representation\SearchConfigRepresentation;
 use Laminas\View\Renderer\PhpRenderer;
 use Omeka\Api\Representation\SitePageBlockRepresentation;
 use Omeka\Api\Representation\SitePageRepresentation;
@@ -103,6 +102,16 @@ class SearchingForm extends AbstractBlockLayout implements TemplateableBlockLayo
 
         $site = $block->page()->site();
 
+        // Check if it is an item set redirection.
+        $itemSetId = (int) $view->params()->fromRoute('item-set-id');
+        // This is just a check: if set, mvc listeners add item_set['id'][].
+        // @see \AdvancedSearch\Mvc\MvcListeners::redirectItemSetToSearch()
+        // May throw a not found exception.
+        // TODO Use site item set ?
+        $itemSet = $itemSetId
+            ? $view->api()->read('item_sets', ['id' => $itemSetId])->getContent()
+            : null;
+
         $displayResults = !empty($data['display_results']);
 
         if (!$displayResults) {
@@ -120,6 +129,7 @@ class SearchingForm extends AbstractBlockLayout implements TemplateableBlockLayo
             'block' => $block,
             'site' => $site,
             'searchConfig' => $searchConfig,
+            'itemSet' => $itemSet,
             'request' => null,
             'link' => $link,
             // Returns results on the same page.
@@ -127,63 +137,40 @@ class SearchingForm extends AbstractBlockLayout implements TemplateableBlockLayo
             'displayResults' => $displayResults,
         ];
 
+        $formAdapter = $searchConfig->formAdapter();
+
         if ($displayResults) {
             $query = $data['query'] ?? [];
             $filterQuery = $data['query_filter'] ?? [];
             $query += $filterQuery;
 
             $request = $view->params()->fromQuery();
-            $request = array_filter($request, fn ($v) => $v !== '' && $v !== [] && $v !== null);
-            if ($request) {
-                $request += $filterQuery;
-                $request = $this->validateSearchRequest($searchConfig, $form, $request) ?: $query;
-            } else {
+            $request = $formAdapter->cleanRequest($request);
+            $isEmptyRequest = $formAdapter->isEmptyRequest($request);
+            if ($isEmptyRequest) {
                 $request = $query + ['page' => 1];
+            } else {
+                $request += $filterQuery;
+                if (!$formAdapter->validateRequest($request)) {
+                    $request = $query;
+                }
             }
             $vars['request'] = $request;
 
-            $plugins = $block->getServiceLocator()->get('ControllerPluginManager');
-            $searchRequestToResponse = $plugins->get('searchRequestToResponse');
-            $result = $searchRequestToResponse($request, $searchConfig, $site);
-            if ($result['status'] === 'success') {
-                $vars = array_replace($vars, $result['data']);
-            } elseif ($result['status'] === 'error') {
-                $messenger = $plugins->get('messenger');
-                $messenger->addError($result['message']);
+            $response = $formAdapter->toResponse($request, $site);
+            if ($response->isSuccess()) {
+                $vars['query'] = $response->getQuery();
+                $vars['response'] = $response;
+            } else {
+                $msg = $response->getMessage();
+                if ($msg) {
+                    $plugins = $block->getServiceLocator()->get('ControllerPluginManager');
+                    $messenger = $plugins->get('messenger');
+                    $messenger->addError($msg);
+                }
             }
         }
 
         return $view->partial($templateViewScript, $vars);
-    }
-
-    /**
-     * Get the request from the query and check it according to the search config.
-     *
-     * @todo Factorize with \AdvancedSearch\Controller\SearchController::getSearchRequest()
-     *
-     * @param SearchConfigRepresentation $searchConfig
-     * @param \Laminas\Form\Form $searchForm
-     * @param array $request
-     * @return array|bool
-     */
-    protected function validateSearchRequest(
-        SearchConfigRepresentation $searchConfig,
-        \Laminas\Form\Form $form,
-        array $request
-    ) {
-        // Only validate the csrf.
-        // There may be no csrf element for initial query.
-        if (array_key_exists('csrf', $request)) {
-            $form->setData($request);
-            if (!$form->isValid()) {
-                $messages = $form->getMessages();
-                if (isset($messages['csrf'])) {
-                    $messenger = $searchConfig->getServiceLocator()->get('ControllerPluginManager')->get('messenger');
-                    $messenger->addError('Invalid or missing CSRF token'); // @translate
-                    return false;
-                }
-            }
-        }
-        return $request;
     }
 }

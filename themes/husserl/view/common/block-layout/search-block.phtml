@@ -1,0 +1,64 @@
+<?php 
+$siteurl = 'http://localhost:9013/husserl/s/'.$block->page()->site()->slug();
+$lang = $block->page()->site()->slug();
+$translate = $this->plugin('translate');
+?>
+<div class="search-block">
+  <form class="search-block__search-block-form search-block-form" action="http://localhost:9013/husserl/s/<?php echo $block->page()->site()->slug();?>/search" id="search-form">
+    <div class="search-block-form__all-results-section all-results-section">
+      <?php if($lang == "nl"):?>
+        <a class="all-results-section__all-results-item all-results-item" href="<?php echo $siteurl;?>/search">
+          <h6 class="all-results-item__all-results-text all-results-text h6"><?php echo $translate("Toon alles");?></h6>
+          <div class="all-results-item__all-results-arrow all-results-arrow">
+            <img src="<?php $this->assetUrl('img/arrow-right.svg')?>" alt="arrow-right"/>
+          </div>
+        </a>
+      <?php else:?>
+        <a class="all-results-section__all-results-item all-results-item" href="<?php echo $siteurl;?>/search">
+          <h6 class="all-results-item__all-results-text all-results-text h6"><?php echo $translate("View all results");?></h6>
+          <div class="all-results-item__all-results-arrow all-results-arrow">
+            <img src="<?= $this->assetUrl('img/arrow-right.svg')?>" alt="arrow-right"/>
+          </div>
+        </a>
+      <?php endif;?> 
+    </div>
+    <div class="search-block-form__search-section search-section">
+      <div class="search-section__search-bar search-bar">
+        <input class="search-bar__search-bar-input search-bar-input body-text" type="text" name="q" id="q" placeholder="<?php echo $translate("Search in the collection");?>" aria-label="">
+        <div class="serach-bar__search-bar-controls search-bar-controls">
+          <div class="search-bar-controls_search-bar-open-more search-bar-open-more advanced-switch">
+            <div class="search-bar-open-more__search-bar-open-more-icon search-bar-open-more-icon">
+              <img src="<?= $this->assetUrl('img/arrow.svg')?>" alt="arrow icon"/>
+            </div>
+          </div>
+          <button type="submit" class="search-bar-controls__search-bar-submit search-bar-submit">
+            <div class="search-bar-submit__submit-icon submit-icon">
+              <img src="<?= $this->assetUrl('img/search-icon.svg')?>" alt="serach icon"/>
+            </div>
+          </button>
+        </div>
+      </div>
+      <div class="search-section__search-advanced-section search-advanced-section">
+        <div class="search-advanced-section__search-advanced-item-select search-advanced-item-select">
+          <select class="select" placeholder="<?php echo $translate("Identifier");?>" name="facet[dcterms_identifier][]">                         
+            <option value="">Identifier</option>    
+            <?php foreach($identifiers as $key=>$value):?>                          
+              <option value="<?php echo $value['val'];?>">
+                <?php echo $value['val'];?>
+              </option>
+            <?php endforeach;?>
+          </select>
+        </div>
+        <div class="search-advanced-section__search-advanced-item-select search-advanced-item-select">
+          <select class="select" placeholder="<?php echo $translate("Title");?>" name="facet[dcterms_text][]">                         
+            <option value="">Title</option>     
+            <?php foreach($titles as $key=>$value):?>                          
+              <option value="<?php echo $value['val'];?>">
+                <?php echo $value['val'];?>
+              </option>
+            <?php endforeach;?>
+          </select>
+        </div>
+      </div>
+    </div>
+</div>

@@ -11,4 +11,16 @@
     @each $name, $color in $colors {
         --#{$name}: #{$color};
     }
+
+    @each $name, $font in $fonts {
+        --#{$name}: #{$font};
+    }
+
+    @each $name, $fontweight in $fontweights {
+        --#{$name}: #{$fontweight};
+    }
+
+    @each $name, $fontsize in $fontsizes {
+        --#{$name}: #{$fontsize};
+    }
 }

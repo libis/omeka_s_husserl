@@ -5,14 +5,23 @@
 }
 
 body {
-    overflow-x: hidden;
     width: 100%;
     background-color: var(--primary-bg-color);
     min-height: 100vh;
 }
 
+.page {
+    width: 100%;
+}
+
+.content {
+    width: 100%;
+    margin-top: 100px;
+}
+
 html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
 }
 
 button, input {
@@ -23,4 +32,18 @@ button, input {
 
 a {
     text-decoration: none;
+    color: var(--primary-text-color);
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+}
+  
+::-webkit-scrollbar-track {
+    background: var(--primary-bg-color);
+}
+   
+::-webkit-scrollbar-thumb {
+    background-color: var(--fourth-bg-color);
+    border-radius: 5px;
 }

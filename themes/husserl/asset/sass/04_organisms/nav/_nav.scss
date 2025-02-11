@@ -1,0 +1,115 @@
+//mobile
+.nav {
+    width: 100%;
+    height: 100px;
+    min-height: 100px;
+    background-color: var(--third-bg-color);
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 30px;
+    color: var(--primary-text-color);
+    z-index: 999;
+    position: fixed;
+    top: 0;
+
+    .burger-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        position: relative;
+        width: 50px;
+        cursor: pointer;
+
+        .burger-line, .burger-line::before, .burger-line::after {
+            display: block;
+            height: 2px;
+            width: 40px;
+            position: absolute;
+            transform-origin: center;
+            background-color: var(--sixth-bg-color);
+            transition: transform .8s ease-in;
+            border-radius: 20px;
+        }
+
+        .burger-line::before, .burger-line::after {
+            content: "";
+        }
+
+        .burger-line::before {
+            transform: translateY(-10px);
+        }
+
+        .burger-line::after {
+            transform: translateY(10px);
+        }
+    }
+
+    .burger-open {
+        .burger-line {
+            transform: translateX(-50px);
+            background-color: transparent;
+        }
+
+        .burger-line::before {
+            transform: rotate(45deg) translate(35px, -35px);
+        }
+
+        .burger-line::after {
+            transform: rotate(-45deg) translate(35px, 35px);
+        }
+    }
+
+    .nav-items {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        gap: 30px;
+        right: 0;
+        top: 100px;
+        width: 100%;
+        height: calc(100vh - 100px);
+        transform: translateX(100%);
+        background-color: var(--third-bg-color);
+        z-index: 99;
+        padding: 40px 30px 30px;
+
+        .nav-item {
+            list-style: none;
+        }
+    }
+
+    .nav-active {
+        transform: translateX(0%);
+        transition: transform 0.5s ease-in;
+    }
+    
+    .nav-non-active {
+        transform: translateX(100%);
+        transition: transform 0.5s ease-in;
+    }
+}
+
+
+//desktop
+@media screen and (min-width: 1024px) {
+    .nav {
+        padding: 10px 60px;
+
+        .nav-items {
+            flex-direction: row;
+            gap: 20px;
+            position: unset;
+            padding: 0;
+            transform: translateX(0%);
+            height: auto;
+            width: auto;
+        }
+
+        .burger-icon {
+            display: none;
+        }
+    }
+}

@@ -14,6 +14,7 @@ $colors: (
     third-bg-color: #FFFFFF,
     fourth-bg-color: #5D2510,
     fifth-bg-color: #E2D1CB,
+    sixth-bg-color: #202020,
 
     //text-colors
     primary-text-color: #202020,
@@ -22,4 +23,44 @@ $colors: (
     fourth-text-color: #BEBEBE,
 
     //border-colors
-)
+    primary-border-color: #202020,
+    secondary-border-color: #BEBEBE,
+);
+
+$fonts: (
+    main-font: "'Montserrat', serif",
+    second-font: "'Noto Serif', serif",
+);
+
+$fontweights: (
+    bold: 700,
+    semi: 600,
+    medium: 500,
+    regular: 400,
+    light: 300,
+    extra-light: 200,
+);
+
+$fontsizes: (
+    h1-desktop: 74px,
+    h1-mobile: 46px,
+    h2-dektop: 48px,
+    h2-mobile: 40px,
+    h3-desktop: 36px,
+    h3-mobile: 32px,
+    h4: 30px,
+    h5-desktop: 24px,
+    h5-mobile: 20px,
+    h6-desktop: 20px,
+    h6-mobile: 16px,
+    body: 16px,
+    big-body: 20px,
+    small: 14px,
+    button: 20px,
+    nav-item: 20px,
+    footer-list-title-desktop: 36px,
+    footer-list-title-mobile: 28px,
+    footer-item-desktop: 22px,
+    footer-item-mobile: 18px,
+    logo: 24px,
+);

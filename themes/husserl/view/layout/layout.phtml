@@ -32,14 +32,36 @@ if (strpos($url, 'page/home') !== false) {
         <?php echo $this->headTitle(); ?>
         <?php echo $this->headLink(); ?>
         <?php echo $this->headStyle(); ?>
+
+        <!-- fonts -->
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        
+        <!-- scripts -->
         <?php echo $this->headScript(); ?>
         <script src="https://kit.fontawesome.com/582fb8c29f.js" crossorigin="anonymous"></script>
         <script src="https://unpkg.com/colcade@0/colcade.js"></script>
     </head>
 
     <?php echo $this->htmlElement('body'); ?>
-    <?php echo $userBar; ?>
-    <div class="page">    
+    <nav class="nav">
+      <div class="nav__nav-logo nav-logo">digital<span>Husserl</span></div>
+      <ul class="nav-items">
+        <?php $menu = $site->publicNav()->menu();
+          $container = $menu->getContainer();
+        ?>
+        <?php foreach ($container as $page): ?>
+            <?php if($page->isActive()): ?>
+              <li class="nav-items__nav-item nav-item nav-text nav-active"><?= $menu->htmlify($page) ?></li>
+            <?php else: ?>
+              <li class="nav-items__nav-item nav-item nav-text"><?= $menu->htmlify($page) ?></li>
+            <?php endif; ?>
+        <?php endforeach; ?>
+      </ul>
+      <div class="nav__nav-burger nav-burger burger-icon">
+        <span class="burger-icon__burger-line burger-line"></span>
+      </div>
+    </nav>
+    <div class="page content">    
       <?php echo $this->content; ?>            
     </div> 
   </body>

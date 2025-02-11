@@ -35,7 +35,7 @@ $untitled = $translate('[Untitled]');
 $headingTerm = $setting('browse_heading_property_term');
 $bodyTerm = $setting('browse_body_property_term');
 
-$gridListMode = $searchConfig ? $searchConfig->subSetting('display', 'grid_list_mode', 'auto') : 'auto';
+$gridListMode = $searchConfig ? $searchConfig->subSetting('results', 'grid_list_mode', 'auto') : 'auto';
 
 $defaultThumbnail = '<img src="' . $assetUrl('thumbnails/default.png', 'Omeka', true) . '" title="' . $translate('No media') . '"/>';
 ?>

@@ -21,9 +21,9 @@ if (!$formId) {
 // Move buttons reset and submit outside of the form.
 $reset = null;
 $submit = null;
-if ($form->has('reset')) {
-    $reset = $form->get('reset');
-    $form->remove('reset');
+if ($form->has('form-reset')) {
+    $reset = $form->get('form-reset');
+    $form->remove('form-reset');
 }
 if ($form->has('submit')) {
     $submit = $form->get('submit');
@@ -54,7 +54,7 @@ if ($filters) {
         <div class="search-form-buttons">
             <!--<?= $reset ? $this->formButton($reset) : null ?>
             <?= $submit ? $this->formButton($submit) : null ?>-->
-            <button type="reset" name="reset" id="search-reset" class="btn btn-ghost search-reset" value="">Reset fields</button>
+            <button type="form-reset" name="form-reset" id="search-reset" class="btn btn-ghost search-reset" value="">Reset fields</button>
             <button type="submit" name="submit" id="search-submit" class="btn search-submit" value="">Search</button>
         </div>
         <?= $this->form()->closeTag() ?>

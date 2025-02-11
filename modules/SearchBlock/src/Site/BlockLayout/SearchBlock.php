@@ -111,10 +111,14 @@ class SearchBlock extends AbstractBlockLayout
       $identifiers = $view->references()->list('dcterms:identifier',$query,array("lang" => $lang,"filters" => $filters));
       $identifiers = $identifiers['o:references'];
 
+      $titles = $view->references()->list('dcterms:title',$query,array("lang" => $lang,"filters" => $filters));
+      $titles = $titles['o:references'];
+
       return $view->partial('common/block-layout/search-block', [
         'block' => $block,
         'attachments' => $block->attachments(),
         'identifiers' => $identifiers,
+        'titles' => $titles,
       ]);
     }
 }

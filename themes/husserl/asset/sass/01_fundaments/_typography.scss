@@ -1,0 +1,113 @@
+.h1 {
+    font-family: var(--main-font);
+    font-size: var(--h1-mobile);
+    font-weight: var(--regular);
+    line-height: 65px;
+}
+
+.h1 span {
+    font-weight: var(--bold);
+}
+
+.h2 {
+    font-family: var(--second-font);
+    font-size: var(--h2-mobile);
+    font-weight: var(--regular);
+    line-height: 58px;
+}
+
+.h3 {
+    font-family: var(--main-font);
+    font-size: var(--h3-mobile);
+    font-weight: var(--medium);
+    line-height: 42px;
+}
+
+.h4 {
+    font-family: var(--main-font);
+    font-size: var(--h4);
+    font-weight: var(--light);
+    line-height: 40px;
+}
+
+.h5 {
+    font-family: var(--main-font);
+    font-size: var(--h5-mobile);
+    font-weight: var(--medium);
+}
+
+.h6 {
+    font-family: var(--second-font);
+    font-size: var(--h6-mobile);
+    font-weight: var(--regular);
+}
+
+.h6-variant {
+    font-family: var(--main-font);
+    font-size: var(--h6-desktop);
+    font-weight: var(--semi);
+}
+
+.h6-variant-medium {
+    font-family: var(--main-font);
+    font-size: var(--h6-dekstop);
+    font-weight: var(--medium);
+}
+
+.body-text {
+    font-family: var(--main-font);
+    font-size: var(--body);
+    font-weight: var(--regular);
+    line-height: 24px;
+}
+
+.big-body-text {
+    font-family: var(--main-font);
+    font-size: var(--big-body);
+    font-weight: var(--regular);
+}
+
+.small-text {
+    font-family: var(--main-font);
+    font-size: var(--small);
+    font-weight: var(--regular);
+    line-height: 19px;
+}
+
+.button-text {
+    font-family: var(--main-font);
+    font-size: var(--button);
+    font-weight: var(--regular);
+}
+
+.nav-item {
+    font-family: var(--main-font);
+    font-size: var(--nav-item);
+    font-weight: var(--regular);
+}
+
+.footer-list-title {
+    font-family: var(--second-font);
+    font-size: var(--footer-list-title-mobile);
+    font-weight: var(--medium);
+}
+
+.footer-list-title {
+    font-family: var(--main-font);
+    font-size: var(--footer-item-mobile);
+    font-weight: var(--regular);
+}
+
+.nav-logo {
+    font-family: var(--main-font);
+    font-size: var(--logo);
+    font-weight: var(--extra-light);
+}
+
+.nav-logo span {
+    font-weight: var(--bold);
+}
+
+@media screen and (min-width: 1024px) {
+
+}

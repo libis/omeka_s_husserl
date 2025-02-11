@@ -1,0 +1,64 @@
+.search-advanced-item-select {
+    width: 100%;
+    position: relative;
+
+    select {
+        display: none;
+    }
+      
+    .select-form-item {
+        width: 100%;
+        min-height: 60px;
+        padding: 8px 10px;
+        border: 2px solid var(--primary-border-color);
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .select-form-item.select-open {
+        border-bottom: none;
+    }
+      
+    .select-form-item:after {
+        position: absolute;
+        content: url(/husserl/themes/husserl/asset/img/arrow.svg);
+        bottom: 18px;
+        right: 10px;
+        width: 21px;
+        height: 12px;
+        transform: rotate(180deg);
+    }
+      
+    .select-form-item.select-arrow-active:after {
+        transform: rotate(0deg);
+        top: 17px;
+    }
+
+    .select-items {
+        height: 100px;
+        overflow-y: scroll;
+        z-index: 99;
+        width: 100%;
+        padding: 10px 5px;
+        border: 2px solid var(--primary-border-color);
+        border-top: 1px solid var(--secondary-border-color);
+        background-color: transparent;
+        cursor: pointer;
+
+        .select-item {
+            height: 35px;
+            display: flex;
+            align-items: center;
+            padding: 0 5px;
+        }
+
+        .select-item:hover {
+            background-color: var(--fifth-bg-color);
+        }
+    }
+      
+    .select-hide {
+        display: none;
+    }
+}

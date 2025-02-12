@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function() {
           const optionsDiv = document.createElement("DIV");
           optionsDiv.setAttribute("class", "select-items select-hide");
       
-          for (let j = 1; j < selectLength; j++) {
+          for (let j = 0; j < selectLength; j++) {
             const optionDiv = document.createElement("DIV");
             optionDiv.setAttribute("class", "select-item body-text");
             optionDiv.innerHTML = selectElement.options[j].innerHTML;

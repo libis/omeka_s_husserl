@@ -44,7 +44,7 @@ if (strpos($url, 'page/home') !== false) {
 
     <?php echo $this->htmlElement('body'); ?>
     <nav class="nav">
-      <div class="nav__nav-logo nav-logo">digital<span>Husserl</span></div>
+      <div class="nav__nav-logo nav-logo"><a href="page/home">digital<span>Husserl</span></a></div>
       <ul class="nav-items">
         <?php $menu = $site->publicNav()->menu();
           $container = $menu->getContainer();

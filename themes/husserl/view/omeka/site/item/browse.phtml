@@ -1,0 +1,91 @@
+<?php
+$translate = $this->plugin('translate');
+$escape = $this->plugin('escapeHtml');
+$thumbnail = $this->plugin('thumbnail');
+
+?>
+
+<? if (isset($_GET['requestedItem'])) :
+    $getRequest = $_GET['requestedItem'];
+
+    //get the get request and take the id of that item
+    $res = $this->api()->read('items',$getRequest,[]);
+    $res = $res->getContent();
+    $resId = $res->id();
+
+    //array for the pad to the top structure
+    $resPathId = [$resId]; 
+
+    //get the rootfolder of the item until we are at the top and push the id in the resPathId array
+    while($res->value("ro:rootFolder")){
+        $rootfolder = $res->value("ro:rootFolder");
+        $id = $rootfolder->valueResource()->id();
+
+        array_unshift($resPathId, $id);
+        
+        $res = $rootfolder->valueResource();
+    };  
+?>
+
+<aside class="browse-aside">
+    <div class="browse-aside__browse-nav browse-nav">
+        <a href="" class="browse-nav__nav-aside-item nav-aside-nav">Search</a>
+        <p class="browse-nav__nav-aside-item nav-aside-nav">|</p>
+        <a href="" class="browse-nav__nav-aside-item nav-aside-nav active">Browse</a>
+    </div>
+
+    <ul class="browse-aside__browse-top-items browse-top-items">
+        <?php if($resPathId[0] == 9013):?>
+            <li><a href="<?= $site->url() . "/item/browse/?requestedItem=9013"?>">Manuscripten</a></li>
+            <?php 
+                $mainres = $this->api()->read('items',9013,[]);
+                $mainres = $mainres->getContent();
+                $subjectValues = $mainres->subjectValues();
+            ?>
+            <ul>
+                <?php foreach($subjectValues["rootFolder"] as $key=>$r): ?>
+                    <?php if( count($resPathId) > 1 && $r['val']->resource()->id() == $resPathId[1]): ?>
+                        <li><?php echo $r['val']->resource()->value("dcterms:identifier");?>
+                            <ul>
+                                <?php
+                                    for($i = 1; $i <= count($resPathId); $i++):       
+                                        echo $r['val']->resource()->value("dcterms:identifier");
+                                    endfor;
+                                ?>
+                            </ul>
+                        </li>
+                    <?php else: ?>
+                        <li><?php echo $r['val']->resource()->value("dcterms:identifier");?></li>
+                    <?php endif;  ?>
+                <?php endforeach; ?>
+            </ul>
+            <li><a href="">Publications</a></li>
+        <?php else: ?>
+            <li><a href="<?= $site->url() . "/item/browse/?requestedItem=9013"?>">Manuscripten</a></li>
+            <li><a href="">Publications</a></li>
+        <?php endif; ?>
+    </ul>
+</aside>
+
+<? else: ?>
+
+<aside class="browse-aside">
+    <?php
+        $res = $this->api()->read('items',9013,[]);
+        $res = $res->getContent();
+    ?>
+    <div class="browse-aside__browse-nav browse-nav">
+        <a href="" class="browse-nav__nav-aside-item nav-aside-nav">Search</a>
+        <p class="browse-nav__nav-aside-item nav-aside-nav">|</p>
+        <a href="" class="browse-nav__nav-aside-item nav-aside-nav active">Browse</a>
+    </div>
+
+    <ul class="browse-aside__browse-top-items browse-top-items">
+        <li><a href="<?= $site->url() . "/item/browse/?requestedItem=" . $res->id()?>">Manuscripten</a></li>
+    </ul>
+</aside>
+
+<? endif; ?>
+
+
+

@@ -108,6 +108,12 @@
     font-weight: var(--bold);
 }
 
+.nav-aside-item-desk {
+    font-family: var(--main-font);
+    font-size: var(--h3-desktop);
+    font-weight: var(--light);
+}
+
 @media screen and (min-width: 1024px) {
 
 }

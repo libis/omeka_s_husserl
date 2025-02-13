@@ -3,89 +3,134 @@ $translate = $this->plugin('translate');
 $escape = $this->plugin('escapeHtml');
 $thumbnail = $this->plugin('thumbnail');
 
+function getId($j, $curentItem) {
+    if($j == 0) {
+       return $id = 9013;   
+    }
+    else {
+        return $id = $curentItem; 
+    }
+}
+
+function getSubjectValues($id, $site) {
+    $element = $site->api()->read('items', $id, []);
+    $element = $element->getContent();
+    $children = $element->subjectValues();
+
+    return $children;
+}
+
 ?>
 
-<? if (isset($_GET['requestedItem'])) :
-    $getRequest = $_GET['requestedItem'];
+<div class="browse-page">
+    <aside class="browse-aside">
+        <div class="browse-aside__browse-nav browse-nav">
+            <a href="<?= $site->url()?>/search " class="browse-nav__nav-aside-item nav-aside-item">
+                <p class="nav-aside-item__nav-aside-item-desk nav-aside-item-desk">Filter</p>
+                <div class="nav-aside-item__nav-aside-item-icon nav-aside-item-icon filter-icon">          
+                    <svg width="30" height="27" viewBox="0 0 30 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M0.677991 1.5502L0.679868 1.54629C0.983287 0.907569 1.62722 0.5 2.34372 0.5H27.6592C28.3757 0.5 29.0196 0.907569 29.323 1.54629C29.6266 2.18542 29.5349 2.93746 29.084 3.48549C29.0839 3.48553 29.0839 3.48558 29.0839 3.48562L18.3661 16.4829L18.2519 16.6214V16.801V24.1925C18.2519 24.706 17.9613 25.1772 17.4941 25.407C17.0205 25.6398 16.4657 25.5905 16.0507 25.2806L16.0501 25.2801L12.2996 22.4887L12.2972 22.4869C11.9525 22.2335 11.751 21.8315 11.751 21.401V16.801V16.6214L11.6368 16.4828L0.913473 3.48016C0.913371 3.48004 0.913269 3.47991 0.913168 3.47979C0.466625 2.93584 0.372343 2.17948 0.677991 1.5502Z" stroke="#202020"/>
+                    </svg>
+                </div>
+            </a>
+            <div class="browse-nav__nav-aside-item nav-aside-item middle-item">
+                <p class="nav-aside-item__nav-aside-item-desk nav-aside-item-desk">|</p>
+            </div>
+            <a href="" class="browse-nav__nav-aside-item nav-aside-item active">
+                <p class="nav-aside-item__nav-aside-item-desk nav-aside-item-desk">Browse</p>
+                <div class="nav-aside-item__nav-aside-item-icon nav-aside-item-icon browse-icon">
+                    <svg width="31" height="30" viewBox="0 0 31 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20.8847 0.904337L20.8861 0.905667L21.664 1.67777C21.6643 1.678 21.6645 1.67823 21.6647 1.67846C22.1088 2.12218 22.7098 2.375 23.3418 2.375H29.125C29.886 2.375 30.5 2.98903 30.5 3.75V11.25C30.5 12.011 29.886 12.625 29.125 12.625H16C15.239 12.625 14.625 12.011 14.625 11.25V1.875C14.625 1.11403 15.239 0.5 16 0.5H19.9141C20.2778 0.5 20.6257 0.645352 20.8847 0.904335L20.8847 0.904337ZM16 17.375H16.0007L19.9141 17.3691C19.9143 17.3691 19.9145 17.3691 19.9147 17.3691C20.2782 17.3693 20.6259 17.5146 20.8847 17.7735L21.664 18.5528C22.1082 18.9969 22.7095 19.25 23.3418 19.25H29.125C29.886 19.25 30.5 19.864 30.5 20.625V28.125C30.5 28.886 29.886 29.5 29.125 29.5H16C15.239 29.5 14.625 28.886 14.625 28.125V18.75C14.625 17.989 15.239 17.375 16 17.375Z" stroke="black"/>
+                        <path d="M1 1.875V6.5625M10.375 24.375H1V6.5625M1 6.5625H9.4375" stroke="black" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </a>
+        </div>
+        <?php // check if the user requested an ID ?>
+        <? if (isset($_GET['requestedItem'])) :
+            $getRequest = $_GET['requestedItem'];
 
-    //get the get request and take the id of that item
-    $res = $this->api()->read('items',$getRequest,[]);
-    $res = $res->getContent();
-    $resId = $res->id();
+            //get the get request and take the id of that item
+            $res = $this->api()->read('items',$getRequest,[]);
+            $res = $res->getContent();
+            $resId = $res->id();
 
-    //array for the pad to the top structure
-    $resPathId = [$resId]; 
+            //array for the pad to the top structure
+            $resPathId = [$resId]; 
 
-    //get the rootfolder of the item until we are at the top and push the id in the resPathId array
-    while($res->value("ro:rootFolder")){
-        $rootfolder = $res->value("ro:rootFolder");
-        $id = $rootfolder->valueResource()->id();
+            //get the rootfolder of the item until we are at the top and push the id in the resPathId array
+            while($res->value("ro:rootFolder")){
+                $rootfolder = $res->value("ro:rootFolder");
+                $id = $rootfolder->valueResource()->id();
 
-        array_unshift($resPathId, $id);
-        
-        $res = $rootfolder->valueResource();
-    };  
-?>
+                array_unshift($resPathId, $id);
+                
+                $res = $rootfolder->valueResource();
+            };  ?>
+            <ul class="browse-aside__browse-top-items browse-top-items">
+                <?php if($resPathId[0] == 9013):?>
+                    <li><a href="<?= $site->url()?>/item/browse/?requestedItem=9013">Manuscripten</a>
+                        <?php function renderChildren($resPathId, $site, $test, $j = 0, $parentId = null){ ?>
+                            <?php
+                                $id = getId($j, $parentId); // Get the id based on the depth of the parent id and the parent id itself
+                                $children = getSubjectValues($id, $test); // take the children of the parent
+                            ?>
+                            <?php if(isset($children["rootFolder"])): ?>
+                                <ul>
+                                    <?php $sortedArray = []; ?>
+                                    <?php foreach ($children["rootFolder"] as $key => $child) : ?>
+                                        <?php $sortedArray[$child['val']->resource()->value("dcterms:identifier").""] = $child ?>
+                                    <?php endforeach; ?>
+                                    <?php ksort($sortedArray, SORT_NATURAL); ?>
+                                    <?php //loop through the children roothfolders ?>
+                                    <?php foreach ($sortedArray as $key => $child) : ?>
+                                        <?php // get the id of the child to later check if the id is the same as the asked id in resPathId ?>
+                                        <?php $childId = $child['val']->resource()->id();?>
+                                        <?php // get the name of the themplate to later check if we have a page or a folder ?>
+                                        <?php
+                                            $element = $test->api()->read('items', $childId, []);
+                                            $element = $element->getContent();
+                                            $template = $element->resourceTemplate()->label();
+                                        ?>
+                                        <?php // write out the child and add on li element classes based on the state of the element ?>
+                                        <li class="<?= (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) ? 'open' : 'close'; ?> <?= ($template == "ManuscriptFolder") ? 'folder' : 'page'; ?>" data-depth=<?= $j + 1 ?>>
+                                            <a href="<?= $site->url() . '/item/browse/?requestedItem=' . $childId ; ?>">
+                                                <?= $child['val']->resource()->value("dcterms:identifier");?>
+                                            </a>
+                                            <?php // Check if there is an next id in the path and if the id is the same as the id of the child ?>
+                                            <?php if (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) :?>
+                                                <?php // Call the function recursive again with a new index and with the childId that now become the new parent ?>
+                                                <?php renderChildren($resPathId, $site, $test, $j + 1, $childId); ?>
+                                            <?php endif; ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        <?php } ?>
 
-<aside class="browse-aside">
-    <div class="browse-aside__browse-nav browse-nav">
-        <a href="" class="browse-nav__nav-aside-item nav-aside-nav">Search</a>
-        <p class="browse-nav__nav-aside-item nav-aside-nav">|</p>
-        <a href="" class="browse-nav__nav-aside-item nav-aside-nav active">Browse</a>
-    </div>
-
-    <ul class="browse-aside__browse-top-items browse-top-items">
-        <?php if($resPathId[0] == 9013):?>
-            <li><a href="<?= $site->url() . "/item/browse/?requestedItem=9013"?>">Manuscripten</a></li>
-            <?php 
-                $mainres = $this->api()->read('items',9013,[]);
-                $mainres = $mainres->getContent();
-                $subjectValues = $mainres->subjectValues();
-            ?>
-            <ul>
-                <?php foreach($subjectValues["rootFolder"] as $key=>$r): ?>
-                    <?php if( count($resPathId) > 1 && $r['val']->resource()->id() == $resPathId[1]): ?>
-                        <li><?php echo $r['val']->resource()->value("dcterms:identifier");?>
-                            <ul>
-                                <?php
-                                    for($i = 1; $i <= count($resPathId); $i++):       
-                                        echo $r['val']->resource()->value("dcterms:identifier");
-                                    endfor;
-                                ?>
-                            </ul>
-                        </li>
-                    <?php else: ?>
-                        <li><?php echo $r['val']->resource()->value("dcterms:identifier");?></li>
-                    <?php endif;  ?>
-                <?php endforeach; ?>
+                        <?php 
+                            $i = count($resPathId);
+                            if ($i > 0) {
+                                renderChildren($resPathId, $site, $this); 
+                            }
+                        ?>
+                    </li>
+                    <li><a href="">Publications</a></li>
+                <?php else: ?>
+                    <li><a href="<?= $site->url() . "/item/browse/?requestedItem=9013"?>">Manuscripten</a></li>
+                    <li><a href="">Publications</a></li>
+                <?php endif; ?>
             </ul>
-            <li><a href="">Publications</a></li>
-        <?php else: ?>
-            <li><a href="<?= $site->url() . "/item/browse/?requestedItem=9013"?>">Manuscripten</a></li>
-            <li><a href="">Publications</a></li>
-        <?php endif; ?>
-    </ul>
-</aside>
-
-<? else: ?>
-
-<aside class="browse-aside">
-    <?php
-        $res = $this->api()->read('items',9013,[]);
-        $res = $res->getContent();
-    ?>
-    <div class="browse-aside__browse-nav browse-nav">
-        <a href="" class="browse-nav__nav-aside-item nav-aside-nav">Search</a>
-        <p class="browse-nav__nav-aside-item nav-aside-nav">|</p>
-        <a href="" class="browse-nav__nav-aside-item nav-aside-nav active">Browse</a>
-    </div>
-
-    <ul class="browse-aside__browse-top-items browse-top-items">
-        <li><a href="<?= $site->url() . "/item/browse/?requestedItem=" . $res->id()?>">Manuscripten</a></li>
-    </ul>
-</aside>
-
-<? endif; ?>
-
-
+        <? else: ?>
+            <?php
+                $res = $this->api()->read('items',9013,[]);
+                $res = $res->getContent();
+            ?>
+            <ul class="browse-aside__browse-top-items browse-top-items">
+                <li><a href="<?= $site->url() . "/item/browse/?requestedItem=" . $res->id()?>">Manuscripten</a></li>
+                <li><a href="">Publications</a></li>
+            </ul>
+        <? endif; ?>
+    </aside>
+</div>
 

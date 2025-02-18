@@ -7,7 +7,7 @@
 body {
     width: 100%;
     background-color: var(--primary-bg-color);
-    min-height: 100vh;
+    min-height: calc(100vh - 100px);
 }
 
 .page {
@@ -24,15 +24,19 @@ html {
     overflow-x: hidden;
 }
 
-button, input {
+/*button, input {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-}
+}*/
 
 a {
     text-decoration: none;
     color: var(--primary-text-color);
+}
+
+li {
+    list-style: none;
 }
 
 ::-webkit-scrollbar {

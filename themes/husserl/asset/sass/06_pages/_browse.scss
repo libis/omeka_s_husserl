@@ -1,0 +1,36 @@
+.browse-page {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+
+    .browse-top-section {
+        padding: 40px 30px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+
+        .page-information {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .browse-page {
+        margin-top: 100px;
+        padding: 40px 60px 0;
+        gap: 100px;
+
+        .browse-top-section {
+            padding: 0;
+
+            .page-information {
+                .page-information-text {
+                    width: 60%;
+                }
+            }
+        }
+    }
+}

@@ -92,7 +92,7 @@
     font-weight: var(--medium);
 }
 
-.footer-list-title {
+.footer-list-item {
     font-family: var(--main-font);
     font-size: var(--footer-item-mobile);
     font-weight: var(--regular);
@@ -108,12 +108,26 @@
     font-weight: var(--bold);
 }
 
-.nav-aside-item-desk {
+.footer-logo {
     font-family: var(--main-font);
-    font-size: var(--h3-desktop);
-    font-weight: var(--light);
+    font-size: var(--logo-footer);
+    font-weight: var(--extra-light);
+}
+
+.footer-logo span {
+    font-weight: var(--bold);
+}
+
+.nav-aside-item-text {
+    font-family: var(--main-font);
+    font-size: var(--small);
+    font-weight: var(--regular);
 }
 
 @media screen and (min-width: 1024px) {
-
+    .nav-aside-item-text {
+        font-family: var(--main-font);
+        font-size: var(--h3-desktop);
+        font-weight: var(--light);
+    }
 }

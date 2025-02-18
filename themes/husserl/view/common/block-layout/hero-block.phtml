@@ -27,7 +27,7 @@
       <h1 class="hero-text__page-title page-title h1"><?php echo $block->dataValue('title');?></h1>
       <p class="hero-text__hero-info hero-info body-text"><?= strip_tags($block->dataValue('text'));?></p>
       <?php if(!empty($block->dataValue('link'))): ?>
-        <a class="hero-text__cta-button cta-button primary-button button-text" href="<?php echo $block->dataValue('link');?>">
+        <a class="hero-text__cta-button cta-button primary-button button-text" href="http://localhost:9013/husserl/s/husserl<?= $block->dataValue('link');?>">
           <?php echo $block->dataValue('link_text');?>
         </a>
       <?php else:?>

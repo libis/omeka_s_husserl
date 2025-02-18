@@ -44,7 +44,7 @@ if (strpos($url, 'page/home') !== false) {
 
     <?php echo $this->htmlElement('body'); ?>
     <nav class="nav">
-      <div class="nav__nav-logo nav-logo"><a href="page/home">digital<span>Husserl</span></a></div>
+      <div class="nav__nav-logo nav-logo"><a href="<?= $site->url() ?>">digital<span>Husserl</span></a></div>
       <ul class="nav-items">
         <?php $menu = $site->publicNav()->menu();
           $container = $menu->getContainer();
@@ -64,5 +64,44 @@ if (strpos($url, 'page/home') !== false) {
     <div class="page content">    
       <?php echo $this->content; ?>            
     </div> 
+    <footer class="footer">
+      <hr class="footer__footer-top-line footer-top-line">
+      <div class="footer__footer-content footer-content">
+        <div class="footer-content__footer-first-column footer-first-column">
+          <div class="footer-first-column__footer-logo footer-logo"><a href="<?= $site->url() ?>">digital<span>Husserl</span></a></div>
+          <p class="footer-first-column__short-company-info short-company-info body-text">Comprehensive digital environment of the Husserl Archives</p>
+        </div>
+        <div class="footer-content__footer-second-column footer-second-column">
+          <h6 class="footer-second-column__footer-column-title footer-column-title footer-list-title">Husserl Collection</h6>
+          <ul class="footer-second-column__footer-column-items footer-column-items">
+            <?php foreach ($container as $page): ?>
+              <li class="footer-column-items__footer-column-item footer-column-item footer-list-item"><?= $menu->htmlify($page) ?></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+        <div class="footer-content__footer-third-column footer-third-column">
+          <h6 class="footer-third-column__footer-column-title footer-column-title footer-list-title">About Husserl</h6>
+          <ul class="footer-third-column__footer-column-items footer-column-items">
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">About the Husserl project</li>
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">Team</li>
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">Aims & Vision</li>
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">Husserl Archive</li>
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">About Husserl</li>
+          </ul>
+        </div>
+      </div>
+      <hr class="footer__footer-bottom-line footer-bottom-line">
+      <div class="footer__footer-bottom-content footer-bottom-content">
+        <p class="footer-bottom-content__copyright-text copyright-text body-text">© KU Leuven, built by LIBIS</p>
+        <div class="footer-bottom-content__footer-bottom-logos footer-bottom-logos">
+          <div class="footer-bottom-logos__ku-leuven-logo ku-leuven-logo footer-bottom-logo">
+            <img src="<?= $this->assetUrl('img/ku-leuven.png')?>" alt="ku leuven logo"/>
+          </div>
+          <div class="footer-bottom-logos__libis-logo libis-logo footer-bottom-logo">
+            <img src="<?= $this->assetUrl('img/libis.png')?>" alt="libis logo"/>
+          </div>
+        </div>
+      </div>
+    </footer>
   </body>
 </html>

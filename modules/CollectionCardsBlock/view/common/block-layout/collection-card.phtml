@@ -1,0 +1,56 @@
+<?php 
+  $items;
+
+  if($block->dataValue('collection-title-4') != null):
+    $items = 4;
+  elseif($block->dataValue('collection-title-3') != null):
+    $items = 3;
+  elseif($block->dataValue('collection-title-2') != null):
+    $items = 2;
+  elseif($block->dataValue('collection-title-1')!= null):
+    $items = 1;
+  else:
+    $items = 0;
+  endif;
+?>
+
+<div class="collection-section">
+  <div class="collection-section__collection-info collection-info">
+    <<?= $block->dataValue('type');?> class="collection-info__collection-info-title collection-title <?= $block->dataValue('type');?>"><?= $block->dataValue('section-title');?><<?= $block->dataValue('type');?>>
+    <p class="collection-info__collection-info-text collection-info-text body-text"><?= strip_tags($block->dataValue('section-text'));?></p>
+  </div>
+  <div class="collection-section__collection-cards collection-cards">
+    <?php for($i = 0; $i < $items; $i++): ?>
+      <?php
+        if($attachments):
+          if($attachments[$i]->media() != null):
+            $media = $attachments[$i]->media();
+            $url = '';
+            $altText = "";
+            if($media):
+              if($media->mediaType() == 'text/html'):
+                $url = $media->originalUrl();
+                $url = str_replace('http:', '', $url);
+              else:
+                $url = $media->thumbnailUrl('large');
+                $url = str_replace('http:', '', $url);
+                $altText = $attachments[0]->caption();
+              endif;
+            endif;
+          endif;
+        endif;
+       ?>
+       <a class="collection-cards__collection-card collection-card" href="<?= ($block->dataValue('collection-type-' . ($i +1)) != null) ? 'http://localhost:9013/husserl/s/' . $block->page()->site()->slug() . '/search?resource_template_id=' .$block->dataValue('collection-type-' . ($i +1)) : '#'?>">
+        <div class="collection-card__collection-card-image collection-card-image">
+          <?php if(isset($url)): ?>
+            <img src="<?php echo $url?>" alt="<?php echo empty($altText) ? 'Page of a Husserl collection' : strip_tags($altText) ?>" />
+          <?php endif; ?>
+        </div>
+        <div class="collection-card__collection-card-info collection-card-info">
+          <h4 class="collection-card-info_collection-title collection-title h4"><?= $block->dataValue('collection-title-' . ($i + 1)) ?></h4>
+          <hr class="collection-card-info__collection-card-line collection-card-line">
+        </div>
+       </a>
+    <?php endfor; ?>
+  </div>
+</div>

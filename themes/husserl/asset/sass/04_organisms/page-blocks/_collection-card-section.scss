@@ -1,0 +1,19 @@
+.collection-section {
+    display: flex;
+    flex-direction: column;
+    gap: 35px;
+    width: 100%;
+    padding: 0 30px;
+
+    .collection-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .collection-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+}

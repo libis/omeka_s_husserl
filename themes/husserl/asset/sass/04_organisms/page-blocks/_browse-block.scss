@@ -1,0 +1,19 @@
+.browse-item-section {
+    display: flex;
+    flex-direction: column;
+    gap: 35px;
+    width: 100%;
+    padding: 0 30px;
+
+    .browse-item-section-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .browse-results {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+}

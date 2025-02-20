@@ -13,7 +13,8 @@ $sitename = $block->page()->site()->title();
   <?php if($this->resources):?>
     <div class="browse-item-section__browse-results browse-results item-cards">
       <?php foreach ($this->resources as $resource):?>
-        <div class="browse-results__browse-result browse-result item-card">
+        <?php $url = $resource->url(); ?>
+        <a href="<?= $url; ?>" class="browse-results__browse-result browse-result item-card">
           <div class="browse-result__browse-top-section browse-top-section item-card-top-section">
             <div class="item-card-top-section__item-card-image item-card-image">
               <?php 
@@ -53,8 +54,15 @@ $sitename = $block->page()->site()->title();
               </div>
             </div>
           </div>
-        </div>
+        </a>
       <?php endforeach; ?>
     </div>
   <?php endif;?>
+  <?php if($block->dataValue('link-active') != null): ?>
+    <div class="browse-item-section__browse-item-section-more-items browse-item-section-more-items">
+      <a class="browse-item-section-more-items__cta-button cta-button primary-button button-text icon" href="http://localhost:9013/husserl/s/husserl<?= $block->dataValue('link');?>">
+        <?php echo $block->dataValue('link-text');?>
+      </a>
+    </div>
+  <?php endif; ?>
 </div>

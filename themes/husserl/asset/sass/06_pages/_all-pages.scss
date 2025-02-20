@@ -1,3 +1,15 @@
 .pageFixed {
     position: fixed;
 }
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 80px;
+}
+
+@media screen and (min-width: 1024px) {
+    .container {
+        gap: 100px;
+    }
+}

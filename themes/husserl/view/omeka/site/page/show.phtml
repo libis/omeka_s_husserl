@@ -1,3 +1,11 @@
 <div class="<?php echo str_replace(' ', '-',strtolower($page->title()))?> container">
+  <?php if(strtolower($page->title()) != "home"): ?>
+    <div class="container__page-breadcrumb page-breadcrumb">
+      <ul class="page-breadcrumb__breadcrumb-list breadcrumb-list">
+          <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>">Home</a></li>
+          <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $page->url();?>"><?= $page->title() ?></a></li>
+      </ul>
+    </div>
+  <?php endif; ?>
   <?php echo $this->content; ?>
 </div>

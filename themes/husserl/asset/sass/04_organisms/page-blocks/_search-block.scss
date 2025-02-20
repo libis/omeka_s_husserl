@@ -46,3 +46,20 @@
         }
     }
 }
+
+@media screen and (min-width: 1024px) {
+    .search-block {
+        padding: 0 60px;
+        
+        .search-section {
+            .search-advanced-section {
+                flex-direction: row;
+                flex-wrap: wrap;
+
+                .search-advanced-item-select {
+                    width: calc(50% - 10px);
+                }
+            }
+        }
+    }
+}

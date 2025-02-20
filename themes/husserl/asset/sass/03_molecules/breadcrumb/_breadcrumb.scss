@@ -1,4 +1,6 @@
 .page-breadcrumb {
+    padding: 0 30px;
+
     .breadcrumb-list {
         display: flex;
         flex-direction: row;
@@ -9,5 +11,11 @@
             content: "/";
             padding-right: 10px;
         }
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .page-breadcrumb {
+        padding: 0 60px;
     }
 }

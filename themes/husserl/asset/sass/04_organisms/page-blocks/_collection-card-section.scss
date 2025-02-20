@@ -17,3 +17,28 @@
         gap: 30px;
     }
 }
+
+@media screen and (min-width: 768px) {
+    .collection-section {
+        .collection-cards {
+            flex-direction: row;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .collection-section {
+        gap: 45px;
+        padding: 0 60px;
+
+        .collection-info {
+            gap: 10px;
+
+            .collection-info-text {
+                max-width: 800px;
+            }
+        }
+    }
+}

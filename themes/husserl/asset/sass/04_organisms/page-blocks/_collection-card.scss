@@ -23,7 +23,8 @@
     .collection-card-info {
         z-index: 1;
         position: absolute;
-        width: 90%;
+        width: 85%;
+        min-width: fit-content;
         padding: 25px 30px;
         bottom: 0;
         background-color: var(--third-bg-color);
@@ -36,5 +37,23 @@
             border: none;
             border-top: 1px solid var(--third-color);
         }
+    }
+}
+
+@media screen and (min-width: 768px) { 
+    .collection-card {
+        width: calc(50% - 10px);
+    }
+}
+
+@media screen and (min-width: 1024px) { 
+    .collection-card {
+        width: calc(33% - 13.3px);
+    }
+}
+
+@media screen and (min-width: 1300px) { 
+    .collection-card {
+        width: calc(25% - 15px);
     }
 }

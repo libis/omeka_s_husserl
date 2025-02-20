@@ -1,0 +1,38 @@
+.facet-items {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    padding: 30px 30px 50px;
+
+    .facet-item-form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 50px;
+
+        .facets-list {
+            .facet-item {
+                .facets-item-top {
+                    display: block;
+                    background: transparent;
+                    border: none;
+                    border-bottom: none;
+                    box-shadow: none;
+                    text-align: left;
+                    cursor: pointer;
+                    width: 100%;
+                    padding: 0;
+                    margin: 0 0 0.5em 0;
+                    font-weight: var(--regular);
+                }
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 1024px) { 
+    .facet-items {
+        padding: 0;
+    }
+}

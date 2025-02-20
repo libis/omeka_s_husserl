@@ -16,4 +16,47 @@
         flex-direction: column;
         gap: 30px;
     }
+
+    .browse-item-section-more-items {
+        .cta-button.icon::after {
+            position: relative;
+            content: url(/husserl/themes/husserl/asset/img/arrow-right.svg);
+            right: 0px;
+            top: 2px;
+            width: 8px;
+            height: 14px;
+        }
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .browse-item-section {
+        .browse-results {
+            flex-direction: row;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .browse-item-section {
+        gap: 45px;
+        padding: 0 60px;
+
+        .browse-item-section-info {
+            gap: 10px;
+
+            .info-text {
+                max-width: 800px;
+            }
+        }
+
+        .browse-item-section-more-items {
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+        }
+    }
 }

@@ -1,0 +1,9 @@
+.collections {
+    gap: 30px;
+}
+
+@media screen and (min-width: 1024px) { 
+    .collections {
+        gap: 40px;
+    }
+}

@@ -7,7 +7,7 @@
 body {
     width: 100%;
     background-color: var(--primary-bg-color);
-    min-height: calc(100vh - 100px);
+    min-height: calc(100vh - 90px);
 }
 
 .page {
@@ -16,7 +16,15 @@ body {
 
 .content {
     width: 100%;
-    margin-top: 100px;
+    margin-top: 90px;
+}
+
+.container {
+    padding-top: 40px;
+}
+
+.container.home {
+    padding-top: 0;
 }
 
 html {
@@ -50,4 +58,14 @@ li {
 ::-webkit-scrollbar-thumb {
     background-color: var(--fourth-bg-color);
     border-radius: 5px;
+}
+
+@media screen and (min-width: 1024px) {
+    .container {
+        padding-top: 50px;
+    }
+
+    .container.home {
+        padding-top: 0px;
+    }
 }

@@ -8,14 +8,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     burger.addEventListener("click", function() {
         if(!navopen) {
-            navItemsGroup.classList.add("nav-active");
+            navItemsGroup.classList.add("navigation-open");
             navItemsGroup.classList.remove("nav-non-active");
             page.classList.add("pageFixed");
             navopen = true;
         }
 
         else {
-            navItemsGroup.classList.remove("nav-active");
+            navItemsGroup.classList.remove("navigation-open");
             navItemsGroup.classList.add("nav-non-active");
             page.classList.remove("pageFixed");
             navopen = false;
@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     navItems.forEach(function(navItem) {
         navItem.addEventListener("click", function () {
-            navItemsGroup.classList.remove("nav-active");
+            navItemsGroup.classList.remove("navigation-open");
             navItemsGroup.classList.add("nav-non-active");
             page.remove("pageFixed");
             navopen = false;

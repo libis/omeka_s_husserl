@@ -2,6 +2,14 @@
     position: fixed;
 }
 
+body:has(.pageFixed) {
+    overflow: hidden;
+    
+    .scroll-to-top-button {
+        z-index: 0;
+    }
+}
+
 .container {
     display: flex;
     flex-direction: column;

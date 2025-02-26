@@ -6,6 +6,7 @@ use AdvancedSearch\Querier\Exception\QuerierException;
 use AdvancedSearch\Response;
 use AdvancedSearch\Stdlib\SearchResources;
 use Common\Stdlib\PsrMessage;
+use Doctrine\ORM\Query\Expr\Join;
 
 class InternalQuerier extends AbstractQuerier
 {
@@ -466,6 +467,99 @@ class InternalQuerier extends AbstractQuerier
     }
 
     /**
+     * Get an associative list of all unique values of a field.
+     *
+     * @todo Support any resources, not only item.
+     *
+     * Note: In version previous 3.4.15, the module Reference was used, that
+     * managed languages, but a lot slower for big databases.
+     *
+     * @todo Factorize with \AdvancedSearch\Querier\InternalQuerier::fillFacetResponse()
+     *
+     * Adapted:
+     * @see \AdvancedSearch\Api\Representation\SearchConfigRepresentation::suggest()
+     * @see \AdvancedSearch\Api\Representation\SearchSuggesterRepresentation::suggest()
+     * @see \AdvancedSearch\Querier\InternalQuerier::queryValues()
+     * @see \Reference\Mvc\Controller\Plugin\References
+     */
+    public function queryValues(string $field): array
+    {
+        // Check if the field is a special or a multifield.
+
+        // Convert multi-fields into a list of property terms.
+        // Normalize search query keys as omeka keys for items and item sets.
+        $aliases = $this->query ? $this->query->getAliases() : [];
+        $fields = [];
+        $fields[$field] = $this->easyMeta->propertyTerm($field)
+            ?? $aliases[$field]['fields']
+            ?? $field;
+
+        // Simplified from References::listDataForProperty().
+        /** @see \Reference\Mvc\Controller\Plugin\References::listDataForProperties() */
+        $fields = reset($fields);
+        if (!is_array($fields)) {
+            $fields = [$fields];
+        }
+        $propertyIds = $this->easyMeta->propertyIds($fields);
+        if (!$propertyIds) {
+            return [];
+        }
+
+        $entityManager = $this->services->get('Omeka\EntityManager');
+        $qb = $entityManager->createQueryBuilder();
+        $expr = $qb->expr();
+
+        // For example to list all authors that are a resource.
+        $fieldQueryArgs = $this->query ? $this->query->getFieldsQueryArgs() : [];
+        $isResourceQuery = $fieldQueryArgs
+            && isset($fieldQueryArgs[$field]['type'])
+            && isset($fieldQueryArgs[$fieldQueryArgs[$field]['type']])
+            && in_array($fieldQueryArgs[$fieldQueryArgs[$field]['type']], SearchResources::FIELD_QUERY['main_type']['resource']);
+
+        if ($isResourceQuery) {
+            $qb
+                ->select('valueResource.title AS val')
+                ->from(\Omeka\Entity\Value::class, 'value')
+                // This join allow to check visibility automatically too.
+                ->innerJoin(\Omeka\Entity\Item::class, 'resource', Join::WITH, $expr->eq('value.resource', 'resource'))
+                ->innerJoin(\Omeka\Entity\Item::class, 'valueResource', Join::WITH, $expr->eq('value.valueResource', 'valueResource'))
+                ->andWhere($expr->in('value.property', ':properties'))
+                ->setParameter('properties', implode(',', $propertyIds))
+                ->groupBy('val')
+                ->orderBy('val', 'asc');
+        } else {
+            $qb
+                ->select('COALESCE(value.value, valueResource.title, value.uri) AS val')
+                ->from(\Omeka\Entity\Value::class, 'value')
+                // This join allow to check visibility automatically too.
+                ->innerJoin(\Omeka\Entity\Item::class, 'resource', Join::WITH, $expr->eq('value.resource', 'resource'))
+                // The values should be distinct for each type.
+                ->leftJoin(\Omeka\Entity\Item::class, 'valueResource', Join::WITH, $expr->eq('value.valueResource', 'valueResource'))
+                ->andWhere($expr->in('value.property', ':properties'))
+                ->setParameter('properties', implode(',', $propertyIds))
+                ->groupBy('val')
+                ->orderBy('val', 'asc');
+        }
+
+        $siteId = $this->query->getSiteId();
+        $siteAlias = 'site';
+        if ($siteId) {
+            $qb
+                ->innerJoin('resource.sites', $siteAlias, 'WITH', $expr->eq("$siteAlias.id", ':site_id'))
+                ->setParameter('site_id', $siteId);
+            // TODO Manage settigns site_attachements_only. See ItemAdapter.
+        }
+
+        $list = array_column($qb->getQuery()->getScalarResult(), 'val', 'val');
+
+        // Fix false empty duplicate or values without title.
+        $list = array_keys(array_flip($list));
+        unset($list['']);
+
+        return array_combine($list, $list);
+    }
+
+    /**
      * @return array|null Arguments for the Omeka api, or null if unprocessable
      * or empty results.
      *
@@ -687,9 +781,9 @@ class InternalQuerier extends AbstractQuerier
         if (!$hiddenFilters) {
             return;
         }
-        $this->filterQueryValues($hiddenFilters);
+        $this->filterQueryAny($hiddenFilters, false, true);
         $this->filterQueryRanges($hiddenFilters);
-        $this->filterQueryFilters($hiddenFilters);
+        $this->filterQueryAny($hiddenFilters);
     }
 
     /**
@@ -704,15 +798,15 @@ class InternalQuerier extends AbstractQuerier
     protected function filterQuery(): void
     {
         // Don't use excluded fields for filters.
-        $this->filterQueryValues($this->query->getFilters());
+        $this->filterQueryAny($this->query->getFilters(), false, true);
         $this->filterQueryRanges($this->query->getFiltersRange());
-        $this->filterQueryFilters($this->query->getFiltersQuery());
+        $this->filterQueryAny($this->query->getFiltersQuery());
         $this->argsWithoutActiveFacets = $this->args;
-        $this->filterQueryValues($this->query->getActiveFacets(), true);
+        $this->filterQueryAny($this->query->getActiveFacets(), true, true);
         $this->filterQueryRefine($this->query->getQueryRefine());
     }
 
-    protected function filterQueryValues(array $filters, bool $inListForFacets = false): void
+    protected function filterQueryAny(array $filters, bool $inListForFacets = false, bool $isSimpleValue = false): void
     {
         $flatArray = function ($values): array {
             if (!is_array($values)) {
@@ -867,6 +961,37 @@ class InternalQuerier extends AbstractQuerier
                 }
                 break;
 
+            case !$isSimpleValue:
+                // The filter is a query row in SearchResource, but the filters
+                // are grouped by field.
+                if (!is_array($values)) {
+                    continue 2;
+                }
+
+                $field = $this->fieldToIndex($fieldName);
+                if (!$field) {
+                    continue 2;
+                }
+
+                foreach ($values as $queryFilter) {
+                    // Skip simple filters (for hidden queries).
+                    if (!$queryFilter
+                        || !is_array($queryFilter)
+                        || empty($queryFilter['type'])
+                        || !isset(SearchResources::FIELD_QUERY['reciprocal'][$queryFilter['type']])
+                    ) {
+                        continue;
+                    }
+                    $queryFilter += ['join' => null, 'type' => null, 'val' => null];
+                    $this->args['filter'][] = [
+                        'join' => $queryFilter['join'],
+                        'field' => $field,
+                        'type' => $queryFilter['type'],
+                        'val' => $queryFilter['val'],
+                    ];
+                }
+                break;
+
             default:
                 // Normally, the fields are already converted in standard
                 // advanced search form.
@@ -966,43 +1091,6 @@ class InternalQuerier extends AbstractQuerier
                         'val' => $filterValue['to'],
                     ];
                 }
-            }
-        }
-    }
-
-    /**
-     * @todo In internal querier, advanced filters manage only properties for now.
-     */
-    protected function filterQueryFilters(array $filters): void
-    {
-        // The filter is a query row in SearchResource, but the filters are
-        // grouped by field.
-        foreach ($filters as $field => $filter) {
-            if (!is_array($filter)) {
-                continue;
-            }
-
-            $field = $this->fieldToIndex($field);
-            if (!$field) {
-                continue;
-            }
-
-            foreach ($filter as $queryFilter) {
-                // Skip simple filters (for hidden queries).
-                if (!$queryFilter
-                    || !is_array($queryFilter)
-                    || empty($queryFilter['type'])
-                    || !isset(SearchResources::FIELD_QUERY['reciprocal'][$queryFilter['type']])
-                ) {
-                    continue;
-                }
-                $queryFilter += ['join' => null, 'type' => null, 'val' => null];
-                $this->args['filter'][] = [
-                    'join' => $queryFilter['join'],
-                    'field' => $field,
-                    'type' => $queryFilter['type'],
-                    'val' => $queryFilter['val'],
-                ];
             }
         }
     }

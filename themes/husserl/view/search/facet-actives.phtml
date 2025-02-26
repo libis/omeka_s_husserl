@@ -21,16 +21,15 @@ $texts = [
 ];
 ?>
 
-<ul class="facets-active">
+<ul class="facets-active facets-active-list">
     <?php foreach ($activeFacets as $name => $facetValues) foreach ($facetValues as $facetKey => $facetValue): ?>
-    <li class="facet-active">
-        <span class="facet-active-label"><?= $escape($translate($facetValue['fieldLabel'])) ?></span>
-        <?= sprintf('<a class="facet-active-value" href="%1$s" data-facet-name="facet[%2$s][%3$s]" data-facet-value="%4$s">%5$s</a>',
-            $escapeAttr($facetValue['url']),
-            $escapeAttr($name),
-            is_numeric($facetKey) ? '' : $escapeAttr($facetKey),
-            $escapeAttr($facetValue['value']),
-            $escape(sprintf($texts[$facetKey] ?? $texts['default'], $facetValue['label']))) ?>
-    </li>
+        <li class="facet-active facet-active-item">
+            <?= sprintf('<a class="facet-active-value small-text" href="%1$s" data-facet-name="facet[%2$s][%3$s]" data-facet-value="%4$s">%5$s</a>',
+                $escapeAttr($facetValue['url']),
+                $escapeAttr($name),
+                is_numeric($facetKey) ? '' : $escapeAttr($facetKey),
+                $escapeAttr($facetValue['value']),
+                $escape(sprintf($texts[$facetKey] ?? $texts['default'], $facetValue['label']))) ?>
+        </li>
     <?php endforeach; ?>
 </ul>

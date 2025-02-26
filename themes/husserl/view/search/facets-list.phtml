@@ -45,19 +45,24 @@ if (!empty($itemSet)) {
 }
 ?>
 
-<div id="search-facets" class="browse-search-aside__facet-items facet-items facets">
-    <?php if ($displayActive && count($activeFacets)): ?>
-        <div class="facet-items__active-facets active-facets">
-            <?= $facetActives(null, $activeFacets, $searchConfig->setting('facet')) ?>
-        </div>
-    <?php endif; ?>
-
-    <form id="form-facets" class="facet-items__facet-item-form facet-item-form">
+<div id="search-facets" class="browse-search-aside__facet-items-content facet-items-content facets">
+    <form id="form-facets" class="facet-items-content__facet-item-form facet-item-form">
+        <?php if ($displayActive && count($activeFacets)): ?>
+            <div class="facet-item-form__active-facets active-facets">
+                <?= $facetActives(null, $activeFacets, $searchConfig->setting('facet')) ?>
+            </div>
+        <?php endif; ?>
         <?php //searchbar ?>
         <?php if ($displayRefine): ?>
-            <div class="facets-refine">
-                <input id="search-refine" name="refine" class="search-refine" value="<?= $escape($query->getQueryRefine()) ?>"<?= $labelRefine ? ' data-placeholder="' . $escapeAttr($labelRefine) . '"' : '' ?>/>
-                <button id="search-refine-submit" class="search-refine" type="submit"><?= $escape($translate('Submit')) ?></button>
+            <div class="search-section__search-bar search-bar facets-refine">
+                <input class="search-bar__search-bar-input search-bar-input body-text search-refine" id="search-refine" type="text" name="refine" placeholder="Search" value="<?= $escape($query->getQueryRefine()) ?>"<?= $labelRefine ? ' data-placeholder="' . $escapeAttr($labelRefine) . '"' : '' ?>/>
+                <div class="search-bar__search-bar-controls search-bar-controls">
+                    <button id="search-refine-submit" type="submit" class="search-bar-controls__search-bar-submit search-bar-submit search-refine">
+                        <div class="search-bar-submit__submit-icon submit-icon">
+                            <img src="<?= $this->assetUrl('img/search-icon.svg')?>" alt="serach icon"/>
+                        </div>
+                    </button>
+                </div>
             </div>
         <?php endif; ?>
         <?php //if there ar no facets to apply than i got the text No filters available?>
@@ -70,20 +75,17 @@ if (!empty($itemSet)) {
                 <?php foreach ($facets as $name => $facetValues): ?>
                     <?php $facetParams = $searchFacets[$name]; ?>
                     <?php $hasState = in_array($facetParams['state'] ?? '', ['expand', 'collapse', 'collapse_unless_set']); ?>
-                    <li class="facet-item<?= empty($facetParams['attributes']['class']) ? '' : ' ' . $escapeAttr($facetParams['attributes']['class']) ?>">
+                    <li class="facets-list__facet-item-main facet-item-main<?= empty($facetParams['attributes']['class']) ? '' : ' ' . $escapeAttr($facetParams['attributes']['class']) ?>">
                         <?php if ($hasState): ?>
                             <?php $stateExpand = $facetParams['state'] === 'expand' || ($facetParams['state'] === 'collapse_unless_set' && !empty($activeFacets[$name])); ?>
-                            <button type="button" class="facet-button facet-item__facets-item-top facets-item-top big-body-text <?= $stateExpand ? 'collapse' : 'expand' ?>" aria-label="<?= $translate($stateExpand ? 'Collapse' : 'Expand') ?>" data-label-expand="<?= $translate('Expand') ?>" data-label-collapse="<?= $translate('Collapse') ?>"><?= $escape($translate($facetParams['label'] ?? $name)) ?></button>
+                            <button type="button" class="facet-button facet-item-main__facets-item-top facets-item-top <?= $stateExpand ? 'collapse' : 'expand' ?>" aria-label="<?= $translate($stateExpand ? 'Collapse' : 'Expand') ?>" data-label-expand="<?= $translate('Expand') ?>" data-label-collapse="<?= $translate('Collapse') ?>">
+                                <p class="facets-item-top__facets-item-text facets-item-text h6-variant"><?= $escape($translate($facetParams['label'] ?? $name)) ?></p>
+                            </button>
                         <?php else: ?>
-                            <h4><?= $escape($translate($facetParams['label'] ?? $name)) ?></h4>
+                            <p class="facet-item-main__facet-item-text facet-item-text h6-variant"><?= $escape($translate($facetParams['label'] ?? $name)) ?></p>
                         <?php endif; ?>
-                        <div class="facet-elements<?= $hasState ? ' collapsible' : '' ?>"<?= $hasState && $facetParams['state'] === 'collapse' ? ' hidden="hidden"' : '' ?>>
+                        <div class="facet-item-main__facet-elements facet-elements <?= $hasState ? 'collapsible' : '' ?>"<?= $hasState && $facetParams['state'] === 'collapse' ? ' hidden="hidden"' : '' ?>>
                             <?= $facetElements($name, $facetValues, $facetParams) ?>
-                            <?php if (($facetParams['more'] ?? '') !== '' && in_array($facetParams['type'] ?? '', ['', 'Checkbox', 'Link', 'Tree', 'TreeLink', 'Thesaurus', 'ThesaurusLink']) && count($facetValues) > (int) $facetParams['more']): ?>
-                                <div class="facet-see-more">
-                                    <button type="button" class="facet-see-more-or-less expand" data-default-count="<?= (int) $facetParams['more'] ?>" data-more-count="<?= count($facetValues) - (int) $facetParams['more'] ?>" data-label-see-more="<?= $escapeAttr($translate('See more')) ?>" data-label-see-less="<?= $escapeAttr($translate('See less')) ?>"><?= $escape($translate('See more')) ?></button>
-                                </div>
-                            <?php endif; ?>
                         </div>
                     </li>
                 <?php endforeach; ?>
@@ -92,12 +94,12 @@ if (!empty($itemSet)) {
         <?php $displayButtonReset = $displayReset === 'below' || $displayReset === 'both'; ?>
         <?php $displayButtonSubmit = $displayFacetButton && ($displaySubmit === 'below' || $displaySubmit === 'both'); ?>
         <?php if ($displayButtonReset || $displayButtonSubmit): ?>
-            <div class="facets-actions facets-actions-bottom">
+            <div class="facet-item-form__facets-actions facet-actions facets-actions-bottom">
                 <?php if ($displayButtonSubmit): ?>
-                <button id="facets-apply" class="facets-apply" type="submit"><?= $escape($labelSubmit) ?></button>
+                    <button id="facets-apply" class="facet-actions__facets-apply facets-apply primary-button body-text" type="submit"><?= $escape($labelSubmit) ?></button>
                 <?php endif; ?>
                 <?php if ($displayButtonReset): ?>
-                <button id="facets-reset" class="facets-reset" type="reset"><?= $escape($labelReset) ?></button>
+                    <a href="<?= $site->url() ?>/search" id="facets-reset" class="facet-actions__facets-reset facet-reset reset-link body-text" type="reset"><?= $escape($labelReset) ?></a>
                 <?php endif; ?>
             </div>
         <?php endif; ?>

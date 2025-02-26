@@ -1,0 +1,23 @@
+.facets-active.facets-active-list {
+    all: unset;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px;
+
+    .facet-active.facet-active-item {
+        all: unset;
+        display: flex;
+        width: fit-content;
+
+        .facet-active-value {
+            padding: 7px 10px;
+            border: 1px solid var(--third-border-color);
+            color: var(--third-text-color);
+        }
+
+        .facet-active-value::after {
+            margin: 0 0 0 10px;
+        }
+    }
+}

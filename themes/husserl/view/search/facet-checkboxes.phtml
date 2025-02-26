@@ -17,7 +17,7 @@ $displayCount = !empty($options['display_count']);
 $isTree = is_array($tree);
 ?>
 
-<ul class="facet-items">
+<ul class="facet-elements__facet-items facet-items">
     <?php foreach ($facetValues as $facetValue):
         $escapedValue = $escapeAttr($facetValue['value']);
         $escapedId = $name . '[]' . $escapedValue;
@@ -27,9 +27,9 @@ $isTree = is_array($tree);
         $treeVal = $isTree ? $tree[$facetValue['value']] ?? null : null;
         $treeValAttrs = $treeVal ? sprintf(' data-value="%s" data-parent="%s" data-level="%s"', $treeVal['id'], $treeVal['parent'], $treeVal['level']) : '';
     ?>
-    <li class="facet-item <?= $facetValue['active'] ? 'active' : 'inactive' ?>"<?= $treeValAttrs ?>>
-        <input type="checkbox" name="<?= "facet[$name][]" ?>" id="<?= $escapedId ?>" value="<?= $escapedValue ?>"<?= $isFacetModeDirect ? ' data-url="' . $escapeAttr($facetValue['url']) . '"' : '' ?><?= $facetValue['active'] ? ' checked="checked"' : '' ?>/>
-        <label for="<?= $escapedId ?>"><?= $label ?></label>
+    <li class="facet-items__facet-item facet-item checkbox <?= $facetValue['active'] ? 'active' : 'inactive' ?>"<?= $treeValAttrs ?>>
+        <input class="checkbox__checkbox-input checkbox-input--checkbox" type="checkbox" name="<?= "facet[$name][]" ?>" id="<?= $escapedId ?>" value="<?= $escapedValue ?>"<?= $isFacetModeDirect ? ' data-url="' . $escapeAttr($facetValue['url']) . '"' : '' ?><?= $facetValue['active'] ? ' checked="checked"' : '' ?>/>
+        <label for="<?= $escapedId ?>" class="checkbox-label__checkbox-label checkbox-label body-text"><?= $label ?></label>
     </li>
     <?php endforeach; ?>
 </ul>

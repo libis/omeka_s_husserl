@@ -7,8 +7,10 @@ $this->headMeta()->appendName('viewport', 'width=device-width, initial-scale=1')
 $this->headTitle($siteTitle)->setSeparator(' · ');
 $this->headTitle()->append($this->setting('installation_title', 'Omeka S'));
 $this->headLink()->prependStylesheet($this->assetUrl('css/app.css'));
+$this->headLink()->prependStylesheet($this->assetUrl('css/splide.min.css'));
 $this->headLink()->prependStylesheet($this->assetUrl('css/iconfonts.css', 'Omeka'));
 
+$this->headScript()->prependFile($this->assetUrl('js/splide.min.js'));
 $this->headScript()->prependFile($this->assetUrl('js/main.js'));
 
 $this->headScript()->prependFile($this->assetUrl('js/global.js', 'Omeka'));

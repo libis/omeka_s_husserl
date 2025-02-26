@@ -52,39 +52,52 @@ $defaultThumbnail = $allThumbnail
 $thumbnailType = $searchConfig->subSetting('results', 'thumbnail_type', 'medium');
 ?>
 
-<ul class="resource-list search-results-list<?= $gridListMode === 'list_only' ? ' list' : ($gridListMode === 'grid_only' ? ' grid' : '') ?>">
+<ul class="resource-list search-results-list">
     <?php /** @var \Omeka\Api\Representation\AbstractResourceEntityRepresentation $resource */
     foreach ($resources as $resource):
-        $resourceUrl = isset($site) ? $resource->siteUrl($siteSlug) : $resource->adminUrl();
-        $resourceType = $resource->getControllerName();
-        $heading = $headingTerm ? $resource->value($headingTerm, ['default' => $untitled, 'lang' => $langValue]) : $resource->displayTitle($untitled, $langValue);
-        $body = $bodyTerm ? $resource->value($bodyTerm, ['lang' => $langValue, 'default' => '']) : $resource->displayDescription(null, $langValue);
-        ?>
-    <li class="resource <?= $resourceType ?>">
-        <div class="resource-heading">
-            <?= $hyperlink->raw($escapeValueOrGetHtml($heading), $resourceUrl, ['class' => 'resource-link']) ?>
-        </div>
-        <?php if (!$noThumbnail): ?>
-        <?php $resourceThumbnail = $thumbnail($resource, $thumbnailType); ?>
-        <div class="resource-thumbnail<?= $resourceThumbnail ? '' : ($allThumbnail ? ' default-thumbnail' : '') ?>">
-            <?php if ($resourceThumbnail || $allThumbnail): ?>
-            <?= $hyperlink->raw($resourceThumbnail ?: $defaultThumbnail, $resourceUrl, ['class' => 'resource-link']) ?>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
-        <div class="resource-body resource-metadata">
-            <?php if (strlen($body)): ?>
-            <div class="description">
-                <?= $escapeValueOrGetHtml($body, $allowHtml) ?>
-            </div>
-            <?php endif; ?>
-        </div>
-        <?php if ($selectionButton): ?>
-        <?= $selectionButton($resource) ?>
-        <?php endif; ?>
-        <?php if ($contactUsSelector): ?>
-        <?= $contactUsSelector($resource) ?>
-        <?php endif; ?>
-    </li>
+        $resourceUrl = isset($site) ? $resource->siteUrl($siteSlug) : $resource->adminUrl();?>
+        <li class="search-results-list__resource-item resource-item item-card item-card">
+            <a href="<?= $resourceUrl; ?>">
+                <div class="item-card__item-card-top-section item-card-top-section">
+                    <div class="item-card-top-section__item-card-image item-card-image">
+                        <?php 
+                        $media = $resource->media();
+                        if($media):
+                            if(sizeof($resources) <= 2):
+                                $altText = $media[0]->altText();
+                                $mediaurl = str_replace('http:', '', $media[0]->thumbnailUrl('large'));
+                            else:
+                                $altText = $media[0]->altText();
+                                $mediaurl = str_replace('http:', '', $media[0]->thumbnailUrl('medium'));
+                            endif;
+                        else:
+                            $mediaurl = "";
+                        endif;
+                        ?>
+                        <?php if($mediaurl != ""): ?>
+                            <img src="<?php echo $mediaurl?>" alt="<?php echo empty($altText) ? 'Page of a Husserl collection' : strip_tags($altText) ?>" />
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="browse-result__browse-bottom-section browse-bottom-section item-card-bottom-section">
+                    <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $resource->value('dcterms:identifier')?></h4>
+                    <div class="item-card-bottom-section__date-section date-section">
+                    <div class="date-section__date date">
+                        <div class="date__date-icon date-icon">     
+                        <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.6562 12.5C22.6562 15.1936 21.5862 17.7769 19.6816 19.6816C17.7769 21.5862 15.1936 22.6562 12.5 22.6562C9.80639 22.6562 7.22311 21.5862 5.31845 19.6816C3.41378 17.7769 2.34375 15.1936 2.34375 12.5C2.34375 9.80639 3.41378 7.22311 5.31845 5.31845C7.22311 3.41378 9.80639 2.34375 12.5 2.34375C15.1936 2.34375 17.7769 3.41378 19.6816 5.31845C21.5862 7.22311 22.6562 9.80639 22.6562 12.5ZM0 12.5C0 15.8152 1.31696 18.9946 3.66117 21.3388C6.00537 23.683 9.18479 25 12.5 25C15.8152 25 18.9946 23.683 21.3388 21.3388C23.683 18.9946 25 15.8152 25 12.5C25 9.18479 23.683 6.00537 21.3388 3.66117C18.9946 1.31696 15.8152 0 12.5 0C9.18479 0 6.00537 1.31696 3.66117 3.66117C1.31696 6.00537 0 9.18479 0 12.5ZM11.3281 5.85938V12.5C11.3281 12.8906 11.5234 13.2568 11.8506 13.4766L16.5381 16.6016C17.0752 16.9629 17.8027 16.8164 18.1641 16.2744C18.5254 15.7324 18.3789 15.0098 17.8369 14.6484L13.6719 11.875V5.85938C13.6719 5.20996 13.1494 4.6875 12.5 4.6875C11.8506 4.6875 11.3281 5.20996 11.3281 5.85938Z" fill="black"/>
+                        </svg>
+                        </div>
+                        <p class="date__date-text date-text body-text"><?= ($resource->value('dcterms:date') != null) ? $resource->value('dcterms:date') : "Unknown"?></p>
+                    </div>
+                    <div class="date-section__arrow-icon arrow-icon">
+                        <svg width="10" height="19" viewBox="0 0 10 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9.63386 8.61736C10.122 9.10555 10.122 9.89836 9.63386 10.3865L2.13533 17.8851C1.64714 18.3733 0.854325 18.3733 0.366139 17.8851C-0.122046 17.3969 -0.122046 16.6041 0.366139 16.1159L6.98203 9.5L0.370045 2.8841C-0.118141 2.39592 -0.118141 1.6031 0.370045 1.11492C0.858231 0.626733 1.65104 0.626733 2.13923 1.11492L9.63777 8.61345L9.63386 8.61736Z" fill="#202020"/>
+                        </svg>
+                    </div>
+                    </div>
+                </div>
+            </a>
+        </li>
     <?php endforeach; ?>
 </ul>

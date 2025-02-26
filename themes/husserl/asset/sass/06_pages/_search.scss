@@ -1,5 +1,4 @@
 .search {
-    padding: 30px 30px 0 30px;
     display: flex;
     flex-direction: column;
     gap: 30px;
@@ -10,6 +9,7 @@
         flex-direction: column;
         gap: 30px;
         width: 100%;
+        padding: 30px 30px 0 30px;
 
         .page-breadcrumb {
             padding: 0;
@@ -25,8 +25,41 @@
     .search-wrapper {
         display: flex;
         flex-direction: column;
-        gap: 30px;
+        flex-wrap: wrap;
+        gap: 40px;
         width: 100%;
+
+        .search-results {
+            width: 100%;
+            padding: 0 30px;
+            gap: 50px;
+
+            .search-results-list {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+
+                .item-card {
+                    a {
+                        display: flex;
+                        flex-direction: column;
+                    }
+                }
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .search {
+        .search-wrapper {
+            .search-results {
+                .search-results-list {
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                }
+            }
+        }
     }
 }
 
@@ -37,6 +70,7 @@
 
         .search-page-top {
             gap: 40px;
+            padding: 0;
 
             .page-top-info {
                 gap: 10px;
@@ -46,6 +80,34 @@
         .search-wrapper {
             flex-direction: row;
             gap: 120px;
+
+            .search-results {
+                padding: 0;
+                width: calc(70% - 60px);
+                gap: 60px;
+
+                .search-results-list { 
+                    .item-card {
+                        width: calc(50% - 10px);
+                    }
+                }
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 1440px) {
+    .search {
+        .search-wrapper {
+            .search-results {
+                width: calc(75% - 60px);
+
+                .search-results-list {
+                    .item-card {
+                        width: calc(33% - 13.3px);
+                    }
+                }
+            }
         }
     }
 }

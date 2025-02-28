@@ -1,10 +1,94 @@
 <?php
 
+$itemData = [
+    "values" => [
+        "title" => "A I 1-4a",
+        "description" => "Lorem ipsum dolor sit amet consectetur. Leo gravida aenean nulla accumsan tortor senectus sodales nunc a. Euismod sit turpis pulvinar morbi orci tellus metus facilisis. Nibh donec pretium at netus felis vestibulum curabitur sit. Ultrices amet aenean at facilisis eget sed iaculis sollicitudin montes. Quam nulla vitae non velit in semper morbi vel odio. Quam dui vulputate odio ante eget.",
+        "identifier" => "A I 1-4a",
+        "alternative Pagination" => 1,
+        "date" => 1912,
+        "creator / contributor" => "Edmund Husserl",
+        "manuscript collection" => "Einleitung In Die Phänomenologie Vorlesungen Sommersemester 1912",
+        "location" => "Leuven, University Archives KU Leuven",
+        "references" => "BE/212934/PP/HUSSERL/F I 4 Archives of Edmund Husserl, F I 4/4b",
+        "links" => [
+            [
+                "text" => "View The Full Archival Description",
+                "link" => "",
+            ],
+            [
+                "text" => "View The Images",
+                "link" => "",
+            ]
+        ],
+        "folder structure" => "Manuscripts / Gruppe A / A I / A I 1",
+        "transcription" => [
+            "person" => "Thomas Voneehr",
+            "content" => "Ich beginne mit einer Einleitung.[1] [Einleitung] [Um] eine gemeinsame Wanderung in unbekannte Forschungsgebiete zu unternehmen, brauchen wir selbstverständlich uns allen bekannte und gegebene Ausgangspunkte. Diese liegen also vor dem noch Unbekannten und allererst zu Erforschenden. Sie brauchen keineswegs theoretische Voraussetzungen für das zu erforschende Neue zu enthalten, sie brauchen nicht Fundamente zu sein, auf welchen sich die Themata der Forschung logisch aufbauen. Ausgangspunkte brauchen keine andere Vorgegebenheit und Bekanntheit zu besitzen als diejenige, welche für die Möglichkeit einer Heranführung [und] Hinleitung zur intendierten Forschungsdomäne erforderlich ist; diese mag ihre eigenen Anfänge haben, die nicht vorgegeben, sondern durch die ersten Handlungen forschender Arbeit ergriffen sind. In unserem Fall nehmen wir als Ausgangs- und Treffpunkt unserer Wanderung, als den gemeinsamen Boden, über den wir ohne weiteres verfügen, den des natürlichen Vorstellens und Denkens und den der allgemeinen Sprache, die sich nach dem natürlich Gegebenen und Gemeinsamen verständlich orientiert. Unser gemeinsames philosophisches und psychologisches Wissen setzen wir außer Aktion; haben wir etwas schon von Phänomenologie gehört, so scheiden wir es aus und das vor allem anderen; denn Phänomenologie soll es allererst sein, zu dem wir gemeinsam hinwandern wollen. Und ist es Phänomenologie des „erlebenden“, „wahrnehmenden“,",
+        ],
+        "publications" => [
+            [
+                "where" => "In Husserliana",
+                "title" => "Hua III/2 (ideen Zu Einer Reinen Phänomenologie Und Phänomenologische Philosophie)",
+                "pages" => "530-532",
+            ],
+            [
+                "where" => "Outside Husserliana",
+                "title" => "Die Urarche Erde Bewegt Sich Nicht, N-N., Phenomenological Research",
+                "pages" => "",
+            ]
+        ]
+    ]
+];
+
+$parentItem = [
+    "values" => [
+        "id" => 7138,
+        "subjectValues" => [
+            "pageOne" => [
+                "values" => [
+                    "id" => 11111,
+                    "dcterms:identifier" => "A I 1/1b",
+                    "dcterms:date" => "1912",
+                    "url" => "#",
+                ],
+                "media" => [
+                    [
+                        "altText" => "",
+                        "thumbnailUrl" => "http://localhost:9013/husserl/files/large/0deb5c720db747efe0283d6620d958fc8d70761a.jpg"
+                    ]
+                ]
+            ],
+            "pageTwo" => [
+                "values" => [
+                    "id" => 11111,
+                    "dcterms:identifier" => "A I 1/1b",
+                    "dcterms:date" => "1912",
+                    "url" => "#",
+                ],
+                "media" => [
+                    [
+                        "altText" => "",
+                        "thumbnailUrl" => "http://localhost:9013/husserl/files/large/0deb5c720db747efe0283d6620d958fc8d70761a.jpg"
+                    ]
+                ]
+            ],
+        ]
+    ]
+];
+
 function searchElement($id, $site) {
     $element = $site->api()->read('items', $id, []);
     $element = $element->getContent();
 
     return $element;
+}
+
+function getSubjectValues($id, $site) {
+    $element = searchElement($id, $site);
+    $children = $element->subjectValues();
+
+    return $children;
 }
 
 //array for the pad to the top structure
@@ -56,10 +140,10 @@ $media = $item->media();
                         </div>
                     <?php else: ?>
                         <div class="splide item-top-information-wrapper__item-images item-images item-pictures-slider info-wrapper-image">
-                            <div class="splide__track item-pictures-slider__picture-slider-track picture-slider-track">
+                            <div class="splide__track item-pictures-slider__picture-slider-track picture-slider-track slider-track">
                                 <div class="splide__list picture-slider-track__picture-slider-track-list picture-slider-track-list slider-group">
                                     <?php for($i = 0; $i < count($media); $i++): ?>
-                                        <div class="splide__slide picture-slider-track-list__image-slider-item image-slider-image">
+                                        <div class="splide__slide picture-slider-track-list__image-slider-item image-slider-item">
                                             <?php
                                                 $altText = $media[$i]->altText();
                                                 $mediaurl = str_replace('http:', '', $media[$i]->thumbnailUrl('large'));
@@ -68,6 +152,15 @@ $media = $item->media();
                                         </div>
                                     <?php endfor; ?>
                                 </div>
+                            </div>
+                            <div class="splide__arrows item-images-nav">
+                                <button class="splide__arrow splide__arrow--prev">
+                                    <img src="<?= $this->assetUrl('img/arrow-right.svg')?>" alt="arrow icon"/>
+                                </button>
+                                <ul class="splide__pagination"></ul>
+                                <button class="splide__arrow splide__arrow--next">
+                                    <img src="<?= $this->assetUrl('img/arrow-right.svg')?>" alt="arrow icon"/>
+                                </button>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -80,11 +173,138 @@ $media = $item->media();
                                 </svg>
                             </div>
                         </div>
-                        <div style="height:1200px; background-color:blue;"></div>
-                        <div style="height:1200px; background-color:pink;"></div>
+                        <div class="item-top-information-scrollable-content__item-metadata-section item-metadata-section">
+                            <?php foreach($itemData['values'] as $key => $value): ?>
+                                <?php if($key == "transcription" || $key == "publications"): ?>
+                                    <?php break; ?>
+                                <?php endif; ?>
+                                <?php if (is_array($value)): ?>
+                                    <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item <?= ($full != '') ? 'full' : '' ?>">
+                                        <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5"><?= $key ?></h5>
+                                        <div class="item-metadata-item__metadata-values metadata-values">
+                                            <?php foreach($value as $keyValue => $valueOfValue): ?>
+                                                <div class="metadata-values__metadata-value metadata-value">
+                                                    <div class="metadata-value__metadata-arrow metadata-arrow">
+                                                        <img src="<?= $this->assetUrl('img/full-arrow.svg')?>" alt="full arrow icon"/>
+                                                    </div>
+                                                    <?php if($key == "links"): ?>
+                                                        <a href="<?= ($valueOfValue['link'] != '') ? $valueOfValue['link'] : '#'?>" class="metadata-value__metadata-value-link metadata-value-link body-text">
+                                                            <?= $valueOfValue['text']; ?>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <p class="metadata-value__metadata-item-text metadata-item-text body-text"><?= $valueOfValue ?></p>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <?php $full = "" ?>
+                                    <?php if($key == "title" || $key == "description"):?>
+                                        <?php $full = true; ?>
+                                    <?php endif; ?>
+                                    <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item <?= ($full != '') ? 'full' : '' ?>">
+                                        <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5"><?= $key ?></h5>
+                                        <p class="item-metadata-item__metadata-item-text metadata-item-text body-text"><?= $value ?></p>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="item-top-information-scrollable-content__item-transcription-section item-transcription-section">
+                            <h2 class="item-transcription-section__transcription-section-title transcription-section-title h2">Transcription</h2>
+                            <div class="item-transcription-section__transcription-person transcription-person">
+                                <div class="transcription-person__person-icon person-icon">
+                                    <img src="<?= $this->assetUrl('img/person.svg')?>" alt="person icon"/>
+                                </div>
+                                <p class="transcription-person__person-name person-name body-text"><?= $itemData['values']['transcription']['person'] ?></p>
+                            </div>
+                            <p class="item-transcription-section__transcription-text transcription-text body-text"><?= $itemData['values']['transcription']['content'] ?></p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="item-information__item-publications-section item-publications-section">
+            <h2 class="item-publications-section__publications-title publications-title h2">Publications</h2>
+            <div class="item-publications-section__table-section table-section">
+                <table class="table-section__publications-table publications-table table">
+                    <tr class="publications-table__publications-table-title-row publications-table-title-row title-table-row">
+                        <th class="publications-table-title-row__table-title table-title body-text">Where</th>
+                        <th class="publications-table-title-row__table-title table-title body-text">Title</th>
+                        <th class="publications-table-title-row__table-title table-title body-text">Page(s)</th>
+                    </tr>
+                    <?php foreach($itemData["values"]["publications"] as $publication): ?>
+                        <tr class="publications-table__publications-table-row publications-table-row table-row">
+                            <td class="publications-table-row__table-field table-field body-text"><?= ($publication['where'] != "")? $publication['where'] : ""  ?></td>
+                            <td class="publications-table-row__table-field table-field body-text"><?= ($publication['title'] != "")? $publication['title'] : ""  ?></td>
+                            <td class="publications-table-row__table-field table-field body-text"><?= ($publication['pages'] != "")? $publication['pages'] : ""  ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
+            </div>
+        </div>
+        <?php 
+            $parentId = 7138; //$item['rootFolder'];
+            $children = $parentItem['values']['subjectValues']; //getSubjectValues($parentid, $this);
+        ?>
+        <?php if(count($children) != 0): ?>
+            <div class="item-information__item-other-pages-section item-other-pages-section">
+                <h2 class="item-other-pages-section__other-pages-title other-pages-title h2">Other pages in the folder</h2>
+                <div class="splide item-other-pages-section__item-cards item-cards item-card-slider" count="<?= count($children)?>">
+                    <div class="splide__track item-card-slider__item-card-slider-track item-card-slider-track slider-track">
+                        <div class="splide__list item-card-slider-track__item-card-slider-list item-card-slider-list slider-group">
+                            <?php foreach ($children as $child):?>
+                                <?php $url = $child['values']['url']; ?>
+                                <a href="<?= $url; ?>" class="splide__slide browse-results__browse-result browse-result item-card">
+                                    <div class="browse-result__browse-top-section browse-top-section item-card-top-section">
+                                        <div class="item-card-top-section__item-card-image item-card-image">
+                                            <?php 
+                                            $media = $child['media'];
+                                            if($media):
+                                                $altText = $media[0]['altText'];
+                                                $mediaurl = str_replace('http:', '', $media[0]['thumbnailUrl']);
+                                            else:
+                                                $mediaurl = "";
+                                            endif;
+                                            ?>
+                                            <?php if($mediaurl != ""): ?>
+                                                <img src="<?php echo $mediaurl?>" alt="<?php echo empty($altText) ? 'Page of a Husserl collection' : strip_tags($altText) ?>" />
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="browse-result__browse-bottom-section browse-bottom-section item-card-bottom-section">
+                                        <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $child['values']['dcterms:identifier']?></h4>
+                                        <div class="item-card-bottom-section__date-section date-section">
+                                            <div class="date-section__date date">
+                                                <div class="date__date-icon date-icon">     
+                                                <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M22.6562 12.5C22.6562 15.1936 21.5862 17.7769 19.6816 19.6816C17.7769 21.5862 15.1936 22.6562 12.5 22.6562C9.80639 22.6562 7.22311 21.5862 5.31845 19.6816C3.41378 17.7769 2.34375 15.1936 2.34375 12.5C2.34375 9.80639 3.41378 7.22311 5.31845 5.31845C7.22311 3.41378 9.80639 2.34375 12.5 2.34375C15.1936 2.34375 17.7769 3.41378 19.6816 5.31845C21.5862 7.22311 22.6562 9.80639 22.6562 12.5ZM0 12.5C0 15.8152 1.31696 18.9946 3.66117 21.3388C6.00537 23.683 9.18479 25 12.5 25C15.8152 25 18.9946 23.683 21.3388 21.3388C23.683 18.9946 25 15.8152 25 12.5C25 9.18479 23.683 6.00537 21.3388 3.66117C18.9946 1.31696 15.8152 0 12.5 0C9.18479 0 6.00537 1.31696 3.66117 3.66117C1.31696 6.00537 0 9.18479 0 12.5ZM11.3281 5.85938V12.5C11.3281 12.8906 11.5234 13.2568 11.8506 13.4766L16.5381 16.6016C17.0752 16.9629 17.8027 16.8164 18.1641 16.2744C18.5254 15.7324 18.3789 15.0098 17.8369 14.6484L13.6719 11.875V5.85938C13.6719 5.20996 13.1494 4.6875 12.5 4.6875C11.8506 4.6875 11.3281 5.20996 11.3281 5.85938Z" fill="black"/>
+                                                </svg>
+                                                </div>
+                                                <p class="date__date-text date-text body-text"><?= ($child['values']['dcterms:date'] != null) ? $child['values']['dcterms:date'] : "Unknown"?></p>
+                                            </div>
+                                            <div class="date-section__arrow-icon arrow-icon">
+                                                <svg width="10" height="19" viewBox="0 0 10 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M9.63386 8.61736C10.122 9.10555 10.122 9.89836 9.63386 10.3865L2.13533 17.8851C1.64714 18.3733 0.854325 18.3733 0.366139 17.8851C-0.122046 17.3969 -0.122046 16.6041 0.366139 16.1159L6.98203 9.5L0.370045 2.8841C-0.118141 2.39592 -0.118141 1.6031 0.370045 1.11492C0.858231 0.626733 1.65104 0.626733 2.13923 1.11492L9.63777 8.61345L9.63386 8.61736Z" fill="#202020"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="splide__arrows item-card-nav">
+                        <button class="splide__arrow splide__arrow--prev">
+                            <img src="<?= $this->assetUrl('img/arrow-right.svg')?>" alt="arrow icon"/>
+                        </button>
+                        <ul class="splide__pagination"></ul>
+                        <button class="splide__arrow splide__arrow--next">
+                            <img src="<?= $this->assetUrl('img/arrow-right.svg')?>" alt="arrow icon"/>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </div>

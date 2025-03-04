@@ -20,6 +20,59 @@
             gap: 5px;
         }
     }
+
+    .browse-result-section {
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
+        gap: 40px;
+        width: 100%;
+
+        .browse-results {
+            width: 100%;
+            padding: 0 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+
+            .results-list-title {
+                margin-bottom: -20px;
+            }
+
+            .browse-results-list {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+
+                .item-card, .item-folder-card {
+                    a {
+                        display: flex;
+                        flex-direction: column;
+                    }
+                }
+                .item-folder-card {
+                    a {
+                        justify-content: space-between;
+                        gap: 20px;
+                        height: 100%;
+                    }
+                }
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .browse-page {
+        .browse-result-section {
+            .browse-results {
+                .browse-results-list {
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                }
+            }
+        }
+    }
 }
 
 @media screen and (min-width: 1024px) {
@@ -34,6 +87,40 @@
             .page-information {
                 .page-information-text {
                     width: 60%;
+                }
+            }
+        }
+
+        .browse-result-section {
+            flex-direction: row;
+            gap: 120px;
+
+            .browse-results {
+                padding: 0;
+                gap: 50px;
+                width: auto;
+                flex: 1;
+
+                .browse-results-list { 
+                    .item-card, .item-folder-card {
+                        width: calc(50% - 10px);
+                    }
+                }
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 1440px) {
+    .browse-page {
+        .browse-result-section {
+            .browse-results {
+                width: calc(75% - 60px);
+
+                .browse-results-list {
+                    .item-card, .item-folder-card {
+                        width: calc(33% - 13.3px);
+                    }
                 }
             }
         }

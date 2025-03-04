@@ -52,15 +52,16 @@
             flex-direction: row;
             gap: 20px;
             flex-wrap: wrap;
+            align-items: center;
 
             .footer-bottom-logo {
                 width: 120px;
                 height: 45px;
+            }
 
-                img {
-                    width: 100%;
-                    height: 100%;
-                }
+            .libis-logo {
+                width: 105px;
+                height: 35px;
             }
         }
     }

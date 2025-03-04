@@ -18,7 +18,7 @@
         align-items: center;
     }
 
-    .nav-aside-item.active {
+    .nav-aside-item.active-item {
         color: var(--secondary-color);
 
         .nav-aside-item-text {
@@ -73,6 +73,20 @@
 
             .nav-aside-item.active {
                 color: var(--primary-text-color);
+
+                .nav-aside-item-text {
+                    font-weight: var(--semi);
+                }
+        
+                .nav-aside-item-icon {
+                    svg {
+                        stroke-width: 2px;
+        
+                        path {
+                            stroke: var(--secondary-color);
+                        }
+                    }
+                }
             }
 
             .nav-aside-item-icon {

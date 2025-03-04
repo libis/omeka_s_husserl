@@ -3,7 +3,7 @@ function saveBrowseData(event) {
     localStorage.setItem('scrollPosition', window.scrollY);
     localStorage.setItem('openSubNav', "true");
     localStorage.setItem('linkRenew', "yes");
-    var element = event.target;
+    var element = event.target.closest('.browse-item-link');
     window.location.href = element.dataset.link;
 }
 
@@ -46,8 +46,11 @@ function setupBrowseIcon() {
 
                     if (!browseOpen) {
                         browseTreeStructure.classList.add("open-treeStructure");
-                    } else {
+                        browseIcon.classList.add("active-item");
+                    } 
+                    else {
                         browseTreeStructure.classList.remove("open-treeStructure");
+                        browseIcon.classList.remove("active-item");
                     }
                 });
             }
@@ -70,11 +73,13 @@ function setupFilterIcon() {
                 if (!filterOpen) {
                     facetsList.classList.add("open-facets-list");
                     searchNav.classList.add("aside-nav-fixed");
+                    filterIcon.classList.add("active-item");
                     page.classList.add("pageFixed");
                 } 
                 else {
                     facetsList.classList.remove("open-facets-list");
                     searchNav.classList.remove("aside-nav-fixed");
+                    filterIcon.classList.remove("active-item");
                     page.classList.remove("pageFixed");
                 }
             });

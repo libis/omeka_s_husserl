@@ -116,10 +116,10 @@ $media = $item->media();
             <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/search">Archive</a></li>
             <?php foreach($resPathId as $itemRes): ?>
                 <?php if($itemRes == 9013):?>
-                    <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem="<?php $itemRes?>>manuscripten</a></li>
+                    <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $itemRes?>&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+<?= urlencode('Gesamtbestand der Manuskriptgruppen A-Y')?>">Manuscripten</a></li>
                 <?php else: ?>
                     <?php $element = searchElement($itemRes, $this);?>
-                    <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem="<?php $item?>><?= $element->value("dcterms:identifier")?></a></li>
+                    <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $element->id() ?>&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+<?= urlencode($element->title())?>"><?= $element->value("dcterms:identifier")?></a></li>
                 <?php endif; ?>
             <?php endforeach; ?>
         </ul>
@@ -210,46 +210,50 @@ $media = $item->media();
                                 <?php endif; ?>
                             <?php endforeach; ?>
                         </div>
-                        <div class="item-top-information-scrollable-content__item-transcription-section item-transcription-section">
-                            <h2 class="item-transcription-section__transcription-section-title transcription-section-title h2">Transcription</h2>
-                            <div class="item-transcription-section__transcription-person transcription-person">
-                                <div class="transcription-person__person-icon person-icon">
-                                    <img src="<?= $this->assetUrl('img/person.svg')?>" alt="person icon"/>
+                        <?php if($item->resourceTemplate()->label() == "ManuscriptPage"): ?>
+                            <div class="item-top-information-scrollable-content__item-transcription-section item-transcription-section">
+                                <h2 class="item-transcription-section__transcription-section-title transcription-section-title h2">Transcription</h2>
+                                <div class="item-transcription-section__transcription-person transcription-person">
+                                    <div class="transcription-person__person-icon person-icon">
+                                        <img src="<?= $this->assetUrl('img/person.svg')?>" alt="person icon"/>
+                                    </div>
+                                    <p class="transcription-person__person-name person-name body-text"><?= $itemData['values']['transcription']['person'] ?></p>
                                 </div>
-                                <p class="transcription-person__person-name person-name body-text"><?= $itemData['values']['transcription']['person'] ?></p>
+                                <p class="item-transcription-section__transcription-text transcription-text body-text"><?= $itemData['values']['transcription']['content'] ?></p>
                             </div>
-                            <p class="item-transcription-section__transcription-text transcription-text body-text"><?= $itemData['values']['transcription']['content'] ?></p>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="item-information__item-publications-section item-publications-section">
-            <h2 class="item-publications-section__publications-title publications-title h2">Publications</h2>
-            <div class="item-publications-section__table-section table-section">
-                <table class="table-section__publications-table publications-table table">
-                    <tr class="publications-table__publications-table-title-row publications-table-title-row title-table-row">
-                        <th class="publications-table-title-row__table-title table-title body-text">Where</th>
-                        <th class="publications-table-title-row__table-title table-title body-text">Title</th>
-                        <th class="publications-table-title-row__table-title table-title body-text">Page(s)</th>
-                    </tr>
-                    <?php foreach($itemData["values"]["publications"] as $publication): ?>
-                        <tr class="publications-table__publications-table-row publications-table-row table-row">
-                            <td class="publications-table-row__table-field table-field body-text"><?= ($publication['where'] != "")? $publication['where'] : ""  ?></td>
-                            <td class="publications-table-row__table-field table-field body-text"><?= ($publication['title'] != "")? $publication['title'] : ""  ?></td>
-                            <td class="publications-table-row__table-field table-field body-text"><?= ($publication['pages'] != "")? $publication['pages'] : ""  ?></td>
+        <?php if($item->resourceTemplate()->label() == "ManuscriptPage"): ?>
+            <div class="item-information__item-publications-section item-publications-section">
+                <h2 class="item-publications-section__publications-title publications-title h2">Publications</h2>
+                <div class="item-publications-section__table-section table-section">
+                    <table class="table-section__publications-table publications-table table">
+                        <tr class="publications-table__publications-table-title-row publications-table-title-row title-table-row">
+                            <th class="publications-table-title-row__table-title table-title body-text">Where</th>
+                            <th class="publications-table-title-row__table-title table-title body-text">Title</th>
+                            <th class="publications-table-title-row__table-title table-title body-text">Page(s)</th>
                         </tr>
-                    <?php endforeach; ?>
-                </table>
+                        <?php foreach($itemData["values"]["publications"] as $publication): ?>
+                            <tr class="publications-table__publications-table-row publications-table-row table-row">
+                                <td class="publications-table-row__table-field table-field body-text"><?= ($publication['where'] != "")? $publication['where'] : ""  ?></td>
+                                <td class="publications-table-row__table-field table-field body-text"><?= ($publication['title'] != "")? $publication['title'] : ""  ?></td>
+                                <td class="publications-table-row__table-field table-field body-text"><?= ($publication['pages'] != "")? $publication['pages'] : ""  ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </table>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
         <?php 
             $parentId = 7138; //$item['rootFolder'];
             $children = $parentItem['values']['subjectValues']; //getSubjectValues($parentid, $this);
         ?>
         <?php if(count($children) != 0): ?>
             <div class="item-information__item-other-pages-section item-other-pages-section">
-                <h2 class="item-other-pages-section__other-pages-title other-pages-title h2">Other pages in the folder</h2>
+                <h2 class="item-other-pages-section__other-pages-title other-pages-title h2"><?= ($item->resourceTemplate()->label() == "ManuscriptPage") ? "Other pages in the folder" : "Pages of this manuscript" ?></h2>
                 <div class="splide item-other-pages-section__item-cards item-cards item-card-slider" count="<?= count($children)?>">
                     <div class="splide__track item-card-slider__item-card-slider-track item-card-slider-track slider-track">
                         <div class="splide__list item-card-slider-track__item-card-slider-list item-card-slider-list slider-group">

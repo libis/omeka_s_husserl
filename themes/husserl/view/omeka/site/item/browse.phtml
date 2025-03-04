@@ -1,8 +1,13 @@
 <?php
+    use Omeka\Api\Manager as ApiManager;
+?>
+<?php
 $translate = $this->plugin('translate');
 $escape = $this->plugin('escapeHtml');
 $thumbnail = $this->plugin('thumbnail');
 $resPathId = [];
+
+$query = $this->params()->fromQuery();
 
 function getId($j, $curentItem) {
     if($j == 0) {
@@ -13,6 +18,7 @@ function getId($j, $curentItem) {
     }
 }
 
+// search an item and get data with given id
 function searchElement($id, $site) {
     $element = $site->api()->read('items', $id, []);
     $element = $element->getContent();
@@ -20,6 +26,7 @@ function searchElement($id, $site) {
     return $element;
 }
 
+//get the childs of an element 
 function getSubjectValues($id, $site) {
     $element = searchElement($id, $site);
     $children = $element->subjectValues();
@@ -27,8 +34,12 @@ function getSubjectValues($id, $site) {
     return $children;
 }
 
+//take requestedItems out the url get requested
 if (isset($_GET['requestedItem'])) :
     $getRequest = $_GET['requestedItem'];
+
+    $requestedRes = $this->api()->read('items',$getRequest,[]);
+    $requestedRes = $requestedRes->getContent();
 
     //get the get request and take the id of that item
     $res = $this->api()->read('items',$getRequest,[]);
@@ -48,7 +59,6 @@ if (isset($_GET['requestedItem'])) :
         $res = $rootfolder->valueResource();
     };
 endif;
-
 ?>
 <div class="page-content browse-page">
     <div class="browse-page__browse-top-section browse-top-section">
@@ -98,10 +108,14 @@ endif;
             </div>
             <div class="browse-aside__browse-tree-structure browse-tree-structure">
                 <?php // check if the user requested an ID ?>
-                <? if (isset($_GET['requestedItem'])) :?>
+                <?php if (isset($_GET['requestedItem'])) :?>
                     <ul class="browse-aside__browse-top-items browse-top-items browse-items">
                         <?php if($resPathId[0] == 9013):?>
-                            <li class="browse-items__browse-item browse-item open big-body-text"><p class="browse-item-link" data-link="<?= $site->url() . '/item/browse/?requestedItem=9013' ?>" onclick="saveBrowseData(event)">Manuscripten</p>
+                            <li class="browse-items__browse-item browse-item big-body-text">
+                                <p class="browse-item-link open" data-link="<?= $site->url() . '/item/browse/?requestedItem=9013' .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
+                                    Manuscripten
+                                    <span class="arrow-after"></span>
+                                </p>
                                 <?php function renderChildren($resPathId, $site, $test, $j = 0, $parentId = null){ ?>
                                     <?php
                                         $id = getId($j, $parentId); // Get the id based on the depth of the parent id and the parent id itself
@@ -125,9 +139,10 @@ endif;
                                                     $template = $element->resourceTemplate()->label();
                                                 ?>
                                                 <?php // write out the child and add on li element classes based on the state of the element ?>
-                                                <li class="browse-items__browse-item browse-item <?= (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) ? 'open' : 'close'; ?> big-body-text <?= ($template == "ManuscriptFolder") ? 'folder' : 'page'; ?>">
-                                                    <p class="browse-item-link" data-link="<?= $site->url() . '/item/browse/?requestedItem=' . $childId ; ?>" onclick="saveBrowseData(event)">
+                                                <li class="browse-items__browse-item browse-item big-body-text">
+                                                    <p class="browse-item-link <?= (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) ? 'open' : 'close'; ?> <?= ($template == "ManuscriptFolder") ? 'folder' : 'page-item'; ?>" data-link="<?= $site->url() . '/item/browse/?requestedItem=' . $childId .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($child['val']->resource()->value("dcterms:title"))?>" onclick="saveBrowseData(event)">
                                                         <?= $child['val']->resource()->value("dcterms:identifier");?>
+                                                        <span class="arrow-after"></span>
                                                     </p>
                                                     <?php // Check if there is an next id in the path and if the id is the same as the id of the child ?>
                                                     <?php if (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) :?>
@@ -147,23 +162,163 @@ endif;
                                     }
                                 ?>
                             </li>
-                            <li class="browse-items__browse-item browse-item close big-body-text"><a href="">Publications</a></li>
+                            <li class="browse-items__browse-item browse-item big-body-text">
+                                <p class="browse-item__browse-item-link browse-item-link close" data-link="<?= $site->url() . '/item/browse/' ?>" onclick="saveBrowseData(event)">
+                                    Publications
+                                    <span class="arrow-after"></span>
+                                </p>
+                            </li>
                         <?php else: ?>
-                            <li class="browse-items__browse-item browse-item close big-body-text"><a href="<?= $site->url() . "/item/browse/?requestedItem=9013"?>">Manuscripten</a></li>
-                            <li class="browse-items__browse-item browse-item open big-body-text"><a href="">Publications</a></li>
+                            <li class="browse-items__browse-item browse-item big-body-text">
+                                <p class="browse-item-link close" data-link="<?= $site->url() . '/item/browse/?requestedItem=9013' .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
+                                    Manuscripten
+                                    <span class="arrow-after"></span>
+                                </p>
+                            </li>
+                            <li class="browse-items__browse-item browse-item big-body-text">
+                                <p class="browse-item__browse-item-link browse-item-link close" data-link="<?= $site->url() . '/item/browse/' ?>" onclick="saveBrowseData(event)">
+                                    Publications
+                                    <span class="arrow-after"></span>
+                                </p>
+                            </li>
                         <?php endif; ?>
                     </ul>
                 <? else: ?>
                     <?php
-                        $res = $this->api()->read('items',9013,[]);
-                        $res = $res->getContent();
+                        $topRes = $this->api()->read('items',9013,[]);
+                        $topRes = $topRes->getContent();
                     ?>
                     <ul class="browse-aside__browse-top-items browse-top-items browse-items">
-                        <li class="browse-items__browse-item browse-item close big-body-text"><a href="<?= $site->url() . "/item/browse/?requestedItem=" . $res->id()?>">Manuscripten</a></li>
-                        <li class="browse-items__browse-item browse-item close big-body-text"><a href="">Publications</a></li>
+                        <li class="browse-items__browse-item browse-item big-body-text">
+                            <p class="browse-item-link close" data-link="<?= $site->url() . '/item/browse/?requestedItem=' .$topRes->id() .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
+                                Manuscripten
+                                <span class="arrow-after"></span>
+                            </p>
+                        </li>
+                        <li class="browse-items__browse-item browse-item big-body-text">
+                            <p class="browse-item__browse-item-link browse-item-link close" data-link="<?= $site->url() . '/item/browse/' ?>" onclick="saveBrowseData(event)">
+                                Publications
+                                <span class="arrow-after"></span>
+                            </p>
+                        </li>
                     </ul>
                 <? endif; ?>
             </div>
         </aside>
+        <?php if (isset($_GET['requestedItem'])): ?>
+            <div class="browse-result-section__browse-results browse-results">
+                <?php
+                    $id = $requestedRes->id();
+                    $children = getSubjectValues($id, $this);
+                    if($children != null) {
+                        if($children['rootFolder'][0]['val']->resource()->resourceTemplate()->label() == "ManuscriptPage") {
+                            $childIsPage = true;
+                        }
+                    }
+                    $resourceUrl = isset($site) ? $requestedRes->siteUrl($site->slug()) : $requestedRes->adminUrl();
+                ?>
+                <<?= ($requestedRes->resourceTemplate()->label() == "ManuscriptPage" || isset($childIsPage) )? 'a href="' .$resourceUrl .'"' : 'div' ?> class="browse-results__item-preview item-preview metadata-show-block manuscriptPage-metadata-block">
+                    <h3 class="item-preview__item-preview-title item-preview-title metadata-show-title h3"><?= $requestedRes->value('dcterms:title'); ?></h3>
+                    <div class="item-preview__item-metadata-list item-metadata-list">
+                        <?php foreach($requestedRes->values() as $term => $property): ?>
+                            <?php if((strtolower($escape($property['property']->label())) == "title") || (strtolower($escape($property['property']->label())) == "date created") || (strtolower($escape($property['property']->label())) == "rootfolder") || (strtolower($escape($property['property']->label())) == "is referenced by")): ?>
+                            <?php else: ?>
+                                <?php $propertyValues = $property['values']; ?>
+                                <?php if(count($propertyValues) == 1): ?>
+                                    <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item">
+                                        <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5"><?= $escape($property['property']->label()); ?></h5>
+                                        <p class="item-metadata-item__metadata-item-text metadata-item-text body-text"><?= strip_tags($propertyValues[0]->asHtml()) ?></p>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if(isset($childIsPage) || $requestedRes->resourceTemplate()->label() == "ManuscriptPage"): ?>
+                        <div class="item-preview__item-more-information item-more-information">
+                            <p class="item-more-information__item-more-information-text item-more-information-text body-text">More information</p>
+                            <div class="item-more-information__arrow-icon arrow-icon">
+                                <img src="<?= $this->assetUrl('img/arrow-right.svg')?>" alt="arrow-right"/>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </<?=($requestedRes->resourceTemplate()->label() == "ManuscriptPage" || isset($childIsPage))? 'a' : 'div' ?>>
+                <?php if(count($items) != 0): ?>
+                    <h4 class="browse-results__results-list-title results-list-title h4"> Items in <?= ($requestedRes->id() == "9013") ? $requestedRes->value('dcterms:title') : $requestedRes->value('dcterms:identifier') ?></h4>
+                    <ul class="browse-results__resource-list resource-list browse-results-list">
+                        <?php foreach ($items as $key => $item): ?>
+                            <?php if($item->resourceTemplate()->label() == "ManuscriptPage"): ?>
+                                <?php $resourceUrl = isset($site) ? $item->siteUrl($site->slug()) : $item->adminUrl();?>
+                                <li class="browse-results-list__resource-item resource-item item-card item-card">
+                                    <a href="<?= $resourceUrl; ?>">
+                                        <div class="item-card__item-card-top-section item-card-top-section">
+                                            <div class="item-card-top-section__item-card-image item-card-image">
+                                                <?php 
+                                                $media = $item->media();
+                                                if($media):
+                                                    if(sizeof($items) <= 2):
+                                                        $altText = $media[0]->altText();
+                                                        $mediaurl = str_replace('http:', '', $media[0]->thumbnailUrl('large'));
+                                                    else:
+                                                        $altText = $media[0]->altText();
+                                                        $mediaurl = str_replace('http:', '', $media[0]->thumbnailUrl('medium'));
+                                                    endif;
+                                                else:
+                                                    $mediaurl = "";
+                                                endif;
+                                                ?>
+                                                <?php if($mediaurl != ""): ?>
+                                                    <img src="<?php echo $mediaurl?>" alt="<?php echo empty($altText) ? 'Page of a Husserl collection' : strip_tags($altText) ?>" />
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <div class="browse-result__browse-bottom-section browse-bottom-section item-card-bottom-section">
+                                            <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $item->value('dcterms:identifier')?></h4>
+                                            <div class="item-card-bottom-section__date-section date-section">
+                                            <div class="date-section__date date">
+                                                <div class="date__date-icon date-icon">     
+                                                <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M22.6562 12.5C22.6562 15.1936 21.5862 17.7769 19.6816 19.6816C17.7769 21.5862 15.1936 22.6562 12.5 22.6562C9.80639 22.6562 7.22311 21.5862 5.31845 19.6816C3.41378 17.7769 2.34375 15.1936 2.34375 12.5C2.34375 9.80639 3.41378 7.22311 5.31845 5.31845C7.22311 3.41378 9.80639 2.34375 12.5 2.34375C15.1936 2.34375 17.7769 3.41378 19.6816 5.31845C21.5862 7.22311 22.6562 9.80639 22.6562 12.5ZM0 12.5C0 15.8152 1.31696 18.9946 3.66117 21.3388C6.00537 23.683 9.18479 25 12.5 25C15.8152 25 18.9946 23.683 21.3388 21.3388C23.683 18.9946 25 15.8152 25 12.5C25 9.18479 23.683 6.00537 21.3388 3.66117C18.9946 1.31696 15.8152 0 12.5 0C9.18479 0 6.00537 1.31696 3.66117 3.66117C1.31696 6.00537 0 9.18479 0 12.5ZM11.3281 5.85938V12.5C11.3281 12.8906 11.5234 13.2568 11.8506 13.4766L16.5381 16.6016C17.0752 16.9629 17.8027 16.8164 18.1641 16.2744C18.5254 15.7324 18.3789 15.0098 17.8369 14.6484L13.6719 11.875V5.85938C13.6719 5.20996 13.1494 4.6875 12.5 4.6875C11.8506 4.6875 11.3281 5.20996 11.3281 5.85938Z" fill="black"/>
+                                                </svg>
+                                                </div>
+                                                <p class="date__date-text date-text body-text"><?= ($item->value('dcterms:date') != null) ? $item->value('dcterms:date') : "Unknown"?></p>
+                                            </div>
+                                            <div class="date-section__arrow-icon arrow-icon">
+                                                <svg width="10" height="19" viewBox="0 0 10 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M9.63386 8.61736C10.122 9.10555 10.122 9.89836 9.63386 10.3865L2.13533 17.8851C1.64714 18.3733 0.854325 18.3733 0.366139 17.8851C-0.122046 17.3969 -0.122046 16.6041 0.366139 16.1159L6.98203 9.5L0.370045 2.8841C-0.118141 2.39592 -0.118141 1.6031 0.370045 1.11492C0.858231 0.626733 1.65104 0.626733 2.13923 1.11492L9.63777 8.61345L9.63386 8.61736Z" fill="#202020"/>
+                                                </svg>
+                                            </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                            <?php elseif($item->resourceTemplate()->label() == "ManuscriptFolder"): ?>
+                                <li class="browse-results-list__resource-item resource-item item-folder-card">
+                                    <a href="<?= $site->url() . '/item/browse/?requestedItem=' .$item->id() .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($item->title())?>">
+                                        <div class="item-folder-card__item-folder-top-card item-folder-top-card">
+                                            <h4 class="item-folder-top-card__folder-title folder-title h4"><?= $item->value("dcterms:identifier") ?></h4>
+                                            <div class="item-folder-top-card__folder-metadata-group folder-metadata-group">
+                                                <p class="folder-metadata-group__folder-metadata-item folder-metadata-item body-text"><span>Title: </span><?= substr($item->value("dcterms:title"), 0, 40) ?><?= (strlen($item->value("dcterms:title")) > 40) ? "..." : ""?></p>
+                                                <p class="folder-metadata-group__folder-metadata-item folder-metadata-item body-text"><span>Reference: </span>reference-data</p>
+                                            </div>
+                                        </div>
+                                        <div class="item-folder-card__folder-more-info-button folder-more-info-button">
+                                            <p class="folder-more-info-button__folder-more-info-button-text folder-more-info-button-text body-text">More information</p>
+                                            <div class="folder-more-info-button__arrow-icon arrow-icon">
+                                                <img src="<?= $this->assetUrl('img/arrow-right.svg')?>" alt="arrow-right"/>
+                                            </div>
+                                        </div>
+                                    </a> 
+                                </li>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </ul>
+                    <div class="search-results-count">
+                        <?php
+                            echo $this->pagination();
+                        ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>

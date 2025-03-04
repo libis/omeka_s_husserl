@@ -17,28 +17,30 @@
                 position: relative;
                 cursor: pointer;
 
-                a {
-                    width: 100%;
-                    display: inline-block;
+                .browse-item-link {
+                    .arrow-after {
+                        content: "";
+                        position: absolute;
+                        background: url(/husserl/themes/husserl/asset/img/arrow.svg);
+                        right: 0px;
+                        top: 7px;
+                        width: 21px;
+                        height: 12px;
+                        display: block;
+                    }
                 }
-            }
-
-            .browse-item::after {
-                position: absolute;
-                content: url(/husserl/themes/husserl/asset/img/arrow.svg);
-                right: 0px;
-                top: 10px;
-                width: 21px;
-                height: 12px;
-            }
-
-            .browse-item.close::after {
-                transform: rotate(180deg);
-            }
-            
-            .browse-item.open:after {
-                top: -1px;
-                transform: rotate(0deg);
+                .browse-item-link.close .arrow-after {
+                    transform: rotate(180deg);
+                }
+                
+                .browse-item-link.open .arrow-after {
+                    top: 5px;
+                    transform: rotate(0deg);
+                }
+    
+                .browse-item-link.page-item .arrow-after {
+                    display: none;
+                }
             }
         }
 

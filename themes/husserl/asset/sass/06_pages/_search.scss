@@ -32,7 +32,6 @@
         .search-results {
             width: 100%;
             padding: 0 30px;
-            gap: 50px;
 
             .search-results-list {
                 display: flex;
@@ -83,8 +82,8 @@
 
             .search-results {
                 padding: 0;
-                width: calc(70% - 60px);
-                gap: 60px;
+                width: auto;
+                flex: 1;
 
                 .search-results-list { 
                     .item-card {

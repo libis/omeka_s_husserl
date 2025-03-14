@@ -48,8 +48,8 @@ RUN unzip -q /var/www/omeka-s.zip -d /var/www/ \
 # Content
 COPY .htaccess /var/www/html/husserl
 COPY robots.txt /var/www/html/husserl
-COPY modules /var/www/html/husserl/themes
-COPY themes /var/www/html/husserl/modules
+COPY modules /var/www/html/husserl/modules
+COPY themes /var/www/html/husserl/themes
 
 # Cron
 #COPY import-cron /etc/cron.d/import-cron

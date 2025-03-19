@@ -37,16 +37,18 @@ if (strpos($url, 'page/home') !== false) {
 
         <!-- fonts -->
         <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-        
-        <!-- scripts -->
-        <?php echo $this->headScript(); ?>
-        <script src="https://kit.fontawesome.com/582fb8c29f.js" crossorigin="anonymous"></script>
-        <script src="https://unpkg.com/colcade@0/colcade.js"></script>
     </head>
 
     <?php echo $this->htmlElement('body'); ?>
     <nav class="nav">
-      <div class="nav__nav-logo nav-logo"><a href="<?= $site->url() ?>">digital<span>Husserl</span></a></div>
+      <div class="nav__nav-logos nav-logos">
+        <div class="nav-logos__nav-logo nav-logo nav-logo-text digital-husserl-logo">
+          <a href="<?= $site->url() ?>">digital<span>Husserl</span></a>
+        </div>
+        <div class="nav-logos__nav-logo nav-logo ku-leuven-logo">
+          <img src="<?= $this->assetUrl('img/ku-leuven.png')?>" alt="ku leuven logo"/>
+        </div>
+      </div>
       <ul class="nav-items">
         <?php $menu = $site->publicNav()->menu();
           $container = $menu->getContainer();
@@ -111,4 +113,5 @@ if (strpos($url, 'page/home') !== false) {
       </div>
     </footer>
   </body>
+  <?php echo $this->headScript(); ?>
 </html>

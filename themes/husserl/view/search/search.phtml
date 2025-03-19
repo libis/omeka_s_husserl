@@ -79,6 +79,32 @@ $this->htmlElement('body')->appendAttribute('class', 'search-page item-set resou
             </p>
         </div>
     </div>
+    <div class="search__search-section search-section">
+        <h4 class="search-section__search-section-title search-section-title h4"><?= $translate("Search");?></h4>
+        <div class="search-section__search-form-simple search-form-simple active">
+            <form class="search-form-simple__search-form-simple-form search-form-simple-form" action="<?= $site->url();?>/search" id="search-form">
+                <div class="search-section__search-bar search-bar">
+                    <input class="search-bar__search-bar-input search-bar-input big-body-text" value="<?= (isset($_GET['q']) && $_GET['q'] !== '') ? htmlspecialchars($_GET['q']) : ''; ?>" type="text" name="q" id="q" placeholder="<?= $translate("Search");?>" aria-label="">
+                    <div class="serach-bar__search-bar-controls search-bar-controls">
+                    <button type="submit" class="search-bar-controls__search-bar-submit search-bar-submit">
+                        <div class="search-bar-submit__submit-icon submit-icon">
+                            <img src="<?= $this->assetUrl('img/search-icon.svg')?>" alt="search icon"/>
+                        </div>
+                    </button>
+                    </div>
+                </div>
+            </form>  
+            <div class="search-form-simple__switch-search-form-button switch-search-form-button secondary-button dark">
+                <p class="secondary-button__button-text button-text">Advanced Search</p>
+            </div>
+        </div>
+        <div class="search-section__search-form-advanced search-form-advanced">
+            <?= $searchConfig->renderForm(['template' => null, 'skip_form_action' => $skipFormAction]) ?>
+            <div class="search-form-simple__switch-search-form-button switch-search-form-button secondary-button dark">
+                <p class="secondary-button__button-text button-text">Simple search</p>
+            </div>
+        </div>
+    </div>
     <div class="search__search-wrapper search-wrapper result-wrapper">
         <aside class="search-wrapper__browse-search-aside browse-search-aside search-aside">
             <div class="search-aside__search-nav search-nav browse-search-nav">
@@ -93,7 +119,7 @@ $this->htmlElement('body')->appendAttribute('class', 'search-page item-set resou
                 <div class="search-nav__nav-aside-item nav-aside-item middle-item">
                     <p class="nav-aside-item__nav-aside-item-text nav-aside-item-text">|</p>
                 </div>
-                <a href="<?= $site->url() ?>/item/browse" class="search-nav__nav-aside-item nav-aside-item browse-item-nav">
+                <div onclick="handleClickAsideNav(this)" data-link="<?= $site->url() ?>/item/browse" class="search-nav__nav-aside-item nav-aside-item browse-item-nav">
                     <p class="nav-aside-item__nav-aside-item-text nav-aside-item-text">Browse</p>
                     <div class="nav-aside-item__nav-aside-item-icon nav-aside-item-icon browse-icon">
                         <svg width="31" height="30" viewBox="0 0 31 30" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -101,7 +127,7 @@ $this->htmlElement('body')->appendAttribute('class', 'search-page item-set resou
                             <path d="M1 1.875V6.5625M10.375 24.375H1V6.5625M1 6.5625H9.4375" stroke="black" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                </a>
+                </div>
             </div>
             <?= $partial('search/facets-list') ?>
         </aside>

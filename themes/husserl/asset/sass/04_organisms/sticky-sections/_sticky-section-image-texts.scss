@@ -40,7 +40,7 @@
 .sticky-section-wrapper::before {
     content: "";
     position: sticky;
-    top: 89px;
+    top: 79px;
     height: 30px;
     background-color: var(--primary-bg-color);
     z-index: 1;
@@ -76,7 +76,7 @@
                 width: calc(40% - 60px);
                 height: calc(100vh - 150px);
                 position: sticky;
-                top: 120px;
+                top: 110px;
             }
 
             .sticky-scrollable-content {

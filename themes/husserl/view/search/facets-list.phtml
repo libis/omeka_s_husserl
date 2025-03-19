@@ -52,19 +52,6 @@ if (!empty($itemSet)) {
                 <?= $facetActives(null, $activeFacets, $searchConfig->setting('facet')) ?>
             </div>
         <?php endif; ?>
-        <?php //searchbar ?>
-        <?php if ($displayRefine): ?>
-            <div class="search-section__search-bar search-bar facets-refine">
-                <input class="search-bar__search-bar-input search-bar-input body-text search-refine" id="search-refine" type="text" name="refine" placeholder="Search" value="<?= $escape($query->getQueryRefine()) ?>"<?= $labelRefine ? ' data-placeholder="' . $escapeAttr($labelRefine) . '"' : '' ?>/>
-                <div class="search-bar__search-bar-controls search-bar-controls">
-                    <button id="search-refine-submit" type="submit" class="search-bar-controls__search-bar-submit search-bar-submit search-refine">
-                        <div class="search-bar-submit__submit-icon submit-icon">
-                            <img src="<?= $this->assetUrl('img/search-icon.svg')?>" alt="serach icon"/>
-                        </div>
-                    </button>
-                </div>
-            </div>
-        <?php endif; ?>
         <?php //if there ar no facets to apply than i got the text No filters available?>
         <?php if (empty($facets) && empty($activeFacets)): ?>
             <?php if ($label = $searchConfig->subSetting('facet', 'label_no_facets', $translate('No filters available'))): ?>

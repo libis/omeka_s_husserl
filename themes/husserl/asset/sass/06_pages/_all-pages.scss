@@ -14,10 +14,24 @@ body:has(.pageFixed) {
     display: flex;
     flex-direction: column;
     gap: 80px;
+
+    .blocks-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 80px;
+    }
 }
 
 @media screen and (min-width: 1024px) {
+    .pageFixed {
+        position: unset;
+    }
+    
     .container {
         gap: 100px;
+
+        .blocks-inner {
+            gap: 100px;
+        }
     }
 }

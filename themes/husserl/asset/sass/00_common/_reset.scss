@@ -61,13 +61,17 @@ li {
 }
    
 ::-webkit-scrollbar-thumb {
-    background-color: var(--fourth-bg-color);
+    background-color: var(--secondary-bg-color);
     border-radius: 5px;
 }
 
 @media screen and (min-width: 1024px) {
     .container {
         padding-top: 50px;
+    }
+
+    .content {
+        margin-top: 80px;
     }
 
     .container.home {

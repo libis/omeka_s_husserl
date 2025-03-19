@@ -19,7 +19,7 @@
     }
 
     .nav-aside-item.active-item {
-        color: var(--secondary-color);
+        color: var(--primary-color);
 
         .nav-aside-item-text {
             font-weight: var(--semi);
@@ -30,7 +30,7 @@
                 stroke-width: 2px;
 
                 path {
-                    stroke: var(--secondary-color);
+                    stroke: var(--primary-color);
                 }
             }
         }
@@ -46,7 +46,7 @@
 }
 
 .search-aside:has(.open-facets-list) {
-    display: block;
+    display: flex;
 }
 
 .aside-nav-fixed {
@@ -76,16 +76,6 @@
 
                 .nav-aside-item-text {
                     font-weight: var(--semi);
-                }
-        
-                .nav-aside-item-icon {
-                    svg {
-                        stroke-width: 2px;
-        
-                        path {
-                            stroke: var(--secondary-color);
-                        }
-                    }
                 }
             }
 

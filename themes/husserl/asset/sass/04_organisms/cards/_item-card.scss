@@ -35,7 +35,7 @@
                 flex-direction: row;
                 gap: 10px;
                 align-items: center;
-                color: var(--secondary-color);
+                color: var(--third-text-color);
 
                 .date-icon {
                     svg {
@@ -43,7 +43,7 @@
                         height: 11.9px;
 
                         path {
-                            stroke: var(--secondary-color);
+                            stroke: var(--primary-color);
                         }
                     }
                 }
@@ -55,7 +55,7 @@
                     height: 18px;
                      
                     path {
-                        fill: var(--secondary-color);
+                        fill: var(--primary-color);
                     }
                 }
             }

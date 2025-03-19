@@ -12,12 +12,13 @@
 
         .facet-active-value {
             padding: 7px 10px;
-            border: 1px solid var(--third-border-color);
+            border: 1px solid var(--secondary-border-color);
             color: var(--third-text-color);
         }
 
         .facet-active-value::after {
             margin: 0 0 0 10px;
+            color: var(--third-text-color);
         }
     }
 }

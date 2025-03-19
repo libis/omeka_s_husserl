@@ -18,8 +18,10 @@
                 &:before {
                     display: block;
                     content: "";
-                    border: 1px solid var(--third-border-color);
+                    border: 1px solid var(--secondary-border-color);
                     height: 20px;
+                    max-width: 20px;
+                    max-height: 20px;
                     width: 20px;
                     opacity: 1;
                 }
@@ -28,7 +30,7 @@
             &:checked {
                 & + label {
                     &:before {
-                        background: center / contain no-repeat url(../../../../themes/husserl/asset/img/check-mark.svg);
+                        background: center / cover no-repeat url(../../../../themes/husserl/asset/img/check-mark.svg);
                     }
                 }
             }
@@ -39,9 +41,11 @@
 .checkbox.active {
     .checkbox-input {
         &--checkbox {
-            & + label {
-                &:before {
-                    background: center / contain no-repeat url(../../../../themes/husserl/asset/img/check-mark.svg);
+            &:checked {
+                & + label {
+                    &:before {
+                        background: center / cover no-repeat url(../../../../themes/husserl/asset/img/check-mark.svg);
+                    }
                 }
             }
         }

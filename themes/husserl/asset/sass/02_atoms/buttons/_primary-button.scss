@@ -6,5 +6,7 @@
     flex-direction: row;
     gap: 15px;
     width: fit-content;
-    color: var(--primary-text-color);
+    color: var(--secondary-text-color);
+    align-items: center;
+    cursor: pointer;
 }

@@ -1,0 +1,146 @@
+.search-form-advanced {
+    display: none;
+}
+
+//desktop
+@media screen and (min-width: 1024px) {
+    .search-form-advanced {
+        display: none;
+    }
+
+    .search-form-advanced.active {
+        display: block;
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 0;
+
+            .search-filters-advanced#search-filters {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
+
+                .add-more-row-button {
+                    align-self: unset;
+                    border: none;
+                    background-color: transparent;
+                    color: var(--third-text-color);
+                }
+
+                .add-more-row-button::before {
+                    all: unset;
+                }
+
+                .add-more-row-button::after {
+                    content: "";
+                    margin-top: 3px;
+                    display: block;
+                    position: relative;
+                    left: 0;
+                    width: 100%;
+                    height: 1.5px;
+                    background-color: var(--primary-color);
+                }
+
+                span {
+                    display: none;
+                }
+
+                .filter {
+                    width: 100%;
+                    display: flex;
+                    flex-direction: row;
+                    gap: 20px;
+                    padding: 0;
+
+                    .all-select-wrapper {
+                        display: flex;
+                        flex-direction: row;
+                        gap: 20px;
+
+                        .select-wrapper {
+                            min-width: 170px;
+                        }
+
+                        .select-wrapper:nth-child(3) {
+                            min-width: 230px;
+                        }
+                    }
+
+                    input {
+                        flex: 1;
+                        height: 60px;
+                        background-color: transparent;
+                        border: 2px solid var(--primary-border-color);
+                        padding: 10px;
+                        font-family: var(--main-font);
+                        font-size: var(--big-body);
+                    }
+
+                    input:focus-visible {
+                        outline: none;
+                    }
+
+                    .switch-search-form-button {
+                        height: 60px;
+                    }
+
+                    .search-filter-minus {
+                        background-color: transparent;
+                        border: 2px solid var(--secondary-border-color);
+                        color: var(--third-text-color);
+                        height: 40px;
+                        width: 40px;
+                        display: flex;
+                        flex-direction: row;
+                        align-items: center;
+                        justify-content: center;
+                        margin-top: 10px;
+                    }
+                }
+            }
+            
+            .search-form-buttons {
+                width: 100%;
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+
+                .send-button::after {
+                    position: relative;
+                    content: url(/husserl/themes/husserl/asset/img/arrow-right-light.svg);
+                    right: 0px;
+                    top: -4px;
+                    width: 8px;
+                    height: 14px;
+                }
+            }
+        }
+
+        //delete the searbar on top
+        .field:has(.search-bar) {
+            display: none;
+        }
+
+        // delete the add button on the first row + delete the minus button on the first row
+        .search-filters-advanced {
+            .filter:first-of-type {
+                .all-select-wrapper {
+                    .select-wrapper:first-child {
+                        display: none;
+                    }
+                }
+            }
+
+            .filter:first-of-type {
+                .field:has(.search-filter-minus) {
+                    display: none;
+                }
+            }
+        }
+    }
+}

@@ -28,6 +28,10 @@
         gap: 40px;
         width: 100%;
 
+        .browse-search-aside {
+            margin-top: -40px;
+        }
+
         .browse-results {
             width: 100%;
             padding: 0 30px;
@@ -94,6 +98,10 @@
         .browse-result-section {
             flex-direction: row;
             gap: 120px;
+
+            .browse-search-aside {
+                margin-top: 0;
+            }
 
             .browse-results {
                 padding: 0;

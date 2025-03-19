@@ -33,7 +33,7 @@
 //desktop
 @media screen and (min-width: 1024px) {
     .hero {
-        height: calc(100vh - 90px);
+        height: calc(100vh - 80px);
         position: relative;
 
         .hero-image {
@@ -51,6 +51,19 @@
             position: relative;
             padding: 0 60px 80px 60px;
             color: var(--secondary-text-color);
+
+            .hero-text {
+                .page-title {
+                    font-size: var(--h1-desktop);
+                    margin-bottom: 10px;
+                }
+
+                .primary-button {
+                    background-color: transparent;
+                    color: var(--secondary-text-color);
+                    border: 2px solid var(--third-border-color);
+                } 
+            }
         }
     }
 }

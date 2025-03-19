@@ -10,7 +10,9 @@ document.addEventListener("DOMContentLoaded", function() {
         if(!navopen) {
             navItemsGroup.classList.add("navigation-open");
             navItemsGroup.classList.remove("nav-non-active");
-            page.classList.add("pageFixed");
+            setTimeout(() => {
+                page.classList.add("pageFixed");
+            }, 800);
             navopen = true;
         }
 

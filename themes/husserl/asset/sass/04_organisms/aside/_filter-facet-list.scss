@@ -36,12 +36,6 @@
         overflow-x: auto;
         padding: 0 30px;
 
-        .search-bar {
-            border: none;
-            background-color: var(--third-bg-color);
-            margin-top: 10px;
-        }
-
         .facets-list {
             display: flex;
             flex-direction: column;
@@ -147,6 +141,18 @@
             .facet-actions {
                 margin-top: 20px;
                 flex-grow: 1;
+            }
+        }
+    }
+
+    .open-facets-list {
+        .facet-item-form {
+            .facet-actions {
+                position: unset;
+                z-index: 0;
+                padding: 0;
+                width: auto;
+                background-color: transparent;
             }
         }
     }

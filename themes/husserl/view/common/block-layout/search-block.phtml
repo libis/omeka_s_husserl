@@ -35,14 +35,14 @@ $translate = $this->plugin('translate');
                 </div>
             </div>
         </form>  
-        <div class="search-form-simple__switch-search-form-button switch-search-form-button secondary-button dark">
+        <div class="search-form-simple__switch-search-form-button switch-search-form-button">
             <p class="secondary-button__button-text button-text">Advanced Search</p>
         </div>
       </div>
       <div class="search-section__search-form-advanced search-form-advanced">
         <?php $searchConfig = $this->getSearchConfig(1);?>
           <?= $searchConfig->renderForm(['template' => null, 'skip_form_action' => false]); ?>
-          <div class="search-form-simple__switch-search-form-button switch-search-form-button secondary-button dark">
+          <div class="search-form-simple__switch-search-form-button switch-search-form-button">
               <p class="secondary-button__button-text button-text">Simple search</p>
           </div>
       </div>

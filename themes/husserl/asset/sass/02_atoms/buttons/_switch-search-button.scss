@@ -1,0 +1,20 @@
+.switch-search-form-button {
+    padding: 15px;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    color: var(--third-text-color);
+    cursor: pointer;
+}
+
+.switch-search-form-button::after {
+    position: relative;
+    content: ""; 
+    background: url(/husserl/themes/husserl/asset/img/arrow-blue.svg);
+    background-repeat: no-repeat;
+    background-size: contain;
+    bottom: -8px;
+    right: -8px;
+    width: 14px;
+    height: 8px;
+}

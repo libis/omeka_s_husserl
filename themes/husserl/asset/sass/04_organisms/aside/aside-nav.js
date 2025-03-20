@@ -60,6 +60,7 @@ function setupBrowseIcon() {
         const browseIcon = document.querySelector(".browse-item-nav");
         const browseAside = document.querySelector(".browse-aside");
         const openbrowse = localStorage.getItem('openbrowse');
+        const closeIcon = document.querySelector('.close-browse-search-nav-button');
 
         if (browseAside) {
             const browseTreeStructure = browseAside.getElementsByClassName('browse-tree-structure')[0];
@@ -72,14 +73,19 @@ function setupBrowseIcon() {
             }
 
             if (browseIcon) {
-                browseIcon.addEventListener("click", function() {
-                    
-                });
                 browseIcon.removeEventListener("click", () => {
                     handleBrowseClick(browseTreeStructure, browseIcon);
                 });
         
                 browseIcon.addEventListener("click", () => {
+                    handleBrowseClick(browseTreeStructure, browseIcon);
+                });
+
+                closeIcon.removeEventListener("click", () => {
+                    handleBrowseClick(browseTreeStructure, browseIcon);
+                });
+        
+                closeIcon.addEventListener("click", () => {
                     handleBrowseClick(browseTreeStructure, browseIcon);
                 });
             }
@@ -109,8 +115,9 @@ function handleFilterClick(facetsList, filterIcon, page) {
 function setupFilterIcon() {
     const openPopUp = localStorage.getItem('openPopUp');
     const filterIcon = document.querySelector(".filter-item-nav");
-    const page = document.querySelector('.content');
+    const page = document.querySelector('.page');
     const facetsList = document.getElementsByClassName('facet-items-content')[0];
+    const closeIcon = document.querySelector('.close-browse-search-nav-button');
 
     if (filterIcon) {
         if (window.innerWidth < 1024) {
@@ -130,6 +137,15 @@ function setupFilterIcon() {
         });
 
         filterIcon.addEventListener("click", () => {
+            handleFilterClick(facetsList, filterIcon, page);
+        });
+
+        closeIcon.removeEventListener("click", () => {
+            handleFilterClick(facetsList, filterIcon, page);
+            facetsList.classList.remove("open-facets-list");
+        });
+
+        closeIcon.addEventListener("click", () => {
             handleFilterClick(facetsList, filterIcon, page);
         });
     }

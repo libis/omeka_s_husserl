@@ -1,7 +1,7 @@
 .browse-nav, .search-nav {
     display: flex;
-    flex-direction: row-reverse;
-    justify-content: flex-end;
+    flex-direction: row;
+    justify-content: space-between;
     gap: 25px;
     width: 100%;
     background-color: var(--primary-bg-color);
@@ -11,33 +11,60 @@
     top: 89px;
     left: 0;
 
-
-    .nav-aside-item {
+    .main-browse-search-nav-items {
         display: flex;
-        flex-direction: column-reverse;
-        align-items: center;
-    }
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        gap: 25px;
 
-    .nav-aside-item.active-item {
-        color: var(--primary-color);
-
-        .nav-aside-item-text {
-            font-weight: var(--semi);
+        .nav-aside-item {
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
         }
-
-        .nav-aside-item-icon {
-            svg {
-                stroke-width: 2px;
-
-                path {
-                    stroke: var(--primary-color);
+    
+        .nav-aside-item.active-item {
+            color: var(--primary-color);
+    
+            .nav-aside-item-text {
+                font-weight: var(--semi);
+            }
+    
+            .nav-aside-item-icon {
+                svg {
+                    stroke-width: 2px;
+    
+                    path {
+                        stroke: var(--primary-color);
+                    }
                 }
             }
         }
+    
+        .middle-item {
+            display: none;
+        }
     }
 
-    .middle-item {
+    .close-browse-search-nav-button {
         display: none;
+    }
+}
+
+.search-wrapper:has(.open-facets-list), .browse-result-section:has(.open-treeStructure) {
+    .close-browse-search-nav-button {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        border: 1px solid var(--secondary-border-color);
+
+        svg {
+            width: 20px;
+            height: 19px;
+        }
     }
 }
 
@@ -87,5 +114,11 @@
                 display: unset;
             }
         } 
+    }
+
+    .search-wrapper:has(.open-facets-list), .browse-result-section:has(.open-treeStructure) {
+        .close-browse-search-nav-button {
+            display: none;
+        }
     }
 }

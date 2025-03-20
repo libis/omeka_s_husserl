@@ -1,9 +1,10 @@
 .metadata-show-block {
-    background-color: var(--fifth-bg-color);
+    background-color: var(--fourth-bg-color);
     padding: 30px;
     display: flex;
     flex-direction: column;
     gap: 30px;
+    word-break: break-all;
 
     .item-metadata-list {
         display: flex;

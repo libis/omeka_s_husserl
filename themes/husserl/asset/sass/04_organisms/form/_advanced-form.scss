@@ -88,6 +88,10 @@
                         height: 60px;
                     }
 
+                    .switch-search-form-button::after {
+                        transform: rotate(180deg);
+                    }
+
                     .search-filter-minus {
                         background-color: transparent;
                         border: 2px solid var(--secondary-border-color);

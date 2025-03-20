@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const burger = document.querySelector(".nav-burger");
     const navItemsGroup = document.querySelector(".nav-items");
     const navItems = document.querySelectorAll('.nav-item');
-    const page = document.querySelector('.content');
+    const page = document.querySelector('.page');
     let navopen = false;
 
     burger.addEventListener("click", function() {

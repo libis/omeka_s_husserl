@@ -1,3 +1,4 @@
+<?php $this->htmlElement('body')->appendAttribute('class', 'page'); ?>
 <div class="<?php echo str_replace(' ', '-',strtolower($page->title()))?> container">
   <?php if(strtolower($page->title()) != "home"): ?>
     <div class="container__page-breadcrumb page-breadcrumb">

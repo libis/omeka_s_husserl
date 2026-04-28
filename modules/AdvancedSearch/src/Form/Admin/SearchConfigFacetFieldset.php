@@ -73,8 +73,8 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
                             'label' => 'Modules', // @translate
                             'options' => [
                                 'Tree' => 'Item sets tree', // @translate
-                                'Thesaurus' => 'Thesaurus', // @translate
                                 'TreeLink' => 'Item sets tree link (fake checkbox)', // @translate
+                                'Thesaurus' => 'Thesaurus', // @translate
                                 'ThesaurusLink' => 'Thesaurus link (fake checkbox)', // @translate
                             ],
                         ],
@@ -281,9 +281,9 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
     {
         /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
         $searchConfig = $this->getOption('search_config');
-        $searchAdapter = $searchConfig ? $searchConfig->searchAdapter() : null;
-        return $searchAdapter
-            ? $searchAdapter->getAvailableFacetFieldsForSelect()
+        $engineAdapter = $searchConfig ? $searchConfig->engineAdapter() : null;
+        return $engineAdapter
+            ? $engineAdapter->getAvailableFacetFieldsForSelect()
             : [];
     }
 }

@@ -11,6 +11,7 @@ use Omeka\Api\Exception\NotFoundException;
  * View helper for rendering search filters for the advanced search response.
  *
  * @deprecated Use $searchConfig->renderSearchFilters() instead.
+ * @todo Once the main standard form will support any index cleanly, all this class will be moved to SearchFilters.
  */
 class SearchingFilters extends AbstractHelper
 {
@@ -22,11 +23,18 @@ class SearchingFilters extends AbstractHelper
     protected $baseUrl;
 
     /**
-     * The cleaned query.
+     * The cleaned query without specific keys.
      *
      * @var array
      */
     protected $query;
+
+    /**
+     * The cleaned query without specific keys to build new queries.
+     *
+     * @var array
+     */
+    protected $queryForUrl;
 
     /**
      * Render filters from advanced search query.
@@ -64,6 +72,7 @@ class SearchingFilters extends AbstractHelper
      * @see \AdvancedSearch\FormAdapter\AbstractFormAdapter
      *
      * @todo Use Query instead of query? The Query is available in the request.
+     * @deprecated Will be moved to SearchFilters once refactorized.
      *
      * @var array $query The query is the cleaned query.
      * @return array The updated filters.
@@ -71,7 +80,9 @@ class SearchingFilters extends AbstractHelper
     public function filterSearchingFilters(SearchConfigRepresentation $searchConfig, array $query, array $filters): array
     {
         /**
+         * @var \Omeka\View\Helper\Url $url
          * @var \Omeka\View\Helper\Api $api
+         * @var \Laminas\I18n\View\Helper\Translate $translate
          * @var \Common\Stdlib\EasyMeta $easyMeta
          *
          * Warning: unlike plugin helper, view helper api() cannot use options.
@@ -83,12 +94,24 @@ class SearchingFilters extends AbstractHelper
         $translate = $plugins->get('translate');
         $easyMeta = $plugins->get('easyMeta')();
 
-        $this->baseUrl = $url(null, [], true);
-        $this->query = $query;
+        $processed = $query['__processed'] ?? [];
 
-        $searchAdapter = $searchConfig->searchAdapter();
-        $availableFields = $searchAdapter
-            ? $searchAdapter->getAvailableFields()
+        $skip = [
+            'page' => null,
+            'offset' => null,
+            'submit' => null,
+            '__processed' => null,
+            '__original_query' => null,
+            '__searchConfig' => null,
+            '__searchQuery' => null,
+        ];
+
+        $this->query = array_diff_key($query, $skip);
+        $this->baseUrl = $url(null, [], true);
+
+        $engineAdapter = $searchConfig->engineAdapter();
+        $availableFields = $engineAdapter
+            ? $engineAdapter->getAvailableFields()
             : [];
         $searchFormSettings = $searchConfig->setting('form') ?: [];
 
@@ -98,30 +121,17 @@ class SearchingFilters extends AbstractHelper
         $availableFieldLabels = array_combine(array_keys($availableFields), array_column($availableFields ?? [], 'label'));
         $fieldLabels = array_replace($availableFieldLabels, array_filter($formFieldLabels));
 
-        // @see \AdvancedSearch\FormAdapter\AbstractFormAdapter::toQuery()
-        // This function manages only one level, so check value when needed.
-        // TODO Simplify queries (or make clear distinction between standard and old way).
-        $flatArray = function ($value): array {
-            if (!is_array($value)) {
-                return [$value];
-            }
-            $firstKey = key($value);
-            if (is_numeric($firstKey)) {
-                return $value;
-            }
-            return is_array(reset($value)) ? $value[$firstKey] : [$value[$firstKey]];
-        };
+        // To build tje new search filters urls, the keys should be the original
+        // ones, so clean the key filter and rebuild original query from the
+        // cleaned query.
+        $this->prepareQueryForUrl();
 
-        $skip = [
-            'page' => null,
-            'offset' => null,
-            'submit' => null,
-            '__searchConfig' => null,
-            '__searchQuery' => null,
-            '__searchCleanQuery' => null,
-        ];
+        // id is overridden.
+        unset($processed['id']);
 
-        foreach (array_diff_key($this->query, $skip) as $key => $value) {
+        $remainingQueryKeys = array_diff_key($this->query, $skip, $processed);
+
+        foreach ($remainingQueryKeys as $key => $value) {
             if ($value === null || $value === '' || $value === []) {
                 continue;
             }
@@ -132,20 +142,20 @@ class SearchingFilters extends AbstractHelper
                     $filters[$filterLabel][$this->urlQuery($key)] = $value;
                     break;
 
-                // Resource type is the api name ("items", "item_sets", etc.).
+                // Here, resource type is the api name (items, item_sets, etc.).
                 case 'resource_type':
                     $filterLabel = $translate('Resource type'); // @translate
-                    foreach ($flatArray($value) as $subKey => $subValue) {
+                    foreach ($this->checkAndFlatArray($value) as $subKey => $subValue) {
                         $subValueLabel = $easyMeta->resourceLabelPlural($subValue);
                         $filters[$filterLabel][$this->urlQuery($key, $subKey)] = $subValueLabel ? ucfirst($translate($subValueLabel)) : $subValue;
                     }
                     break;
 
                 // Resource id.
-                // Override standard search filters.
+                // Override standard search filters, so use the same label.
                 case 'id':
                     $filterLabel = $translate('ID'); // @translate
-                    foreach (array_filter(array_map('intval', $flatArray($value))) as $subKey => $subValue) {
+                    foreach (array_filter(array_map('intval', $this->checkAndFlatArray($value))) as $subKey => $subValue) {
                         $filters[$filterLabel][$this->urlQuery($key, $subKey)] = $subValue;
                     }
                     break;
@@ -153,7 +163,7 @@ class SearchingFilters extends AbstractHelper
                 case 'site':
                     $filterLabel = $translate('Site');
                     $isId = is_array($value) && key($value) === 'id';
-                    foreach (array_filter($flatArray($value), 'is_numeric') as $subKey => $subValue) {
+                    foreach (array_filter($this->checkAndFlatArray($value), 'is_numeric') as $subKey => $subValue) {
                         try {
                             $filterValue = $api->read('sites', $subValue)->getContent()->title();
                         } catch (NotFoundException $e) {
@@ -167,7 +177,7 @@ class SearchingFilters extends AbstractHelper
                 case 'owner':
                     $filterLabel = $translate('User');
                     $isId = is_array($value) && key($value) === 'id';
-                    foreach (array_filter($flatArray($value), 'is_numeric') as $subKey => $subValue) {
+                    foreach (array_filter($this->checkAndFlatArray($value), 'is_numeric') as $subKey => $subValue) {
                         try {
                             $filterValue = $api->read('users', $subValue)->getContent()->name();
                         } catch (NotFoundException $e) {
@@ -181,7 +191,7 @@ class SearchingFilters extends AbstractHelper
                 case 'class':
                     $filterLabel = $translate('Class'); // @translate
                     $isId = is_array($value) && key($value) === 'id';
-                    foreach ($flatArray($value) as $subKey => $subValue) {
+                    foreach ($this->checkAndFlatArray($value) as $subKey => $subValue) {
                         if (is_numeric($subValue)) {
                             try {
                                 $filterValue = $translate($api->read('resource_classes', $subValue)->getContent()->label());
@@ -200,7 +210,7 @@ class SearchingFilters extends AbstractHelper
                 case 'template':
                     $filterLabel = $translate('Template'); // @translate
                     $isId = is_array($value) && key($value) === 'id';
-                    foreach ($flatArray($value) as $subKey => $subValue) {
+                    foreach ($this->checkAndFlatArray($value) as $subKey => $subValue) {
                         if (is_numeric($subValue)) {
                             try {
                                 $filterValue = $translate($api->read('resource_templates', $subValue)->getContent()->label());
@@ -219,7 +229,7 @@ class SearchingFilters extends AbstractHelper
                 case 'item_set':
                     $filterLabel = $translate('Item set');
                     $isId = is_array($value) && key($value) === 'id';
-                    foreach (array_filter($flatArray($value), 'is_numeric') as $subKey => $subValue) {
+                    foreach (array_filter($this->checkAndFlatArray($value), 'is_numeric') as $subKey => $subValue) {
                         try {
                             $filterValue = $api->read('item_sets', $subValue)->getContent()->displayTitle();
                         } catch (NotFoundException $e) {
@@ -233,7 +243,7 @@ class SearchingFilters extends AbstractHelper
                 case 'item_sets_tree':
                     $filterLabel = $translate('Item sets tree'); // @translate
                     $isId = is_array($value) && key($value) === 'id';
-                    foreach (array_filter($flatArray($value), 'is_numeric') as $subKey => $subValue) {
+                    foreach (array_filter($this->checkAndFlatArray($value), 'is_numeric') as $subKey => $subValue) {
                         try {
                             $filterValue = $api->read('item_sets', $subValue)->getContent()->displayTitle();
                         } catch (NotFoundException $e) {
@@ -267,35 +277,16 @@ class SearchingFilters extends AbstractHelper
                     break;
 
                 // Bypass filters processed by searchFilters.
-                // Standard.
-                case 'fulltext_search':
-                case 'resource_class_id':
-                case 'property':
-                case 'search':
-                case 'resource_template_id':
-                case 'item_set_id':
-                case 'not_item_set_id':
-                case 'owner_id':
-                case 'site_id':
-                case 'is_public':
-                case 'has_media':
-                // case 'id':
-                case 'in_sites':
-                // Added by this module.
-                case 'datetime':
-                case 'filter':
-                case 'has_original':
-                case 'has_thumbnails':
-                case 'has_asset':
-                case 'asset_id':
-                case 'media_types':
-                case 'resource_class_term':
+                case array_key_exists($key, $processed):
                     break;
 
                 default:
                     // Append only fields that are not yet processed somewhere
                     // else, included searchFilters helper.
-                    if (isset($fieldLabels[$key]) && !isset($filters[$fieldLabels[$key]])) {
+                    if (isset($fieldLabels[$key])
+                        && !isset($filters[$fieldLabels[$key]])
+                    ) {
+                        // Manage ranges.
                         if (is_array($value) && (array_key_exists('from', $value) || array_key_exists('to', $value))) {
                             $valueFrom = $value['from'] ?? '';
                             $valueTo = $value['to'] ?? '';
@@ -307,12 +298,13 @@ class SearchingFilters extends AbstractHelper
                             } elseif ($valueTo !== '') {
                                 $filters[$filterLabel][$this->urlQuery($key)] = sprintf($translate('until %s'), $valueTo); // @translate
                             }
-                            break;
                         }
-
-                        $filterLabel = $fieldLabels[$key];
-                        foreach (array_filter(array_map('trim', array_map('strval', $flatArray($value))), 'strlen') as $subKey => $subValue) {
-                            $filters[$filterLabel][$this->urlQuery($key, $subKey)] = $subValue;
+                        // Else manage raw label/value.
+                        else {
+                            $filterLabel = $fieldLabels[$key];
+                            foreach (array_filter(array_map('trim', array_map('strval', $this->checkAndFlatArray($value))), 'strlen') as $subKey => $subValue) {
+                                $filters[$filterLabel][$this->urlQuery($key, $subKey)] = $subValue;
+                            }
                         }
                     }
                     break;
@@ -325,19 +317,69 @@ class SearchingFilters extends AbstractHelper
     }
 
     /**
+     * Flat a max two levels array, like the one in properties and filters.
+     *
+     * The array should be an associative array.
+     *
+     * This function fixes some forms that add an array level.
+     * This function manages only one level, so check value when needed.
+     *
+     * @see \AdvancedSearch\FormAdapter\TraitFormAdapterClassic::toQuery()
+     */
+    protected function checkAndFlatArray($value): array
+    {
+        if (!is_array($value)) {
+            return [$value];
+        }
+        $firstKey = key($value);
+        if (is_numeric($firstKey)) {
+            return $value;
+        }
+        return is_array(reset($value))
+            ? $value[$firstKey]
+            : [$value[$firstKey]];
+    }
+
+    /**
+     * Prepare original query to use to build new urls skipping a part.
+     *
+     * @see \AdvancedSearch\Stdlib\SearchResources::expandFieldQueryArgs()
+     * @see \AdvancedSearch\View\Helper\SearchFilters::prepareQueryForUrl()
+     */
+    protected function prepareQueryForUrl(): self
+    {
+        $this->queryForUrl = $this->query;
+        if (empty($this->queryForUrl['filter'])) {
+            return $this;
+        }
+        foreach ($this->queryForUrl['filter'] ?? [] as $key => $filter) {
+            if (!empty($filter['is_form_filter'])) {
+                $this->queryForUrl[$filter['replaced_field']] = $filter['replaced_value'];
+                unset($this->queryForUrl['filter'][$key]);
+            }
+        }
+        if (empty($this->queryForUrl['filter'])) {
+            unset($this->queryForUrl['filter']);
+        }
+        return $this;
+    }
+
+    /**
      * Get the url of the query without the specified key and subkey.
      *
      * @param string|int $key
      * @param string|int|null $subKey
      * @return string
      *
-     * Copy:
+     * Adapted:
      * @see \AdvancedSearch\View\Helper\SearchFilters::urlQuery()
      * @see \AdvancedSearch\View\Helper\SearchingFilters::urlQuery()
+     *
+     * There is no filter here.
      */
     protected function urlQuery($key, $subKey = null): string
     {
-        $newQuery = $this->query;
+        $newQuery = $this->queryForUrl;
         if (is_null($subKey) || !is_array($newQuery[$key]) || count($newQuery[$key]) <= 1) {
             unset($newQuery[$key]);
         } else {
@@ -359,7 +401,7 @@ class SearchingFilters extends AbstractHelper
      */
     protected function urlQueryId($key, $subKey): string
     {
-        $newQuery = $this->query;
+        $newQuery = $this->queryForUrl;
         if (!is_array($newQuery[$key]) || !is_array($newQuery[$key]['id']) || count($newQuery[$key]['id']) <= 1) {
             unset($newQuery[$key]);
         } else {

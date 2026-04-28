@@ -23,9 +23,8 @@ class BrowseBlock extends AbstractBlockLayout
             'resource_type' => 'items',
             'query' => '',
             'heading' => '',
-            'columns' => '2',
             'text' => '',
-            'limit' => 12,
+            'limit' => 3,
             'link' => '',
             'link-text' => 'Browse all', // @translate
         ];
@@ -57,19 +56,6 @@ class BrowseBlock extends AbstractBlockLayout
                 'label' => 'Resource type', // @translate
                 'value_options' => [
                     'items' => 'Items',  // @translate
-                    'item_sets' => 'Item sets',  // @translate
-                    'media' => 'Media',  // @translate
-                ],
-            ],
-        ]);
-        $form->add([
-            'name' => 'o:block[__blockIndex__][o:data][columns]',
-            'type' => Element\Select::class,
-            'options' => [
-                'label' => 'Number of columns', // @translate
-                'value_options' => [
-                    'is-half' => '2',  // @translate
-                    'is-one-third' => '3',  // @translate
                 ],
             ],
         ]);
@@ -90,7 +76,16 @@ class BrowseBlock extends AbstractBlockLayout
                 'info' => 'Maximum number of resources to display in the preview.', // @translate
             ],
         ]);
-
+        $form->add([
+            'name' => 'o:block[__blockIndex__][o:data][link-active]',
+            'type' => Element\Checkbox::class,
+            'options' => [
+                'label' => 'A button under the results?', // @translate
+                'use_hidden_element' => true,
+                'checked_value' => 'yes',
+                'unchecked_value' => 'no',
+            ],
+        ]);
         $form->add([
             'name' => 'o:block[__blockIndex__][o:data][link]',
             'type' => Element\Text::class,
@@ -111,10 +106,10 @@ class BrowseBlock extends AbstractBlockLayout
         $form->setData([
             'o:block[__blockIndex__][o:data][resource_type]' => $data['resource_type'],
             'o:block[__blockIndex__][o:data][query]' => $data['query'],
-            'o:block[__blockIndex__][o:data][columns]' => $data['columns'],
             'o:block[__blockIndex__][o:data][text]' => $data['text'],
             'o:block[__blockIndex__][o:data][heading]' => $data['heading'],
             'o:block[__blockIndex__][o:data][limit]' => $data['limit'],
+            'o:block[__blockIndex__][o:data][link-active]' => $data['link-active'],
             'o:block[__blockIndex__][o:data][link]' => $data['link'],
             'o:block[__blockIndex__][o:data][link-text]' => $data['link-text'],
         ]);
@@ -153,8 +148,6 @@ class BrowseBlock extends AbstractBlockLayout
         //var_dump($resources);
         $resourceTypes = [
             'items' => 'item',
-            'item_sets' => 'item-set',
-            'media' => 'media',
         ];
 
         return $view->partial('common/block-layout/browse-block', [

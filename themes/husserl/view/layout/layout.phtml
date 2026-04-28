@@ -1,0 +1,117 @@
+<?php
+$escape = $this->plugin('escapeHtml');
+$siteTitle = $site->title();
+$this->htmlElement('html')->setAttribute('lang', $this->lang());
+$this->headMeta()->setCharset('utf-8');
+$this->headMeta()->appendName('viewport', 'width=device-width, initial-scale=1');
+$this->headTitle($siteTitle)->setSeparator(' · ');
+$this->headTitle()->append($this->setting('installation_title', 'Omeka S'));
+$this->headLink()->prependStylesheet($this->assetUrl('css/app.css'));
+$this->headLink()->prependStylesheet($this->assetUrl('css/splide.min.css'));
+$this->headLink()->prependStylesheet($this->assetUrl('css/iconfonts.css', 'Omeka'));
+
+$this->headScript()->prependFile($this->assetUrl('js/splide.min.js'));
+$this->headScript()->prependFile($this->assetUrl('js/main.js'));
+
+$this->headScript()->prependFile($this->assetUrl('js/global.js', 'Omeka'));
+$this->headScript()->prependFile($this->assetUrl('vendor/jquery/jquery.min.js', 'Omeka'));
+$this->trigger('view.layout');
+$userBar = $this->userBar();
+
+$url = $this->serverUrl(true);
+//echo 'url:'.$url;
+if (strpos($url, 'page/home') !== false) {
+    $home = true;
+}else{
+  $home = false;
+}
+?>
+<?php echo $this->doctype(); ?>
+<?php echo $this->htmlElement('html'); ?>
+    <head>
+        <?php echo $this->headMeta(); ?>
+
+        <?php echo $this->headTitle(); ?>
+        <?php echo $this->headLink(); ?>
+        <?php echo $this->headStyle(); ?>
+
+        <!-- fonts -->
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    </head>
+
+    <?php echo $this->htmlElement('body'); ?>
+    <nav class="nav">
+      <div class="nav__nav-logos nav-logos">
+        <div class="nav-logos__nav-logo nav-logo nav-logo-text digital-husserl-logo">
+          <a href="<?= $site->url() ?>">digital<span>Husserl</span></a>
+        </div>
+        <div class="nav-logos__nav-logo nav-logo ku-leuven-logo">
+          <img src="<?= $this->assetUrl('img/ku-leuven.png')?>" alt="ku leuven logo"/>
+        </div>
+      </div>
+      <ul class="nav-items">
+        <?php $menu = $site->publicNav()->menu();
+          $container = $menu->getContainer();
+        ?>
+        <?php foreach ($container as $page): ?>
+            <?php if($page->isActive()): ?>
+              <li class="nav-items__nav-item nav-item nav-text nav-active"><?= $menu->htmlify($page) ?></li>
+            <?php else: ?>
+              <li class="nav-items__nav-item nav-item nav-text"><?= $menu->htmlify($page) ?></li>
+            <?php endif; ?>
+        <?php endforeach; ?>
+      </ul>
+      <div class="nav__nav-burger nav-burger burger-icon">
+        <span class="burger-icon__burger-line burger-line"></span>
+      </div>
+    </nav>
+    <div class="scroll-to-top-button">
+      <svg width="21" height="12" viewBox="0 0 21 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.559 0.439367C10.9733 -0.146456 10.022 -0.146456 9.43629 0.439367L0.439306 9.43761C-0.146437 10.0234 -0.146437 10.9748 0.439306 11.5606C1.02505 12.1465 1.97629 12.1465 2.56203 11.5606L10.5 3.62156L18.438 11.5559C19.0237 12.1418 19.975 12.1418 20.5607 11.5559C21.1464 10.9701 21.1464 10.0187 20.5607 9.43292L11.5637 0.43468L11.559 0.439367Z" fill="#202020"/>
+      </svg>
+    </div>
+    <div class="content">    
+      <?php echo $this->content; ?>            
+    </div> 
+    <footer class="footer">
+      <hr class="footer__footer-top-line footer-top-line">
+      <div class="footer__footer-content footer-content">
+        <div class="footer-content__footer-first-column footer-first-column">
+          <div class="footer-first-column__footer-logo footer-logo"><a href="<?= $site->url() ?>">digital<span>Husserl</span></a></div>
+          <p class="footer-first-column__short-company-info short-company-info body-text">Comprehensive digital environment of the Husserl Archives</p>
+        </div>
+        <div class="footer-content__footer-second-column footer-second-column">
+          <h6 class="footer-second-column__footer-column-title footer-column-title footer-list-title">Husserl Collection</h6>
+          <ul class="footer-second-column__footer-column-items footer-column-items">
+            <?php foreach ($container as $page): ?>
+              <li class="footer-column-items__footer-column-item footer-column-item footer-list-item"><?= $menu->htmlify($page) ?></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+        <div class="footer-content__footer-third-column footer-third-column">
+          <h6 class="footer-third-column__footer-column-title footer-column-title footer-list-title">About Husserl</h6>
+          <ul class="footer-third-column__footer-column-items footer-column-items">
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">About the Husserl project</li>
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">Team</li>
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">Aims & Vision</li>
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">Husserl Archive</li>
+            <li class="footer-column-items__footer-column-item footer-column-item footer-list-item">About Husserl</li>
+          </ul>
+        </div>
+      </div>
+      <hr class="footer__footer-bottom-line footer-bottom-line">
+      <div class="footer__footer-bottom-content footer-bottom-content">
+        <p class="footer-bottom-content__copyright-text copyright-text body-text">© KU Leuven, built by LIBIS</p>
+        <div class="footer-bottom-content__footer-bottom-logos footer-bottom-logos">
+          <div class="footer-bottom-logos__ku-leuven-logo ku-leuven-logo footer-bottom-logo">
+            <img src="<?= $this->assetUrl('img/ku-leuven.png')?>" alt="ku leuven logo"/>
+          </div>
+          <div class="footer-bottom-logos__libis-logo libis-logo footer-bottom-logo">
+            <img src="<?= $this->assetUrl('img/libis.png')?>" alt="libis logo"/>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+  <?php echo $this->headScript(); ?>
+</html>

@@ -1,0 +1,75 @@
+.browse-search-aside {
+    .browse-tree-structure {
+        position: fixed;
+        right: 0;
+        width: 100%;
+        transform: translateX(100%);
+        z-index: 9;
+        padding: 20px 30px 50px;
+
+        .browse-items {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+
+            .browse-item {
+                position: relative;
+                cursor: pointer;
+
+                .browse-item-link {
+                    .arrow-after {
+                        content: "";
+                        position: absolute;
+                        background: url(/husserl/themes/husserl/asset/img/arrow.svg);
+                        right: 0px;
+                        top: 7px;
+                        width: 21px;
+                        height: 12px;
+                        display: block;
+                    }
+                }
+                .browse-item-link.close .arrow-after {
+                    transform: rotate(180deg);
+                }
+                
+                .browse-item-link.open .arrow-after {
+                    top: 5px;
+                    transform: rotate(0deg);
+                }
+    
+                .browse-item-link.page-item .arrow-after {
+                    display: none;
+                }
+            }
+        }
+
+        .inner-browse-items {
+            gap: 15px;
+            margin-bottom: 10px;
+
+            .browse-item {
+                margin-left: 15px;
+            }
+
+            .browse-item:first-child {
+                margin-top: 15px;
+            }
+        }
+    }
+
+    .browse-tree-structure.open-treeStructure {
+        transform: translateX(0%);
+        position: relative;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .browse-search-aside {
+        .browse-tree-structure {
+            position: unset;
+            padding: 0;
+            transform: translateX(0%);
+        }
+    }
+}

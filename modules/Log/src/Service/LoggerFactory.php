@@ -6,8 +6,8 @@ use Interop\Container\ContainerInterface;
 use Laminas\Log\Logger;
 use Laminas\Log\Writer\Noop;
 use Laminas\ServiceManager\Factory\FactoryInterface;
-use Log\Processor\UserId;
-use Log\Service\Processor\UserIdFactory;
+use Log\Log\Processor\UserId;
+use Log\Service\Log\Processor\UserIdFactory;
 
 /**
  * Logger factory.
@@ -34,8 +34,7 @@ class LoggerFactory implements FactoryInterface
         }
 
         // For compatibility with Omeka default config, that may be customized.
-        $hasStream = !empty($writers['stream']);
-        if ($hasStream) {
+        if (!empty($writers['stream'])) {
             if (isset($config['logger']['priority'])) {
                 $writers['stream']['options']['filters'] = $config['logger']['priority'];
             }
@@ -46,11 +45,8 @@ class LoggerFactory implements FactoryInterface
             if (!is_file($writers['stream']['options']['stream'])
                 || !is_writeable($writers['stream']['options']['stream'])
             ) {
-                error_log('[Omeka S] File logging disabled: not writeable.'); // @translate
                 unset($writers['stream']);
-                if (empty($writers)) {
-                    return (new Logger)->addWriter(new Noop);
-                }
+                error_log('[Omeka S] File logging disabled: not writeable.'); // @translate
             }
         }
 
@@ -61,21 +57,11 @@ class LoggerFactory implements FactoryInterface
             } else {
                 unset($writers['db']);
                 error_log('[Omeka S] Database logging disabled: wrong config.'); // @translate
-                if (empty($writers)) {
-                    return (new Logger)->addWriter(new Noop);
-                }
             }
         }
 
-        // A specific check is needed for Sentry: the sender may be autoloaded
-        // automagically, but the config should avoid to include an object when
-        // it is not used.
-        if (!empty($writers['sentry'])) {
-            if (empty($writers['sentry']['options']['sender'])
-                || $writers['sentry']['options']['sender'] === \Facile\Sentry\Common\Sender\SenderInterface::class
-            ) {
-                $writers['sentry']['options']['sender'] = $services->get(\Facile\Sentry\Common\Sender\SenderInterface::class);
-            }
+        if (empty($writers)) {
+            return (new Logger)->addWriter(new Noop);
         }
 
         $config['logger']['options']['writers'] = $writers;
@@ -93,7 +79,7 @@ class LoggerFactory implements FactoryInterface
      * To disable the database, set `"db" => false` in the module config.
      *
      * For performance, flexibility and stability reasons, the write process
-     * uses a specific Zend Db adapter. The read/delete process in api or ui
+     * uses a specific Laminas Db adapter. The read/delete process in api or ui
      * uses the default doctrine entity manager.
      * @todo Use a second entity manager to manage the database and save logs in real time.
      *
@@ -119,11 +105,20 @@ class LoggerFactory implements FactoryInterface
             unset($iniConfig['user']);
             $iniConfig['driver'] = 'Pdo_Mysql';
             $iniConfig['platform'] = 'Mysql';
+            // Driver options allow to pass specific options, in particular the
+            // ssl certificate. Doctrine use camel case and Laminas snake case.
+            // The list of driver options are the values of the constants PDO::MYSQL_ATTR_*.
+            if (isset($iniConfig['driverOptions'])) {
+                $iniConfig['driver_options'] = $iniConfig['driverOptions'];
+            }
         }
         // Avoid an issue on common config.
         elseif (empty($iniConfig['driver'])) {
             $iniConfig['driver'] = 'Pdo_Mysql';
             $iniConfig['platform'] = 'Mysql';
+            if (isset($iniConfig['driverOptions'])) {
+                $iniConfig['driver_options'] = $iniConfig['driverOptions'];
+            }
         }
 
         return new \Laminas\Db\Adapter\Adapter($iniConfig);

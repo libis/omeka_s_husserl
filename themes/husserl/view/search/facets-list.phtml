@@ -1,0 +1,94 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SiteRepresentation|null $site
+ * @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig
+ * @var \AdvancedSearch\Query $query
+ * @var \AdvancedSearch\Response $response
+ * @var ?\Omeka\Api\Representation\ItemSetRepresentation|null $itemSet
+ */
+
+if (!isset($response)) return;
+
+$searchFacets = $searchConfig->subSetting('facet', 'facets', []);
+if (!count($searchFacets)) return;
+
+$plugins = $this->getHelperPluginManager();
+$escape = $plugins->get('escapeHtml');
+$translate = $plugins->get('translate');
+$escapeAttr = $plugins->get('escapeHtmlAttr');
+
+$facets = $response->getFacetCounts();
+$activeFacets = $response->getActiveFacets();
+
+// Don't display facet groups without facet elements.
+$facets = array_filter($facets);
+
+$isFacetModeButton = !in_array($searchConfig->subSetting('facet', 'mode'), ['link', 'js']);
+$displayActive = (bool) $searchConfig->subSetting('facet', 'display_active', true);
+$displayRefine = (bool) $searchConfig->subSetting('facet', 'display_refine', true);
+$labelRefine = $displayRefine ? $searchConfig->subSetting('facet', 'label_refine', $translate('Refine search')) : null;
+$displayFacetButton = $isFacetModeButton && ($displayActive || !empty($facets));
+$displaySubmit = $displayFacetButton ? $searchConfig->subSetting('facet', 'display_submit', 'above') : 'none';
+$labelSubmit = $displaySubmit ? $searchConfig->subSetting('facet', 'label_submit', $translate('Apply facets')) : null;
+$displayReset = $searchConfig->subSetting('facet', 'display_reset', 'above');
+$labelReset = $displayReset ? $searchConfig->subSetting('facet', 'label_reset', $translate('Reset facets')) : null;
+
+$facetActives = $plugins->get('facetActives');
+$facetElements = $plugins->get('facetElements');
+
+// TODO Remove item sets facets early when item set redirects to search.
+// Don't display facets for item sets when browsing an item set.
+if (!empty($itemSet)) {
+    unset($facets['item_set_id']);
+    unset($activeFacets['item_set_id']);
+}
+?>
+
+<div id="search-facets" class="browse-search-aside__facet-items-content facet-items-content facets">
+    <form id="form-facets" class="facet-items-content__facet-item-form facet-item-form">
+        <?php if ($displayActive && count($activeFacets)): ?>
+            <div class="facet-item-form__active-facets active-facets">
+                <?= $facetActives(null, $activeFacets, $searchConfig->setting('facet')) ?>
+            </div>
+        <?php endif; ?>
+        <?php //if there ar no facets to apply than i got the text No filters available?>
+        <?php if (empty($facets) && empty($activeFacets)): ?>
+            <?php if ($label = $searchConfig->subSetting('facet', 'label_no_facets', $translate('No filters available'))): ?>
+                <p><?= $escape($label) ?></p>
+            <?php endif; ?>
+        <?php else: ?>
+            <ul class="facet-item-form__facets-list facets-list">
+                <?php foreach ($facets as $name => $facetValues): ?>
+                    <?php $facetParams = $searchFacets[$name]; ?>
+                    <?php $hasState = in_array($facetParams['state'] ?? '', ['expand', 'collapse', 'collapse_unless_set']); ?>
+                    <li class="facets-list__facet-item-main facet-item-main<?= empty($facetParams['attributes']['class']) ? '' : ' ' . $escapeAttr($facetParams['attributes']['class']) ?>">
+                        <?php if ($hasState): ?>
+                            <?php $stateExpand = $facetParams['state'] === 'expand' || ($facetParams['state'] === 'collapse_unless_set' && !empty($activeFacets[$name])); ?>
+                            <button type="button" class="facet-button facet-item-main__facets-item-top facets-item-top <?= $stateExpand ? 'collapse' : 'expand' ?>" aria-label="<?= $translate($stateExpand ? 'Collapse' : 'Expand') ?>" data-label-expand="<?= $translate('Expand') ?>" data-label-collapse="<?= $translate('Collapse') ?>">
+                                <p class="facets-item-top__facets-item-text facets-item-text h6-variant"><?= $escape($translate($facetParams['label'] ?? $name)) ?></p>
+                            </button>
+                        <?php else: ?>
+                            <p class="facet-item-main__facet-item-text facet-item-text h6-variant"><?= $escape($translate($facetParams['label'] ?? $name)) ?></p>
+                        <?php endif; ?>
+                        <div class="facet-item-main__facet-elements facet-elements <?= $hasState ? 'collapsible' : '' ?>"<?= $hasState && $facetParams['state'] === 'collapse' ? ' hidden="hidden"' : '' ?>>
+                            <?= $facetElements($name, $facetValues, $facetParams) ?>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+        <?php $displayButtonReset = $displayReset === 'below' || $displayReset === 'both'; ?>
+        <?php $displayButtonSubmit = $displayFacetButton && ($displaySubmit === 'below' || $displaySubmit === 'both'); ?>
+        <?php if ($displayButtonReset || $displayButtonSubmit): ?>
+            <div class="facet-item-form__facets-actions facet-actions facets-actions-bottom">
+                <?php if ($displayButtonSubmit): ?>
+                    <button id="facets-apply" class="facet-actions__facets-apply facets-apply primary-button body-text" type="submit"><?= $escape($labelSubmit) ?></button>
+                <?php endif; ?>
+                <?php if ($displayButtonReset): ?>
+                    <a href="<?= $site->url() ?>/search" id="facets-reset" class="facet-actions__facets-reset facet-reset reset-link body-text" type="reset"><?= $escape($labelReset) ?></a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </form>
+</div>

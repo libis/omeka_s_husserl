@@ -8,6 +8,8 @@ use Laminas\Form\Fieldset;
 
 class SettingsFieldset extends Fieldset
 {
+    use TraitCommonSettings;
+
     /**
      * @var array
      */
@@ -30,18 +32,9 @@ class SettingsFieldset extends Fieldset
         $this
             ->setAttribute('id', 'advanced-search')
             ->setOption('element_groups', $this->elementGroups)
-            ->add([
-                'name' => 'advancedsearch_property_improved',
-                'type' => Element\Checkbox::class,
-                'options' => [
-                    'element_group' => 'search',
-                    'label' => 'Support improved search of properties (not recommended: use filters)', // @translate
-                    'info' => 'To override the default search elements is not recommended, so the improvements are now available in the element "filter".', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_property_improved',
-                ],
-            ])
+
+            ->initSearchFields()
+
             ->add([
                 'name' => 'advancedsearch_fulltextsearch_alto',
                 'type' => Element\Checkbox::class,
@@ -59,25 +52,12 @@ class SettingsFieldset extends Fieldset
                 'type' => CommonElement\OptionalSelect::class,
                 'options' => [
                     'element_group' => 'advanced_search',
-                    'label' => 'Default search page (admin)', // @translate
-                    'info' => 'This search engine is used in the admin bar.', // @translate
+                    'label' => 'Default search page in admin side bar', // @translate
                     'value_options' => $this->searchConfigs,
-                    'empty_option' => 'Select the search engine for the admin bar…', // @translate
+                    'empty_option' => 'Select the search engine for the admin side bar…', // @translate
                 ],
                 'attributes' => [
                     'id' => 'advancedsearch_main_config',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_configs',
-                'type' => CommonElement\OptionalMultiCheckbox::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Available search pages', // @translate
-                    'value_options' => $this->searchConfigs,
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_configs',
                 ],
             ])
             ->add([

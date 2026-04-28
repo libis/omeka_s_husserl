@@ -2,20 +2,19 @@
 
 namespace AdvancedSearch\FormAdapter;
 
-use AdvancedSearch\Api\Representation\SearchConfigRepresentation;
 use AdvancedSearch\Query;
+use AdvancedSearch\Response;
 use AdvancedSearch\Stdlib\SearchResources;
 use Common\Stdlib\EasyMeta;
 use Doctrine\DBAL\Connection;
+use Omeka\Api\Representation\SiteRepresentation;
 
 /**
  * Simulate an api search for an external search engine.
  *
  * Only main search and properties are managed currently, with the joiner "and".
- *
- * This is not a sub-class of AbstractFormAdapter.
  */
-class ApiFormAdapter implements FormAdapterInterface
+class ApiFormAdapter extends AbstractFormAdapter implements FormAdapterInterface
 {
     protected $configFormClass = \AdvancedSearch\Form\Admin\ApiFormConfigFieldset::class;
 
@@ -31,11 +30,6 @@ class ApiFormAdapter implements FormAdapterInterface
      */
     protected $easyMeta;
 
-    /**
-     * @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation
-     */
-    protected $searchConfig;
-
     public function __construct(
         Connection $connection,
         EasyMeta $easyMeta
@@ -44,52 +38,12 @@ class ApiFormAdapter implements FormAdapterInterface
         $this->easyMeta = $easyMeta;
     }
 
-    public function setSearchConfig(?SearchConfigRepresentation $searchConfig): self
-    {
-        $this->searchConfig = $searchConfig;
-        return $this;
-    }
-
-    public function getConfigFormClass(): ?string
-    {
-        return $this->configFormClass;
-    }
-
-    public function getLabel(): string
-    {
-        return $this->label;
-    }
-
-    public function getFormClass(): ?string
-    {
-        return null;
-    }
-
-    public function getFormPartialHeaders(): ?string
-    {
-        return null;
-    }
-
-    public function getFormPartial(): ?string
-    {
-        return null;
-    }
-
-    public function getForm(array $options = []): ?\Laminas\Form\Form
-    {
-        return null;
-    }
-
-    public function renderForm(array $options = []): string
-    {
-        return '';
-    }
-
-    public function toQuery(array $request, array $formSettings): \AdvancedSearch\Query
+    public function toQuery(array $request, array $formSettings): Query
     {
         $query = new Query();
         $query
             ->setAliases($formSettings['aliases'] ?? [])
+            ->setFieldsQueryArgs($formSettings['fields_query_args'] ?? [])
             ->setOption('remove_diacritics', !empty($formSettings['remove_diacritics']))
             ->setOption('default_search_partial_word', !empty($formSettings['default_search_partial_word']));
 
@@ -107,6 +61,14 @@ class ApiFormAdapter implements FormAdapterInterface
         $this->buildFilterQuery($query, $request, $formSettings);
 
         return $query;
+    }
+
+    public function toResponse(array $request, ?SiteRepresentation $site = null): Response
+    {
+        $response = new Response();
+        return $response
+            ->setIsSuccess(false)
+            ->setMessage('Not implemented in this form adapter.'); // @translate
     }
 
     /**
@@ -130,7 +92,7 @@ class ApiFormAdapter implements FormAdapterInterface
         // Copied from \Omeka\Api\Adapter\ItemAdapter::buildQuery(), etc.
 
         if (isset($metadata['is_public']) && isset($request['is_public'])) {
-            $query->addFilter($metadata['is_public'], (bool) $request['is_public']);
+            $query->addFilterQuery($metadata['is_public'], (bool) $request['is_public'], 'eq');
         }
 
         if (isset($metadata['id']) && !empty($request['id'])) {
@@ -172,12 +134,12 @@ class ApiFormAdapter implements FormAdapterInterface
         }
 
         if (isset($metadata['is_open']) && isset($request['is_open'])) {
-            $query->addFilter($metadata['is_open'], (bool) $request['is_open']);
+            $query->addFilterQuery($metadata['is_open'], (bool) $request['is_open'], 'eq');
         }
 
         // Module Access.
         if (isset($metadata['access']) && isset($request['access'])) {
-            $query->addFilter($metadata['access'], (string) $request['access']);
+            $query->addFilterQuery($metadata['access'], (string) $request['access'], 'eq');
         }
     }
 
@@ -221,24 +183,37 @@ class ApiFormAdapter implements FormAdapterInterface
                 continue;
             }
 
-            // Narrow to specific property, if one is selected, else use search.
-            $property = $this->easyMeta->propertyTerm($property);
-            // TODO Manage empty properties (main search and "any property").
+            // TODO Manage empty, multiple and all properties (main search and "any property").
+            // For now, it is managed via fields?
+
             if (!$property) {
                 continue;
             }
+
+            if (is_array($property)) {
+                if (count($property) <= 1) {
+                    $property = reset($property);
+                } else {
+                    continue;
+                }
+            }
+
+            // Narrow to specific property, if one is selected, else use search.
+            $property = $this->easyMeta->propertyTerm($property);
+            if (!$property) {
+                continue;
+            }
+
             if (empty($properties[$property])) {
                 continue;
             }
+
             $propertyField = $properties[$property];
 
             // $positive = true;
 
             switch ($queryType) {
-                case 'eq':
-                    $query->addFilter($propertyField, $value);
-                    break;
-
+                /** @deprecated Use eq/neq, that supports array internally. */
                 case 'nlist':
                 case 'list':
                     $list = is_array($value) ? $value : explode("\n", $value);
@@ -247,6 +222,7 @@ class ApiFormAdapter implements FormAdapterInterface
                         continue 2;
                     }
                     $value = $list;
+                    $queryType = $queryType === 'nlist' ? 'neq' : 'eq';
                     // no break;
                 case isset(SearchResources::FIELD_QUERY['reciprocal'][$queryType]):
                     $query->addFilterQuery($propertyField, $value, $queryType);
@@ -298,24 +274,37 @@ class ApiFormAdapter implements FormAdapterInterface
                 continue;
             }
 
+            // TODO Manage empty, multiple and all properties (main search and "any property").
+            // For now, it is managed via fields?
+
+            if (!$field) {
+                continue;
+            }
+
+            if (is_array($field)) {
+                if (count($field) <= 1) {
+                    $field = reset($field);
+                } else {
+                    continue;
+                }
+            }
+
             // Narrow to specific property, if one is selected, else use search.
             $property = $this->easyMeta->propertyTerm($field);
-            // TODO Manage empty properties (main search and "any property").
             if (!$property) {
                 continue;
             }
+
             if (empty($properties[$property])) {
                 continue;
             }
+
             $propertyField = $properties[$property];
 
             // $positive = true;
 
             switch ($queryType) {
-                case 'eq':
-                    $query->addFilter($propertyField, $val);
-                    break;
-
+                /** @deprecated Use eq/neq, that supports array internally. */
                 case 'nlist':
                 case 'list':
                     $list = is_array($val) ? $val : explode("\n", $val);
@@ -324,6 +313,7 @@ class ApiFormAdapter implements FormAdapterInterface
                         continue 2;
                     }
                     $val = $list;
+                    $queryType = $queryType === 'nlist' ? 'neq' : 'eq';
                     // no break;
                 case isset(SearchResources::FIELD_QUERY['reciprocal'][$queryType]):
                     $query->addFilterQuery($propertyField, $val, $queryType);
@@ -346,7 +336,7 @@ class ApiFormAdapter implements FormAdapterInterface
     {
         $dataValues = trim(is_array($value) ? array_shift($value) : $value);
         if (strlen($dataValues)) {
-            $query->addFilter($filterName, $dataValues);
+            $query->addFilterQuery($filterName, $dataValues, 'eq');
         }
     }
 
@@ -361,7 +351,7 @@ class ApiFormAdapter implements FormAdapterInterface
     {
         $dataValues = (int) (is_array($value) ? array_shift($value) : $value);
         if ($dataValues) {
-            $query->addFilter($filterName, $dataValues);
+            $query->addFilterQuery($filterName, $dataValues, 'eq');
         }
     }
 
@@ -377,7 +367,7 @@ class ApiFormAdapter implements FormAdapterInterface
         $dataValues = is_array($value) ? $value : [$value];
         $dataValues = array_filter(array_map('trim', $dataValues), 'strlen');
         if ($dataValues) {
-            $query->addFilter($filterName, $dataValues);
+            $query->addFilterQuery($filterName, $dataValues, 'eq');
         }
     }
 
@@ -393,7 +383,7 @@ class ApiFormAdapter implements FormAdapterInterface
         $dataValues = is_array($value) ? $value : [$value];
         $dataValues = array_filter(array_map('intval', $dataValues));
         if ($dataValues) {
-            $query->addFilter($filterName, $dataValues);
+            $query->addFilterQuery($filterName, $dataValues, 'eq');
         }
     }
 }

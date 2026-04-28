@@ -1,0 +1,28 @@
+.search-form-simple {
+    width: 100%;
+
+    .switch-search-form-button {
+        display: none;
+    }
+}
+
+//desktop
+@media screen and (min-width: 1024px) {
+    .search-form-simple {
+        display: none;
+    }
+
+    .search-form-simple.active {
+        display: flex;
+        flex-direction: row;
+        gap: 20px;
+
+        .search-form-simple-form {
+            flex: 1;
+        }
+
+        .switch-search-form-button {
+            display: flex;
+        }
+    }
+}

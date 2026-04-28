@@ -11,6 +11,7 @@ use Common\Stdlib\PsrMessage;
  * @var string $oldVersion
  *
  * @var \Omeka\Api\Manager $api
+ * @var \Laminas\Log\Logger $logger
  * @var \Omeka\Settings\Settings $settings
  * @var \Doctrine\DBAL\Connection $connection
  * @var \Doctrine\ORM\EntityManager $entityManager
@@ -18,6 +19,7 @@ use Common\Stdlib\PsrMessage;
  */
 $plugins = $services->get('ControllerPluginManager');
 $api = $plugins->get('api');
+$logger = $services->get('Omeka\Logger');
 $settings = $services->get('Omeka\Settings');
 $translate = $plugins->get('translate');
 $translator = $services->get('MvcTranslator');
@@ -27,10 +29,10 @@ $entityManager = $services->get('Omeka\EntityManager');
 
 $defaultConfig = require dirname(__DIR__, 2) . '/config/module.config.php';
 
-if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.62')) {
+if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.66')) {
     $message = new \Omeka\Stdlib\Message(
         $translate('The module %1$s should be upgraded to version %2$s or later.'), // @translate
-        'Common', '3.4.62'
+        'Common', '3.4.66'
     );
     throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
 }
@@ -124,10 +126,10 @@ if (version_compare($oldVersion, '3.4.7', '<')) {
 if (version_compare($oldVersion, '3.4.9', '<')) {
     // Append item pool (query) to reference block.
     $sql = <<<'SQL'
-UPDATE site_page_block
-SET data = CONCAT('{"reference":{"order":{"alphabetic":"ASC"},"query":[],', SUBSTR(data, 15))
-WHERE layout = "reference";
-SQL;
+        UPDATE site_page_block
+        SET data = CONCAT('{"reference":{"order":{"alphabetic":"ASC"},"query":[],', SUBSTR(data, 15))
+        WHERE layout = "reference";
+        SQL;
     $connection->executeStatement($sql);
 }
 
@@ -476,8 +478,8 @@ if (version_compare($oldVersion, '3.4.43', '<')) {
 
 if (version_compare($oldVersion, '3.4.47', '<')) {
     $sql = <<<'SQL'
-ALTER TABLE `reference_metadata` ADD INDEX `idx_is_public` (`is_public`);
-SQL;
+        ALTER TABLE `reference_metadata` ADD INDEX `idx_is_public` (`is_public`);
+        SQL;
     try {
         $connection->executeStatement($sql);
     } catch (\Exception $e) {
@@ -487,9 +489,9 @@ SQL;
 
 if (version_compare($oldVersion, '3.4.48', '<')) {
     $sql = <<<'SQL'
-ALTER TABLE `reference_metadata`
-CHANGE `lang` `lang` varchar(190) NOT NULL DEFAULT '' AFTER `field`;
-SQL;
+        ALTER TABLE `reference_metadata`
+        CHANGE `lang` `lang` varchar(190) NOT NULL DEFAULT '' AFTER `field`;
+        SQL;
     $connection->executeStatement($sql);
 }
 
@@ -512,9 +514,10 @@ if (version_compare($oldVersion, '3.4.49', '<')) {
 
         if ($result) {
             $message = new PsrMessage(
-                'Because of the integration of block templates in Omeka S v4.1, you should move custom templates before upgrading the module: move following files from directory "view/common/block-layout/" to "view/common/block-template/" of each theme, except the default files "reference.phtml" and "reference-tree.phtml". Then, you should add all templates from the directory "view/common/block-template/" at the bottom of the file "config/theme.ini" of each theme, for example `block_templates.reference.reference-index = "Reference index custom"`. This process can be done automatically via a task of the module Easy Admin before upgrading the module (important: backup your themes first). Matching files: {json}', // @translate
+                'Because of the integration of block templates in Omeka S v4.1, you should move custom templates before upgrading the module: move following files from directory "view/common/block-layout/" to "view/common/block-template/" of each theme, except the default files "reference.phtml" and "reference-tree.phtml". Then, you should add all templates from the directory "view/common/block-template/" at the bottom of the file "config/theme.ini" of each theme, for example `block_templates.reference.reference-index = "Reference index custom"`. Matching files: {json}', // @translate
                 ['json' => json_encode($result, 448)]
             );
+            $logger->warn($message->getMessage(), $message->getContext());
             throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message->setTranslator($translator));
         }
     }
@@ -523,8 +526,6 @@ if (version_compare($oldVersion, '3.4.49', '<')) {
 
     $pageRepository = $entityManager->getRepository(\Omeka\Entity\SitePage::class);
     $blocksRepository = $entityManager->getRepository(\Omeka\Entity\SitePageBlock::class);
-
-    $logger = $services->get('Omeka\Logger');
 
     /**
      * Replace filled settings "template" by the new layout data for reference.
@@ -621,10 +622,10 @@ if (version_compare($oldVersion, '3.4.50', '<')) {
             'The option "heading" was removed from block Reference and replaced by a block Heading (if module Block Plus is present) or Html. Remove it in the following files before upgrade and automatic conversion: {json}', // @translate
             ['json' => json_encode($results, 448)]
         );
+        $logger->err($message->getMessage(), $message->getContext());
         throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message->setTranslator($translator));
     }
 
-    $logger = $services->get('Omeka\Logger');
     $pageRepository = $entityManager->getRepository(\Omeka\Entity\SitePage::class);
     $blocksRepository = $entityManager->getRepository(\Omeka\Entity\SitePageBlock::class);
 
@@ -732,10 +733,17 @@ if (version_compare($oldVersion, '3.4.50', '<')) {
     if ($pagesUpdated2) {
         $result = array_map('array_values', $pagesUpdated2);
         $message = new PsrMessage(
-            'The option "heading" was removed from block Reference. New block "Heading" (if module Block Plus id present) or "Html" was prepended to all blocks that had a filled heading. You may check pages for styles: {json}', // @translate
+            'The option "heading" was removed from block Reference. New block "Heading" (if module Block Plus is present) or "Html" was prepended to all blocks that had a filled heading. You may check pages for styles: {json}', // @translate
             ['json' => json_encode($result, 448)]
         );
         $messenger->addWarning($message);
         $logger->warn($message->getMessage(), $message->getContext());
     }
+}
+
+if (version_compare($oldVersion, '3.4.51', '<')) {
+    $message = new PsrMessage(
+        'A template has been added to display references as list/grid (mansory).' // @translate
+    );
+    $messenger->addSuccess($message);
 }

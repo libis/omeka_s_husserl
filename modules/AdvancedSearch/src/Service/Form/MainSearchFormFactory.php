@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /*
- * Copyright Daniel Berthereau, 2018-2024
+ * Copyright Daniel Berthereau, 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -52,6 +52,7 @@ class MainSearchFormFactory implements FactoryInterface
             ->setEscapeHtml($helpers->get('escapeHtml'))
             ->setFormElementManager($services->get('FormElementManager'))
             ->setItemSetsTree($services->has('ItemSetsTree') ? $services->get('ItemSetsTree') : null)
+            ->setLogger($services->get('Omeka\Logger'))
             ->setSettings($services->get('Omeka\Settings'))
             ->setSiteSettings($siteSettings)
             ->setTranslator($services->get('MvcTranslator'))

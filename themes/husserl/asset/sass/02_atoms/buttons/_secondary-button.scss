@@ -1,0 +1,17 @@
+.secondary-button {
+    background-color: transparent;
+    border: 2px solid var(--third-border-color);
+    padding: 12px 15px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
+    width: fit-content;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+}
+
+.secondary-button.dark {
+    border: 2px solid var(--secondary-border-color);
+    color: var(--third-text-color);
+}

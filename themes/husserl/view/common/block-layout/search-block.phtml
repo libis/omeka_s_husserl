@@ -1,0 +1,50 @@
+<?php 
+$siteurl = 'http://localhost:9013/husserl/s/'.$block->page()->site()->slug();
+$lang = $block->page()->site()->slug();
+$translate = $this->plugin('translate');
+?>
+<div class="search-block">
+    <div class="search-block__all-results-section all-results-section">
+      <?php if($lang == "nl"):?>
+        <a class="all-results-section__all-results-item all-results-item" href="<?php echo $siteurl;?>/search">
+          <h6 class="all-results-item__all-results-text all-results-text h6"><?php echo $translate("Toon alles");?></h6>
+          <div class="all-results-item__all-results-arrow all-results-arrow">
+            <img src="<?php $this->assetUrl('img/arrow-right.svg')?>" alt="arrow-right"/>
+          </div>
+        </a>
+      <?php else:?>
+        <a class="all-results-section__all-results-item all-results-item" href="<?php echo $siteurl;?>/search">
+          <h6 class="all-results-item__all-results-text all-results-text h6"><?php echo $translate("View all results");?></h6>
+          <div class="all-results-item__all-results-arrow all-results-arrow">
+            <img src="<?= $this->assetUrl('img/arrow-right.svg')?>" alt="arrow-right"/>
+          </div>
+        </a>
+      <?php endif;?> 
+    </div>
+    <div class="search-block__search-section search-section">
+      <div class="search-section__search-form-simple search-form-simple active">
+        <form class="search-form-simple__search-form-simple-form search-form-simple-form" action="http://localhost:9013/husserl/s/<?php echo $block->page()->site()->slug();?>/search" id="search-form">
+            <div class="search-section__search-bar search-bar">
+                <input class="search-bar__search-bar-input search-bar-input big-body-text" value="<?= (isset($_GET['q']) && $_GET['q'] !== '') ? htmlspecialchars($_GET['q']) : ''; ?>" type="text" name="q" id="q" placeholder="<?= $translate("Search");?>" aria-label="">
+                <div class="serach-bar__search-bar-controls search-bar-controls">
+                <button type="submit" class="search-bar-controls__search-bar-submit search-bar-submit">
+                    <div class="search-bar-submit__submit-icon submit-icon">
+                        <img src="<?= $this->assetUrl('img/search-icon.svg')?>" alt="search icon"/>
+                    </div>
+                </button>
+                </div>
+            </div>
+        </form>  
+        <div class="search-form-simple__switch-search-form-button switch-search-form-button">
+            <p class="secondary-button__button-text button-text">Advanced Search</p>
+        </div>
+      </div>
+      <div class="search-section__search-form-advanced search-form-advanced">
+        <?php $searchConfig = $this->getSearchConfig(1);?>
+          <?= $searchConfig->renderForm(['template' => null, 'skip_form_action' => false]); ?>
+          <div class="search-form-simple__switch-search-form-button switch-search-form-button">
+              <p class="secondary-button__button-text button-text">Simple search</p>
+          </div>
+      </div>
+    </div>
+</div>

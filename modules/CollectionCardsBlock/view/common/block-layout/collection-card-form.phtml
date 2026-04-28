@@ -1,0 +1,96 @@
+<?php
+use Zend\Form\Element\Textarea;
+$selectOptions = ["h1", "h2", "h3","h4","h5", "h6"];
+?>
+<h4>Section title</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('section-title')); ?>" name="o:block[__blockIndex__][o:data][section-title]">
+  </div>
+</div>
+<h4>Choose the type of title</h4>
+<div class="field">
+  <select name="o:block[__blockIndex__][o:data][type]" id="type">
+    <?php if(!isset($block)): ?>
+      <?php foreach($selectOptions as $option): ?>
+        <option value="<?= $option ?>"><?= $option ?></option>
+      <?php endforeach; ?>
+    <?php else: ?>
+      <?php foreach($selectOptions as $option): ?>
+        <?php if($block->dataValue('type') == $option): ?>
+          <option value="<?= $option ?>" selected><?= $option ?></option>
+        <?php else: ?>
+          <option value="<?= $option ?>"><?= $option ?></option>
+        <?php endif; ?>
+      <?php endforeach; ?>
+    <?php endif; ?>
+  </select>
+</div>
+<h4>Description</h4>
+<?php
+  $textarea = new Textarea("o:block[__blockIndex__][o:data][section-text]");
+  $textarea->setAttribute('class', 'block-html full wysiwyg');
+  if ($block) {
+      $textarea->setAttribute('value', $block->dataValue('section-text'));
+  }
+?>
+<?php echo $this->formRow($textarea);?>
+<br>
+<h2>Collections</h2>
+<?php echo $this->blockAttachmentsForm($block); ?>
+<br>
+<h3>Collection 1*</h3>
+<h4>Collection title</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('collection-title-1')); ?>" name="o:block[__blockIndex__][o:data][collection-title-1]">
+  </div>
+</div>
+<h4>Type collection</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('collection-type-1')); ?>" name="o:block[__blockIndex__][o:data][collection-type-1]">
+  </div>
+</div>
+<br>
+<h3>Collection 2</h3>
+<h4>Collection title</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('collection-title-2')); ?>" name="o:block[__blockIndex__][o:data][collection-title-2]">
+  </div>
+</div>
+<h4>Type collection</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('collection-type-2')); ?>" name="o:block[__blockIndex__][o:data][collection-type-2]">
+  </div>
+</div>
+<br>
+<h3>Collection 3</h3>
+<h4>Collection title</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('collection-title-3')); ?>" name="o:block[__blockIndex__][o:data][collection-title-3]">
+  </div>
+</div>
+<h4>Type collection</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('collection-type-3')); ?>" name="o:block[__blockIndex__][o:data][collection-type-3]">
+  </div>
+</div>
+<br>
+<h3>Collection 4</h3>
+<h4>Collection title</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('collection-title-4')); ?>" name="o:block[__blockIndex__][o:data][collection-title-4]">
+  </div>
+</div>
+<h4>Type collection</h4>
+<div class="field">
+  <div class="inputs">
+      <input type="text" class="" value="<?php echo (!isset($block) ? '' : $block->dataValue('collection-type-4')); ?>" name="o:block[__blockIndex__][o:data][collection-type-4]">
+  </div>
+</div>

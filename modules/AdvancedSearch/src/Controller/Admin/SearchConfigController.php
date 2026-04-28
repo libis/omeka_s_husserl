@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016-2017
- * Copyright Daniel Berthereau, 2018-2024
+ * Copyright Daniel Berthereau, 2018-2025
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -30,12 +30,10 @@
 
 namespace AdvancedSearch\Controller\Admin;
 
-use AdvancedSearch\Adapter\Manager as SearchAdapterManager;
 use AdvancedSearch\Api\Representation\SearchConfigRepresentation;
 use AdvancedSearch\Form\Admin\SearchConfigConfigureForm;
 use AdvancedSearch\Form\Admin\SearchConfigFilterFieldset;
 use AdvancedSearch\Form\Admin\SearchConfigForm;
-use AdvancedSearch\FormAdapter\Manager as SearchFormAdapterManager;
 use Common\Stdlib\PsrMessage;
 use Doctrine\ORM\EntityManager;
 use Laminas\Form\FormElementManager;
@@ -55,26 +53,12 @@ class SearchConfigController extends AbstractActionController
      */
     protected $formElementManager;
 
-    /**
-     * @var \AdvancedSearch\Adapter\Manager
-     */
-    protected $searchAdapterManager;
-
-    /**
-     * @var \AdvancedSearch\FormAdapter\Manager
-     */
-    protected $searchFormAdapterManager;
-
     public function __construct(
         EntityManager $entityManager,
-        FormElementManager $formElementManager,
-        SearchAdapterManager $searchAdapterManager,
-        SearchFormAdapterManager $searchFormAdapterManager
+        FormElementManager $formElementManager
     ) {
         $this->entityManager = $entityManager;
         $this->formElementManager = $formElementManager;
-        $this->searchAdapterManager = $searchAdapterManager;
-        $this->searchFormAdapterManager = $searchFormAdapterManager;
     }
 
     public function addAction()
@@ -97,13 +81,13 @@ class SearchConfigController extends AbstractActionController
             'Search page "{name}" created.', // @translate
             ['name' => $searchConfig->name()]
         ));
-        $this->manageSearchConfigOnSites(
+        $this->manageSearchConfigSettings(
             $searchConfig,
-            $formData['manage_config_default'] ?: [],
-            $formData['manage_config_availability']
+            $formData['manage_config_availability'] ?: [],
+            $formData['manage_config_default'] ?: []
         );
         if (!in_array($formData['manage_config_availability'], ['disable', 'enable'])
-            && empty($formData['manage_config_default'])
+            && in_array($formData['manage_config_default'], ['', 'let'])
         ) {
             $this->messenger()->addWarning('You can enable this page in your site settings or in admin settings.'); // @translate
         }
@@ -126,8 +110,9 @@ class SearchConfigController extends AbstractActionController
 
         // $data = $searchConfig->jsonSerialize();
         $data = json_decode(json_encode($searchConfig), true);
-        $data['manage_config_default'] = $this->sitesWithSearchConfig($searchConfig);
-        $data['o:engine'] = empty($data['o:engine']['o:id']) ? null : $data['o:engine']['o:id'];
+        $data['manage_config_default'] = $this->sitesWithSearchConfigAsDefault($searchConfig);
+        $data['manage_config_availability'] = $this->sitesWithSearchConfigAsAvailable($searchConfig);
+        $data['o:search_engine'] = empty($data['o:search_engine']['o:id']) ? null : $data['o:search_engine']['o:id'];
 
         $form = $this->getForm(SearchConfigForm::class);
         $form->setData($data);
@@ -150,10 +135,10 @@ class SearchConfigController extends AbstractActionController
             ['name' => $searchConfig->name()]
         ));
 
-        $this->manageSearchConfigOnSites(
+        $this->manageSearchConfigSettings(
             $searchConfig,
-            $formData['manage_config_default'] ?: [],
-            $formData['manage_config_availability']
+            $formData['manage_config_availability'] ?: [],
+            $formData['manage_config_default'] ?: []
         );
 
         return $this->redirect()->toRoute('admin/search-manager');
@@ -173,12 +158,12 @@ class SearchConfigController extends AbstractActionController
             'searchConfig' => $searchConfig,
         ]);
 
-        $engine = $searchConfig->engine();
-        $adapter = $engine ? $engine->adapter() : null;
-        if (empty($adapter)) {
+        $searchEngine = $searchConfig->searchEngine();
+        $engineAdapter = $searchEngine ? $searchEngine->engineAdapter() : null;
+        if (empty($engineAdapter)) {
             $message = new PsrMessage(
                 'The engine adapter "{label}" is unavailable.', // @translate
-                ['label' => $engine->adapterLabel()]
+                ['label' => $searchEngine->engineAdapterLabel()]
             );
             $this->messenger()->addError($message); // @translate
             return $view;
@@ -189,7 +174,7 @@ class SearchConfigController extends AbstractActionController
         if (empty($form)) {
             $message = new PsrMessage(
                 'This engine adapter "{label}" has no config form.', // @translate
-                ['label' => $engine->adapterLabel()]
+                ['label' => $searchEngine->engineAdapterLabel()]
             );
             $this->messenger()->addWarning($message); // @translate
             return $view;
@@ -224,6 +209,13 @@ class SearchConfigController extends AbstractActionController
         $params = $form->getData();
 
         $params = $this->prepareDataToSave($params);
+        if (($params['facet']['mode'] ?? 'button') === 'button'
+            && ($params['facet']['display_submit'] ?? 'none') === 'none'
+        ) {
+            $this->messenger()->addWarning(new PsrMessage(
+                'The mode for facets is "Button", but the button "Apply facets" is hidden, so it should be added in the theme.' // @translate
+            ));
+        }
 
         $searchConfig = $searchConfig->getEntity();
         $searchConfig->setSettings($params);
@@ -326,29 +318,47 @@ class SearchConfigController extends AbstractActionController
      */
     protected function getConfigureForm(SearchConfigRepresentation $searchConfig): ?\AdvancedSearch\Form\Admin\SearchConfigConfigureForm
     {
-        return $searchConfig->engine()
+        return $searchConfig->searchEngine()
             ? $this->getForm(SearchConfigConfigureForm::class, ['search_config' => $searchConfig])
             : null;
     }
 
-    protected function sitesWithSearchConfig(SearchConfigRepresentation $searchConfig): array
+    protected function sitesWithSearchConfigAsDefault(SearchConfigRepresentation $searchConfig): array
     {
         $result = [];
         $searchConfigId = $searchConfig->id();
 
         // Check admin.
-        $adminSearchId = $this->settings()->get('advancedsearch_main_config');
-        if ($adminSearchId && $adminSearchId == $searchConfigId) {
+        $adminSearchId = (int) $this->settings()->get('advancedsearch_main_config');
+        if ($adminSearchId && $adminSearchId === $searchConfigId) {
             $result[] = 'admin';
         }
 
         // Check all sites.
-        $settings = $this->siteSettings();
+        $siteSettings = $this->siteSettings();
         $sites = $this->api()->search('sites')->getContent();
         foreach ($sites as $site) {
-            $settings->setTargetId($site->id());
-            $siteSearchId = $settings->get('advancedsearch_main_config');
-            if ($siteSearchId && $siteSearchId == $searchConfigId) {
+            $siteSettings->setTargetId($site->id());
+            $siteSearchId = (int) $siteSettings->get('advancedsearch_main_config');
+            if ($siteSearchId && $siteSearchId === $searchConfigId) {
+                $result[] = $site->id();
+            }
+        }
+
+        return $result;
+    }
+
+    protected function sitesWithSearchConfigAsAvailable(SearchConfigRepresentation $searchConfig): array
+    {
+        $result = [];
+        $searchConfigId = $searchConfig->id();
+
+        $siteSettings = $this->siteSettings();
+        $sites = $this->api()->search('sites')->getContent();
+        foreach ($sites as $site) {
+            $siteSettings->setTargetId($site->id());
+            $searchConfigIdsForSite = $siteSettings->get('advancedsearch_configs', []);
+            if (in_array($searchConfigId, $searchConfigIdsForSite)) {
                 $result[] = $site->id();
             }
         }
@@ -357,29 +367,26 @@ class SearchConfigController extends AbstractActionController
     }
 
     /**
-     * Set the config for all sites.
+     * Set the search config for admin and sites.
      */
-    protected function manageSearchConfigOnSites(
+    protected function manageSearchConfigSettings(
         SearchConfigRepresentation $searchConfig,
-        array $newMainSearchConfigForSites,
-        $availability
+        array $searchConfigSiteAvailabilities,
+        array $searchConfigSiteDefaults
     ): void {
         $searchConfigId = $searchConfig->id();
-        $currentMainSearchConfigForSites = $this->sitesWithSearchConfig($searchConfig);
+        $searchConfigSiteDefaultsCurrent = $this->sitesWithSearchConfigAsDefault($searchConfig);
+
+        // Check default config first in order to add it as available config.
 
         // Manage admin settings.
-        $current = in_array('admin', $currentMainSearchConfigForSites);
-        $new = in_array('admin', $newMainSearchConfigForSites);
+        $settings = $this->settings();
+
+        $current = in_array('admin', $searchConfigSiteDefaultsCurrent);
+        $new = in_array('admin', $searchConfigSiteDefaults);
         if ($current !== $new) {
-            $settings = $this->settings();
             if ($new) {
                 $settings->set('advancedsearch_main_config', $searchConfigId);
-                $searchConfigs = $settings->get('advancedsearch_configs', []);
-                $searchConfigs[] = $searchConfigId;
-                $searchConfigs = array_unique(array_filter(array_map('intval', $searchConfigs)));
-                sort($searchConfigs);
-                $settings->set('advancedsearch_configs', $searchConfigs);
-
                 $message = 'The page has been set by default in admin board.'; // @translate
             } else {
                 $settings->set('advancedsearch_main_config', null);
@@ -388,54 +395,73 @@ class SearchConfigController extends AbstractActionController
             $this->messenger()->addSuccess($message);
         }
 
-        $allSites = in_array('all', $newMainSearchConfigForSites);
-        switch ($availability) {
-            case 'disable':
-                $available = false;
-                $message = 'The page has been disabled in all specified sites.'; // @translate
-                break;
-            case 'enable':
-                $available = true;
-                $message = 'The page has been made available in all specified sites.'; // @translate
-                break;
-            default:
-                $available = null;
-                $message = 'The availability of pages of sites was let unmodified.'; // @translate
-        }
-
         // Manage site settings.
         $siteSettings = $this->siteSettings();
+
+        $allDefaults = [];
+        $allAvailables = [];
+        $defaultForAllSitesAdded = in_array('all', $searchConfigSiteDefaults);
+        $defaultForAllSitesRemoved = in_array('none', $searchConfigSiteDefaults);
+        $availabilityForAllSitesEnabled = in_array('enable', $searchConfigSiteAvailabilities);
+        $availabilityForAllSitesDisabled = in_array('disable', $searchConfigSiteAvailabilities);
+
+        /** @var \Omeka\Api\Representation\SiteRepresentation[] $sites */
         $sites = $this->api()->search('sites')->getContent();
         foreach ($sites as $site) {
             $siteId = $site->id();
             $siteSettings->setTargetId($siteId);
-            $searchConfigs = $siteSettings->get('advancedsearch_configs', []);
-            $current = in_array($siteId, $currentMainSearchConfigForSites);
-            $new = $allSites || in_array($siteId, $newMainSearchConfigForSites);
-            if ($current !== $new) {
-                if ($new) {
-                    $siteSettings->set('advancedsearch_main_config', $searchConfigId);
-                    $searchConfigs[] = $searchConfigId;
-                } else {
-                    $siteSettings->set('advancedsearch_main_config', null);
-                }
+
+            $prevDefaultForSite = (int) $siteSettings->get('advancedsearch_main_config');
+            $setDefaultForSite = $defaultForAllSitesAdded
+                || in_array($siteId, $searchConfigSiteDefaults);
+            if ($setDefaultForSite) {
+                $siteSettings->set('advancedsearch_main_config', $searchConfigId);
+            } elseif ($defaultForAllSitesRemoved || $prevDefaultForSite === $searchConfigId) {
+                $siteSettings->set('advancedsearch_main_config', null);
+            }
+            if ($siteSettings->get('advancedsearch_main_config') === $searchConfigId) {
+                $allDefaults[] = $site->slug();
             }
 
-            if ($new || $available) {
-                $searchConfigs[] = $searchConfigId;
-            } else {
-                $key = array_search($searchConfigId, $searchConfigs);
-                if ($key === false) {
-                    continue;
-                }
-                unset($searchConfigs[$key]);
+            $searchConfigIdsForSite = $siteSettings->get('advancedsearch_configs', []);
+            $prevAvailableForSite = in_array($searchConfigId, $searchConfigIdsForSite);
+            $setAvailableForSite = $setDefaultForSite
+                || $availabilityForAllSitesEnabled
+                || in_array($siteId, $searchConfigSiteAvailabilities);
+            if ($setAvailableForSite) {
+                $searchConfigIdsForSite[] = $searchConfigId;
+            } elseif ($availabilityForAllSitesDisabled || $prevAvailableForSite) {
+                $searchConfigIdsForSite = array_diff($searchConfigIdsForSite, [$searchConfigId]);
             }
-            $searchConfigs = array_unique(array_filter(array_map('intval', $searchConfigs)));
-            sort($searchConfigs);
-            $siteSettings->set('advancedsearch_configs', $searchConfigs);
+            $searchConfigIdsForSite = array_unique(array_filter(array_map('intval', $searchConfigIdsForSite)));
+            sort($searchConfigIdsForSite);
+            $siteSettings->set('advancedsearch_configs', $searchConfigIdsForSite);
+            if (in_array($searchConfigId, $searchConfigIdsForSite)) {
+                $allAvailables[] = $site->slug();
+            }
         }
 
-        $this->messenger()->addSuccess($message);
+        if ($allDefaults) {
+            $this->messenger()->addSuccess(new PsrMessage(
+                'This search config is the default one in sites: {site_slugs}.', // @translate
+                ['site_slugs' => implode(', ', $allDefaults)]
+            ));
+        } else {
+            $this->messenger()->addSuccess(new PsrMessage(
+                'This search config is not used as default in any site.' // @translate
+            ));
+        }
+
+        if ($allAvailables) {
+            $this->messenger()->addSuccess(new PsrMessage(
+                'This search config is available in sites: {site_slugs}.', // @translate
+                ['site_slugs' => implode(', ', $allAvailables)]
+            ));
+        } else {
+            $this->messenger()->addSuccess(new PsrMessage(
+                'This search config is not available in any site.' // @translate
+            ));
+        }
     }
 
     /**
@@ -472,9 +498,10 @@ class SearchConfigController extends AbstractActionController
             'more',
             'display_count',
         ];
-        $settings['facet']['mode'] = in_array($settings['facet']['mode'] ?? null, ['link', 'js']) ? $settings['facet']['mode'] : 'button';
+        $settings['facet']['mode'] = in_array($settings['facet']['mode'] ?? null, ['button', 'link', 'js']) ? $settings['facet']['mode'] : 'button';
         foreach ($settings['facet']['facets'] ?? [] as $key => $facet) {
-            // Remove the mode of each facet to simplify config.
+            // Remove the mode of each facet to simplify config: it is stored
+            // in each facet to simplify theming, but it is a global option.
             unset($facet['mode']);
             // Simplify some values too (integer and boolean).
             if (isset($facet['display_count'])) {
@@ -600,14 +627,15 @@ class SearchConfigController extends AbstractActionController
         $params['form']['advanced'] = $advanced;
 
         $sortList = [];
-        foreach ($params['display']['sort_list'] ?? [] as $sort) {
+        foreach ($params['results']['sort_list'] ?? [] as $sort) {
             if (!empty($sort['name'])) {
                 $sortList[$sort['name']] = $sort;
             }
         }
-        $params['display']['sort_list'] = $sortList;
+        $params['results']['sort_list'] = $sortList;
 
-        $facetMode = in_array($params['facet']['mode'] ?? null, ['link', 'js']) ? $params['facet']['mode'] : 'button';
+        // Three possible modes: button, link, checkbox js as link.
+        $facetMode = in_array($params['facet']['mode'] ?? null, ['button', 'link', 'js']) ? $params['facet']['mode'] : 'button';
         $warnLanguage = false;
         $facets = [];
         $i = 0;
@@ -622,7 +650,8 @@ class SearchConfigController extends AbstractActionController
             if (isset($facets[$name])) {
                 $name .= '_' . ++$i;
             }
-            // Add the mode to each facet to simplify theme.
+            // There can be only one mode for all facets, so add the mode to
+            // each facet to simplify theme.
             $facet['mode'] = $facetMode;
             // Move specific settings to the root of the array.
             foreach ($facet['options'] as $k => $v) {
@@ -691,7 +720,7 @@ class SearchConfigController extends AbstractActionController
     }
 
     /**
-     * Remove empty params and all params starting with "available_".
+     * Remove empty params except labels and params starting with "available_".
      */
     protected function removeUselessFields(array $params): array
     {
@@ -732,7 +761,7 @@ class SearchConfigController extends AbstractActionController
 
         $collections = [
             'form' => 'filters',
-            'display' => 'sort_list',
+            'results' => 'sort_list',
             'facet' => 'facets',
         ];
         foreach ($collections as $mainName => $name) {

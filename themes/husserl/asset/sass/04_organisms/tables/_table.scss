@@ -1,0 +1,26 @@
+.table {
+    border-collapse: collapse;
+    width: fit-content;
+    min-width: 750px;
+    margin-bottom: 10px;
+
+    .title-table-row, .table-row {
+        .table-title, .table-field {
+            text-align: left;
+            border-bottom: 1px solid var(--fourth-border-color);
+            padding-bottom: 15px;
+            padding-right: 45px;
+            max-width: 450px;
+            vertical-align: top;
+        }
+        .table-title:last-child, .table-field:last-child {
+            padding-right: 0;
+        }
+        .table-field {
+            padding-top: 15px;
+        }
+        .table-title {
+            font-weight: var(--semi);
+        }
+    }
+}

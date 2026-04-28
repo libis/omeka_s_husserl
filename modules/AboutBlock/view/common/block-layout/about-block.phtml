@@ -1,0 +1,35 @@
+<?php
+  $escape = $this->plugin('escapeHtml');
+  $url = '';
+  $siteTitle = $block->page()->site()->title();
+  if($attachments):
+    $media = $attachments[0]->media();
+
+    $url = '';
+    $altText = "";
+    if($media):
+      $url = $media->thumbnailUrl('large');
+      $url = str_replace('http:', '', $url);
+      $altText = $attachments[0]->caption();
+    endif;
+  endif;
+?>
+<div class="about-block">
+  <div class="about-block__about-frist-section about-first-section">
+    <hr>
+    <div class="about-first-section__about-information about-information">
+      <h2 class="about-information__about-title about-title h2"><?php echo $block->dataValue('title');?></h2>
+      <p class="about-information__about-information-text about-information-text body-text"><?= strip_tags($block->dataValue('text'));?></p>
+      <?php if(!empty($block->dataValue('link'))): ?>
+        <a class="about-information__cta-button cta-button primary-button button-text" href="http://localhost:9013/husserl/s/husserl<?= $block->dataValue('link');?>">
+          <?php echo $block->dataValue('link_text');?>
+        </a>
+      <?php endif;?>
+    </div>
+  </div>
+  <div class="about-block__about-second-section about-second-section">
+    <div class="about-second-section__about-image about-image">
+      <img src="<?php echo $url?>" alt="<?php echo empty($altText) ? 'Husserl' : strip_tags($altText) ?>" />
+    </div>
+  </div>
+</div>

@@ -40,8 +40,8 @@ class SearchingValue extends AbstractHelper
         $siteSlug = $isSite ? $params->fromRoute('site-slug') : null;
 
         $advancedSearchConfig = $getSearchConfig();
-        $engine = $advancedSearchConfig ? $advancedSearchConfig->engine() : null;
-        $querier = $engine ? $engine->querier() : null;
+        $searchEngine = $advancedSearchConfig ? $advancedSearchConfig->searchEngine() : null;
+        $querier = $searchEngine ? $searchEngine->querier() : null;
         $isInternalSearch = $querier instanceof \AdvancedSearch\Querier\InternalQuerier;
         // Fallback to standard search for module Advanced search.
         if (!$querier || $querier instanceof \AdvancedSearch\Querier\NoopQuerier) {
@@ -74,7 +74,7 @@ class SearchingValue extends AbstractHelper
                 $query->addFilterQuery($property, $vr->id(), 'res');
             } else {
                 $val = (string) $value->value();
-                $query->addFilter($property, $uriOrVal);
+                $query->addFilterQuery($property, $uriOrVal, 'eq');
             }
             $urlQuery = $advancedSearchConfig->toRequest($query);
             */

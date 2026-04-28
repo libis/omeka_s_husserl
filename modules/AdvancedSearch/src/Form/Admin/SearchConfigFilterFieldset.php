@@ -23,7 +23,7 @@ class SearchConfigFilterFieldset extends Fieldset implements InputFilterProvider
                 'name' => 'name',
                 'type' => Element\Text::class,
                 'options' => [
-                    'label' => 'Name for query argument (alphanumeric)', // @translate
+                    'label' => 'Name (alphanumeric)', // @translate
                 ],
                 'attributes' => [
                     'id' => 'form_filter_name',
@@ -127,7 +127,7 @@ class SearchConfigFilterFieldset extends Fieldset implements InputFilterProvider
                 'name' => 'options',
                 'options' => [
                     'label' => 'Options', // @translate
-                    'info' => 'List of specific options according to types. Omeka and Laminas options are accepted, for example `empty_option = ""`, `checked_value = "yes"`, `autosuggest = true`, `value_options.first = "First"`.', // @translate
+                    'info' => 'List of specific options according to types. Omeka and Laminas options are accepted, for example `empty_option = ""`, `checked_value = "yes"`, `autosuggest = true`, `value_options.first = "First"`, `first_digits = true`.', // @translate
                     'ini_typed_mode' => true,
                 ],
                 'attributes' => [
@@ -231,9 +231,9 @@ class SearchConfigFilterFieldset extends Fieldset implements InputFilterProvider
     {
         /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
         $searchConfig = $this->getOption('search_config');
-        $searchAdapter = $searchConfig ? $searchConfig->searchAdapter() : null;
-        return $searchAdapter
-            ? $searchAdapter->getAvailableFieldsForSelect()
+        $engineAdapter = $searchConfig ? $searchConfig->engineAdapter() : null;
+        return $engineAdapter
+            ? $engineAdapter->getAvailableFieldsForSelect()
             : [];
     }
 }

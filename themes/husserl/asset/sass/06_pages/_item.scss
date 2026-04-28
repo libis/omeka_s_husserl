@@ -1,0 +1,161 @@
+//mobile
+.item-page {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+
+    .item-information {
+        display: flex;
+        flex-direction: column;
+        gap: 60px;
+
+        .item-top-information {
+            margin-top: -30px;
+
+            .item-title-section {
+                width: calc(100% + 4px);
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                position: sticky;
+                top: 108px;
+                background-color: var(--primary-bg-color);
+                padding: 0 0 20px 2px;
+                margin: 0 0 -20px -2px;
+
+                .item-title {
+                    color: var(--third-text-color);
+                    font-weight: var(--medium);
+                }
+
+                .item-page-button-icon {
+                    width: 50px;
+                    height: 50px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    background-color: var(--primary-bg-color);
+
+                    svg {
+                        width: 25px;
+                        height: 22px;
+                    }
+                }
+                .item-page-button-icon.sticky-open {
+                    position: fixed;
+                    right: 29px;
+                    top: 119px;
+                    z-index: 999;
+                }
+            }
+
+            .item-metadata-section {
+                display: flex;
+                flex-direction: column;
+                flex-wrap: wrap;
+                gap: 35px;
+                margin-bottom: 60px;
+            }
+
+            .item-transcription-section {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+
+                .transcription-person {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    gap: 5px;
+
+                    .person-icon {
+                        width: 15px;
+                        height: 15px;
+
+                        img {
+                            object-fit: cover;
+                        }
+                    }
+                }
+            }
+
+            .item-title-section.no-sticky {
+                position: unset;
+                padding: 0;
+            }
+        }
+        .item-publications-section {
+            display: flex;
+            flex-direction: column;
+            gap: 35px;
+            padding: 0 30px;
+
+            .table-section {
+                overflow-x: scroll;
+                overflow-y: hidden;
+            }
+
+            .table-section::-webkit-scrollbar {
+                height: 5px;
+            }
+            .table-section::-webkit-scrollbar-thumb {
+                background: var(--seventh-bg-color);
+            }
+        }
+        .item-other-pages-section {
+            display: flex;
+            flex-direction: column;
+            gap: 35px;
+            padding: 0 30px;
+
+            .other-pages-group {
+                display: flex;
+                flex-direction: row;
+                gap: 20px;
+            }
+        }
+    }
+}
+
+//desktop
+@media screen and (min-width: 1024px) {
+    .item-page {
+        gap: 45px;
+
+        .item-information {
+            gap: 75px;
+
+            .item-top-information {
+                .item-title-section {
+                    padding: 0 0 20px 0;
+                    top: 109px;
+                    margin-left: 0;
+                    width: 100%;
+
+                    .item-title {
+                        font-size: var(--h2-desktop);
+                    }
+
+                    .item-page-button-icon {
+                        display: none;
+                    }
+                }
+                .item-metadata-section {
+                    flex-direction: row;
+                    gap: 35px 30px;
+                }
+                .item-transcription-section {
+                    margin-bottom: 80px;
+                }
+            }
+            .item-publications-section {
+                padding: 0 60px;
+            }
+            .item-other-pages-section { 
+                padding: 0 60px;
+            }  
+        }
+    }
+}

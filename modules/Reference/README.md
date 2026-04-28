@@ -30,6 +30,9 @@ See general end user documentation for [installing a module].
 
 This module requires the module [Common], that should be installed first.
 
+If your records contains diacritic letters like É, Ù, etc., it is recommended to
+install the php extension `intl`.
+
 * From the zip
 
 Download the last release [Reference.zip] from the list of releases, and
@@ -284,6 +287,7 @@ TODO
 - [ ] Use the new table `reference_metadata` when possible.
 - [ ] Simplify queries for aggregated fields (see AdvancedSearch).
 - [ ] Order by years instead of alphabetic.
+- [ ] Get thumbnail url directly from references for performance.
 
 
 Warning
@@ -332,7 +336,7 @@ Copyright
 
 * Copyright William Mayo, 2011
 * Copyright Philip Collins, 2013 ([jQuery tree view])
-* Copyright Daniel Berthereau, 2014-2024 (see [Daniel-KM] on GitLab)
+* Copyright Daniel Berthereau, 2014-2025 (see [Daniel-KM] on GitLab)
 
 This module is inspired from earlier work done by William Mayo (see [pobocks] on
 GitLab) in [Subject Browse], with some ideas from [Metadata Browser] and

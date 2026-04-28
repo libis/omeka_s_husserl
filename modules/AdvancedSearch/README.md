@@ -80,14 +80,14 @@ only via api, not in the advanced search form for now):
     - `lkq`/`nlkq`: is or is not linked with resources matching query
 - Count:
     - `ex`/`nex`: has any value or has no value (default Omeka)
-    - `exs`/`nexs`: has or has not a single value
-    - `exm`/`nexm`: has or has not multiple values
+    - `exs`/`nexs`: has or does not have a single value
+    - `exm`/`nexm`: has or does not have multiple values
 - Data Type:
-    - `tp`/`ntp`: has or has not main type (literal-like, resource-like, uri-like)
-    - `tpl`/`ntpl`: has or has not type literal-like
-    - `tpr`/`ntpr`: has or has not type resource-like
-    - `tpu`/`ntpu`: has or has not type uri-like
-    - `dtp`/`ndtp`: has or has not data type
+    - `tp`/`ntp`: has or does not have main type (literal-like, resource-like, uri-like)
+    - `tpl`/`ntpl`: has or does not have type literal-like
+    - `tpr`/`ntpr`: has or does not have type resource-like
+    - `tpu`/`ntpu`: has or does not have type uri-like
+    - `dtp`/`ndtp`: has or does not have data type
 - Comparisons (alphabetical):
     - `lt`: lower than
     - `lte`: lower than or equal
@@ -484,6 +484,37 @@ is saved and the moment when it is fully available in the search engine (it may
 be some minutes with Solr, according to your configuration).
 
 
+Deprecated improvements of the advanced search elements
+-------------------------------------------------------
+
+The default advanced search form is improved mainly for the element "property"
+to support multiple properties, many more search types, and multiple values.
+For example you can search for dcterms:creator and dcterms:contributor at the
+same time, and search for strings that look like "bossuet" and "ralelais", and
+only for data type literal:
+
+```
+property[0] => [
+  property => [dcterms:creator, dcterms:contributor],
+  type => near,
+  text => [bossuet, rabelais]
+]
+```
+
+Such a query should be replaced by this one:
+```
+filter[0] => [
+  field => [dcterms:creator, dcterms:contributor],
+  type => near,
+  val => [bossuet, rabelais]
+]
+```
+
+The change should be done mainly in the site pages when there are queries, for
+example for the block Browse Preview. You can do it directly in the user
+interface. There will be an automatic upgrade when the feature will be removed.
+
+
 TODO
 ----
 
@@ -500,7 +531,6 @@ TODO
 - [ ] Use the Laminas config (ini/json/xml) to allow complex form (see User Profile). Or allow export/import with json or tsv.
 - [x] Use the standard view with tabs and property selector for the page creation, in order not to limit it to Dublin Core terms. The tabs may be "Filters", "Facets", and "Sort".
 - [x] Create an internal index (see Omeka Classic) or use the fulltext feature
-- [-] Move all code related to Internal (sql) into another module? No.
 - [ ] Allow to remove an index without removing pages.
 - [ ] Allow to import/export a mapping via json, for example the default one.
 - [ ] Add an option to use the search api by default (and an option `'index' => false`).
@@ -530,6 +560,14 @@ TODO
 - [x] Standard query of items with has media, has original has thumbnail, and media types together are slow.
 - [ ] Manage aliases and labels of properties for each resource template with FilterSelect.
 - [ ] Use aliases to manage standard search with solr.
+- [ ] Make all filter types usable with multiple values.
+- [ ] Replace search config form by the styles of the navigation form or the advanced resource template form.
+- [ ] Do not include indexes in form so get multiple form with an index.
+- [ ] Autmatic min/max for facet range double.
+
+No more todo:
+
+- Move all code related to Internal (sql) into another module? No.
 
 
 Warning
@@ -589,7 +627,7 @@ Copyright
 See commits for full list of contributors.
 
 * Copyright BibLibre, 2016-2017 (see [BibLibre])
-* Copyright Daniel Berthereau, 2017-2024 (see [Daniel-KM])
+* Copyright Daniel Berthereau, 2017-2025 (see [Daniel-KM])
 * Copyright Tomas Kirda 2017 (library jQuery-Autocomplete)
 
 This module is a merge of features from the deprecated modules [Advanced Search Plus],

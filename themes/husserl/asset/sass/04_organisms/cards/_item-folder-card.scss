@@ -1,0 +1,75 @@
+.item-folder-card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    background-color: var(--third-bg-color);
+    padding: 30px 30px 60px;
+    min-height: 320px;
+
+    .item-folder-top-card {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+
+        .folder-title::after {
+            content: "";
+            display: block;
+            margin-top: 10px;
+            width: 55px;
+            height: 1.5px;
+            background-color: var(--sixth-bg-color);
+        }
+
+        .folder-metadata-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            color: var(--third-text-color);
+
+            .folder-metadata-item span {
+                font-weight: var(--bold);
+            }
+        }
+    }
+    .folder-more-info-button {
+        display: flex;
+        flex-direction: row;
+        gap: 15px;
+        align-items: center;
+        margin-top: 10px;
+
+        .folder-more-info-button-text {
+            font-family: var(--second-font);
+            font-weight: var(--bold);
+        }
+
+        .arrow-icon {
+            width: 10px;
+            height: 18px;
+
+            img {
+                object-fit: cover;
+            }
+        }
+    }
+}
+
+@media screen and (min-width: 768px) { 
+    .item-folder-card {
+        width: calc(50% - 10px);
+    }
+}
+
+@media screen and (min-width: 1024px) { 
+    .item-folder-card {
+        width: calc(33% - 13.3px);
+    }
+}
+
+@media screen and (min-width: 1300px) { 
+    .item-folder-card {
+        width: calc(25% - 15px);
+    }
+}

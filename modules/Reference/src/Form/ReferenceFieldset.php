@@ -9,6 +9,13 @@ use Omeka\Form\Element as OmekaElement;
 
 class ReferenceFieldset extends Fieldset
 {
+    /**
+     * List of search configs  when module Advanced Search is used.
+     *
+     * @var array
+     */
+    protected $searchConfigs = [];
+
     public function init(): void
     {
         // Args and options cannot use sub-fieldsets for compatibility with
@@ -157,10 +164,26 @@ class ReferenceFieldset extends Fieldset
                 ],
             ])
             ->add([
+                'name' => 'o:block[__blockIndex__][o:data][search_config]',
+                'type' => Element\Select::class,
+                'options' => [
+                    'label' => 'Link to browse or search engine', // @translate
+                    'info' => 'This option is useful when the module Advanced Search is used.', // @translate
+                    'value_options' => [
+                        'default' => 'Search config of the site', // @translate
+                    ] + $this->searchConfigs,
+                    'empty_option' => '',
+                ],
+                'attributes' => [
+                    'id' => 'reference-options-search-config',
+                    'data-fieldset' => 'options',
+                ],
+            ])
+            ->add([
                 'name' => 'o:block[__blockIndex__][o:data][link_to_single]',
                 'type' => Element\Checkbox::class,
                 'options' => [
-                    'label' => 'Link to single records', // @translate
+                    'label' => 'Direct link for single records', // @translate
                     'info' => 'When a reference has only one item, link to it directly instead of to the items/browse page.', // @translate
                 ],
                 'attributes' => [
@@ -175,7 +198,7 @@ class ReferenceFieldset extends Fieldset
                 'name' => 'o:block[__blockIndex__][o:data][custom_url]',
                 'type' => Element\Checkbox::class,
                 'options' => [
-                    'label' => 'Custom url for single', // @translate
+                    'label' => 'Custom url for single records', // @translate
                     'info' => 'May be set with modules such Clean Url or Ark. May slow the display when there are many single references.', // @translate
                 ],
                 'attributes' => [
@@ -229,6 +252,18 @@ class ReferenceFieldset extends Fieldset
                 ],
             ])
             ->add([
+                'name' => 'o:block[__blockIndex__][o:data][thumbnail]',
+                'type' => CommonElement\ThumbnailTypeSelect::class,
+                'options' => [
+                    'label' => 'Add the thumbnail of the first resource', // @translate
+                    'empty_option' => '',
+                ],
+                'attributes' => [
+                    'id' => 'reference-options-thumbnail',
+                    'data-fieldset' => 'options',
+                ],
+            ])
+            ->add([
                 'name' => 'o:block[__blockIndex__][o:data][list_by_max]',
                 'type' => Element\Number::class,
                 'options' => [
@@ -264,5 +299,11 @@ class ReferenceFieldset extends Fieldset
                 ],
             ])
         ;
+    }
+
+    public function setSearchConfigs(array $searchConfigs): self
+    {
+        $this->searchConfigs = $searchConfigs;
+        return $this;
     }
 }

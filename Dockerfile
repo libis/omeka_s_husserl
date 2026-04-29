@@ -1,4 +1,4 @@
-FROM php:8.1-apache
+FROM php:8.4-apache
 
 RUN a2enmod rewrite
 
@@ -38,7 +38,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 WORKDIR /var/www/html/  
 
 RUN usermod -u 10000 www-data
-RUN wget --no-verbose "https://github.com/omeka/omeka-s/releases/download/v4.1.1/omeka-s-4.1.1.zip" -O /var/www/omeka-s.zip
+RUN wget --no-verbose "https://github.com/omeka/omeka-s/releases/download/v4.2.0/omeka-s-4.2.0.zip" -O /var/www/omeka-s.zip
 RUN unzip -q /var/www/omeka-s.zip -d /var/www/ \
 &&  rm /var/www/omeka-s.zip \
 &&  rm -rf /var/www/html/husserl \
@@ -61,7 +61,7 @@ COPY themes /var/www/html/husserl/themes
 COPY extra.ini /usr/local/etc/php/conf.d/
 
 # Image magick settings
-RUN sed -i 's/^.*policy.*coder.*none.*PDF.*//' /etc/ImageMagick-6/policy.xml
+RUN find /etc -name policy.xml -exec sed -i 's/^.*policy.*coder.*none.*PDF.*//' {} \;
 
 # Mail config
 COPY update-exim4.conf.conf /etc/exim4/update-exim4.conf.conf

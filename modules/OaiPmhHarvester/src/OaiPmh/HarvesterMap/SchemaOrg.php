@@ -101,6 +101,11 @@ class SchemaOrg extends AbstractHarvesterMap
             $parentLabel = $resource['schema:isPartOf'][0]['@value'] ?? null;
             if ($parentLabel) {
                 try {
+                    //todo get property id out of data
+                    $query = "property[0][joiner]=and&property[0][property]=290&property[0][type]=eq&property[0][text]=".$parentLabel;
+                    //turn query into array
+                    $queryArray = [];
+                    parse_str($query, $queryArray);
                     $response = $this->api->search('items', ['title' => $parentLabel]);
                     $parentItem = $response->getContent()[0] ?? null;
                     if ($parentItem) {
@@ -116,8 +121,6 @@ class SchemaOrg extends AbstractHarvesterMap
                 }
             }
         }
-        //todo: 
-
 
         return $resource;
     }

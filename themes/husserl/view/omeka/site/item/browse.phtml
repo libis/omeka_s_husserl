@@ -11,7 +11,7 @@ $query = $this->params()->fromQuery();
 
 function getId($j, $curentItem) {
     if($j == 0) {
-       return $id = 9013;   
+       return $id = 25646;   
     }
     else {
         return $id = $curentItem; 
@@ -50,8 +50,8 @@ if (isset($_GET['requestedItem'])) :
     $resPathId = [$resId]; 
 
     //get the rootfolder of the item until we are at the top and push the id in the resPathId array
-    while($res->value("ro:rootFolder")){
-        $rootfolder = $res->value("ro:rootFolder");
+    while($res->value('schema:isPartOf', ['type' => 'resource'])){
+        $rootfolder = $res->value('schema:isPartOf', ['type' => 'resource']);
         $id = $rootfolder->valueResource()->id();
 
         array_unshift($resPathId, $id);
@@ -70,11 +70,11 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                 <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/page/collections">Collections</a></li>
                 <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/search">Archive</a></li>
                 <?php foreach($resPathId as $item): ?>
-                    <?php if($item == 9013):?>
-                        <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem="<?php $item?>>manuscripten</a></li>
+                    <?php if($item == 25646):?>
+                        <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $item ?>">manuscripten</a></li>
                     <?php else: ?>
                         <?php $element = searchElement($item, $this);?>
-                        <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem="<?php $item?>><?= $element->value("dcterms:identifier")?></a></li>
+                        <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $item?>"><?= $element->value("schema:identifier")?></a></li>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </ul>
@@ -120,9 +120,9 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                 <?php // check if the user requested an ID ?>
                 <?php if (isset($_GET['requestedItem'])) :?>
                     <ul class="browse-aside__browse-top-items browse-top-items browse-items">
-                        <?php if($resPathId[0] == 9013):?>
+                        <?php if($resPathId[0] == 25646):?>
                             <li class="browse-items__browse-item browse-item big-body-text">
-                                <p class="browse-item-link open" data-link="<?= $site->url() . '/item/browse/?requestedItem=9013' .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
+                                <p class="browse-item-link open" data-link="<?= $site->url() . '/item/browse/?requestedItem=25646' .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
                                     Manuscripten
                                     <span class="arrow-after"></span>
                                 </p>
@@ -131,11 +131,11 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                         $id = getId($j, $parentId); // Get the id based on the depth of the parent id and the parent id itself
                                         $children = getSubjectValues($id, $test); // take the children of the parent
                                     ?>
-                                    <?php if(isset($children["rootFolder"])): ?>
+                                    <?php if(isset($children["isPartOf"])): ?>
                                         <ul class="browse-items inner-browse-items">
                                             <?php $sortedArray = []; ?>
-                                            <?php foreach ($children["rootFolder"] as $key => $child) : ?>
-                                                <?php $sortedArray[$child['val']->resource()->value("dcterms:identifier").""] = $child ?>
+                                            <?php foreach ($children["isPartOf"] as $key => $child) : ?>
+                                                <?php $sortedArray[$child['val']->resource()->value("schema:identifier").""] = $child ?>
                                             <?php endforeach; ?>
                                             <?php ksort($sortedArray, SORT_NATURAL); ?>
                                             <?php //loop through the children roothfolders ?>
@@ -150,8 +150,8 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                                 ?>
                                                 <?php // write out the child and add on li element classes based on the state of the element ?>
                                                 <li class="browse-items__browse-item browse-item big-body-text">
-                                                    <p class="browse-item-link <?= (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) ? 'open' : 'close'; ?> <?= ($template == "ManuscriptFolder") ? 'folder' : 'page-item'; ?>" data-link="<?= $site->url() . '/item/browse/?requestedItem=' . $childId .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($child['val']->resource()->value("dcterms:title"))?>" onclick="saveBrowseData(event)">
-                                                        <?= $child['val']->resource()->value("dcterms:identifier");?>
+                                                    <p class="browse-item-link <?= (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) ? 'open' : 'close'; ?> <?= ($template == "ManuscriptFolder") ? 'folder' : 'page-item'; ?>" data-link="<?= $site->url() . '/item/browse/?requestedItem=' . $childId .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($child['val']->resource()->value("schema:title"))?>" onclick="saveBrowseData(event)">
+                                                        <?= $child['val']->resource()->value("schema:identifier");?>
                                                         <span class="arrow-after"></span>
                                                     </p>
                                                     <?php // Check if there is an next id in the path and if the id is the same as the id of the child ?>
@@ -180,7 +180,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                             </li>
                         <?php else: ?>
                             <li class="browse-items__browse-item browse-item big-body-text">
-                                <p class="browse-item-link close" data-link="<?= $site->url() . '/item/browse/?requestedItem=9013' .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
+                                <p class="browse-item-link close" data-link="<?= $site->url() . '/item/browse/?requestedItem=25646' .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
                                     Manuscripten
                                     <span class="arrow-after"></span>
                                 </p>
@@ -195,12 +195,12 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                     </ul>
                 <? else: ?>
                     <?php
-                        $topRes = $this->api()->read('items',9013,[]);
+                        $topRes = $this->api()->read('items',25646,[]);
                         $topRes = $topRes->getContent();
                     ?>
                     <ul class="browse-aside__browse-top-items browse-top-items browse-items">
                         <li class="browse-items__browse-item browse-item big-body-text">
-                            <p class="browse-item-link close" data-link="<?= $site->url() . '/item/browse/?requestedItem=' .$topRes->id() .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
+                            <p class="browse-item-link close" data-link="<?= $site->url() . '/item/browse/?requestedItem=' .$topRes->id() .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
                                 Manuscripten
                                 <span class="arrow-after"></span>
                             </p>
@@ -221,17 +221,17 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                     $id = $requestedRes->id();
                     $children = getSubjectValues($id, $this);
                     if($children != null) {
-                        if($children['rootFolder'][0]['val']->resource()->resourceTemplate()->label() == "ManuscriptPage") {
+                        if($children['isPartOf'][0]['val']->resource()->resourceTemplate()->label() == "Manuscript page") {
                             $childIsPage = true;
                         }
                     }
                     $resourceUrl = isset($site) ? $requestedRes->siteUrl($site->slug()) : $requestedRes->adminUrl();
                 ?>
-                <<?= ($requestedRes->resourceTemplate()->label() == "ManuscriptPage" || isset($childIsPage) )? 'a href="' .$resourceUrl .'"' : 'div' ?> class="browse-results__item-preview item-preview metadata-show-block manuscriptPage-metadata-block">
-                    <h3 class="item-preview__item-preview-title item-preview-title metadata-show-title h3"><?= $requestedRes->value('dcterms:title'); ?></h3>
+                <<?= ($requestedRes->resourceTemplate()->label() == "Manuscript page" || isset($childIsPage) )? 'a href="' .$resourceUrl .'"' : 'div' ?> class="browse-results__item-preview item-preview metadata-show-block manuscriptPage-metadata-block">
+                    <h3 class="item-preview__item-preview-title item-preview-title metadata-show-title h3"><?= $requestedRes->value('schema:name'); ?></h3>
                     <div class="item-preview__item-metadata-list item-metadata-list">
                         <?php foreach($requestedRes->values() as $term => $property): ?>
-                            <?php if((strtolower($escape($property['property']->label())) == "title") || (strtolower($escape($property['property']->label())) == "date created") || (strtolower($escape($property['property']->label())) == "rootfolder") || (strtolower($escape($property['property']->label())) == "is referenced by")): ?>
+                            <?php if((strtolower($escape($property['property']->label())) == "title") || (strtolower($escape($property['property']->label())) == "date created") || (strtolower($escape($property['property']->label())) == "isPartOf") || (strtolower($escape($property['property']->label())) == "is referenced by")): ?>
                             <?php else: ?>
                                 <?php $propertyValues = $property['values']; ?>
                                 <?php if(count($propertyValues) == 1): ?>
@@ -251,12 +251,34 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                             </div>
                         </div>
                     <?php endif; ?>
-                </<?=($requestedRes->resourceTemplate()->label() == "ManuscriptPage" || isset($childIsPage))? 'a' : 'div' ?>>
-                <?php if(count($items) != 0): ?>
-                    <h4 class="browse-results__results-list-title results-list-title h4"> Items in <?= ($requestedRes->id() == "9013") ? $requestedRes->value('dcterms:title') : $requestedRes->value('dcterms:identifier') ?></h4>
+                </<?=($requestedRes->resourceTemplate()->label() == "Manuscript page" || isset($childIsPage))? 'a' : 'div' ?>>
+                <?php
+                    $childrenOfRequest = $this->api()->search('items', [
+                        'property' => [[
+                            'property' => 'schema:isPartOf',
+                            'type'     => 'res',
+                            'text'     => $requestedRes->id(),
+                        ]]
+                    ])->getContent();                    
+                    usort($childrenOfRequest, function ($a, $b) {
+
+                        $idA = $a->value('schema:identifier') ?? '';
+                        $idB = $b->value('schema:identifier') ?? '';
+
+                        return strnatcmp($idA, $idB);
+                    });                    
+                    $page     = max(1, (int) ($this->params()->fromQuery('page', 1)));
+                    $perPage  = 9;
+                    $offset   = ($page - 1) * $perPage;
+                    $total    = count($childrenOfRequest);
+                    $pagedChildrenOfRequest = array_slice($children, $offset, $perPage);
+                ?>
+
+                <?php if(count($childrenOfRequest) != 0): ?>
+                    <h4 class="browse-results__results-list-title results-list-title h4"> Items in <?= ($requestedRes->id() == "25646") ? $requestedRes->value('schema:name') : $requestedRes->value('schema:identifier') ?></h4>
                     <ul class="browse-results__resource-list resource-list browse-results-list">
-                        <?php foreach ($items as $key => $item): ?>
-                            <?php if($item->resourceTemplate()->label() == "ManuscriptPage"): ?>
+                        <?php foreach ($pagedChildrenOfRequest as $key => $item): ?>
+                            <?php if($item->resourceTemplate()->label() == "Manuscript page"): ?>
                                 <?php $resourceUrl = isset($site) ? $item->siteUrl($site->slug()) : $item->adminUrl();?>
                                 <li class="browse-results-list__resource-item resource-item item-card item-card">
                                     <a href="<?= $resourceUrl; ?>">
@@ -282,7 +304,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                             </div>
                                         </div>
                                         <div class="browse-result__browse-bottom-section browse-bottom-section item-card-bottom-section">
-                                            <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $item->value('dcterms:identifier')?></h4>
+                                            <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $item->value('schema:identifier')?></h4>
                                             <div class="item-card-bottom-section__date-section date-section">
                                             <div class="date-section__date date">
                                                 <div class="date__date-icon date-icon">     
@@ -290,7 +312,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                                     <path d="M22.6562 12.5C22.6562 15.1936 21.5862 17.7769 19.6816 19.6816C17.7769 21.5862 15.1936 22.6562 12.5 22.6562C9.80639 22.6562 7.22311 21.5862 5.31845 19.6816C3.41378 17.7769 2.34375 15.1936 2.34375 12.5C2.34375 9.80639 3.41378 7.22311 5.31845 5.31845C7.22311 3.41378 9.80639 2.34375 12.5 2.34375C15.1936 2.34375 17.7769 3.41378 19.6816 5.31845C21.5862 7.22311 22.6562 9.80639 22.6562 12.5ZM0 12.5C0 15.8152 1.31696 18.9946 3.66117 21.3388C6.00537 23.683 9.18479 25 12.5 25C15.8152 25 18.9946 23.683 21.3388 21.3388C23.683 18.9946 25 15.8152 25 12.5C25 9.18479 23.683 6.00537 21.3388 3.66117C18.9946 1.31696 15.8152 0 12.5 0C9.18479 0 6.00537 1.31696 3.66117 3.66117C1.31696 6.00537 0 9.18479 0 12.5ZM11.3281 5.85938V12.5C11.3281 12.8906 11.5234 13.2568 11.8506 13.4766L16.5381 16.6016C17.0752 16.9629 17.8027 16.8164 18.1641 16.2744C18.5254 15.7324 18.3789 15.0098 17.8369 14.6484L13.6719 11.875V5.85938C13.6719 5.20996 13.1494 4.6875 12.5 4.6875C11.8506 4.6875 11.3281 5.20996 11.3281 5.85938Z" fill="black"/>
                                                 </svg>
                                                 </div>
-                                                <p class="date__date-text date-text body-text"><?= ($item->value('dcterms:date') != null) ? $item->value('dcterms:date') : "Unknown"?></p>
+                                                <p class="date__date-text date-text body-text"><?= ($item->value('schema:dateCreated') != null) ? $item->value('schema:dateCreated') : "Unknown"?></p>
                                             </div>
                                             <div class="date-section__arrow-icon arrow-icon">
                                                 <svg width="10" height="19" viewBox="0 0 10 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -301,13 +323,13 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                         </div>
                                     </a>
                                 </li>
-                            <?php elseif($item->resourceTemplate()->label() == "ManuscriptFolder"): ?>
+                            <?php elseif($item->resourceTemplate()->label() == "Archival folder"): ?>
                                 <li class="browse-results-list__resource-item resource-item item-folder-card">
-                                    <a href="<?= $site->url() . '/item/browse/?requestedItem=' .$item->id() .'&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($item->title())?>">
+                                    <a href="<?= $site->url() . '/item/browse/?requestedItem=' .$item->id() .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($item->title())?>">
                                         <div class="item-folder-card__item-folder-top-card item-folder-top-card">
-                                            <h4 class="item-folder-top-card__folder-title folder-title h4"><?= $item->value("dcterms:identifier") ?></h4>
+                                            <h4 class="item-folder-top-card__folder-title folder-title h4"><?= $item->value("schema:identifier") ?></h4>
                                             <div class="item-folder-top-card__folder-metadata-group folder-metadata-group">
-                                                <p class="folder-metadata-group__folder-metadata-item folder-metadata-item body-text"><span>Title: </span><?= substr($item->value("dcterms:title"), 0, 40) ?><?= (strlen($item->value("dcterms:title")) > 40) ? "..." : ""?></p>
+                                                <p class="folder-metadata-group__folder-metadata-item folder-metadata-item body-text"><span>Title: </span><?= substr($item->value("schema:name"), 0, 40) ?><?= (strlen($item->value("schema:name")) > 40) ? "..." : ""?></p>
                                                 <p class="folder-metadata-group__folder-metadata-item folder-metadata-item body-text"><span>Reference: </span>reference-data</p>
                                             </div>
                                         </div>

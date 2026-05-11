@@ -48,8 +48,8 @@ $parentItem = [
             "pageOne" => [
                 "values" => [
                     "id" => 11111,
-                    "dcterms:identifier" => "A I 1/1b",
-                    "dcterms:date" => "1912",
+                    "schema:name" => "A I 1/1b",
+                    "schema:dateCreated" => "1912",
                     "url" => "#",
                 ],
                 "media" => [
@@ -62,8 +62,8 @@ $parentItem = [
             "pageTwo" => [
                 "values" => [
                     "id" => 11111,
-                    "dcterms:identifier" => "A I 1/1b",
-                    "dcterms:date" => "1912",
+                    "schema:name" => "A I 1/1b",
+                    "schema:dateCreated" => "1912",
                     "url" => "#",
                 ],
                 "media" => [
@@ -96,8 +96,8 @@ $resPathId = [$item->id()];
 $res = $item;
 
 //get the rootfolder of the item until we are at the top and push the id in the resPathId array
-while($res->value("ro:rootFolder")){
-    $rootfolder = $res->value("ro:rootFolder");
+while($res->value('schema:isPartOf', ['type' => 'resource'])){
+    $rootfolder = $res->value('schema:isPartOf', ['type' => 'resource']);
     $id = $rootfolder->valueResource()->id();
 
     array_unshift($resPathId, $id);
@@ -116,11 +116,11 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
             <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/page/collections">Collections</a></li>
             <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/search">Archive</a></li>
             <?php foreach($resPathId as $itemRes): ?>
-                <?php if($itemRes == 9013):?>
-                    <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $itemRes?>&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+<?= urlencode('Gesamtbestand der Manuskriptgruppen A-Y')?>">Manuscripten</a></li>
+                <?php if($itemRes == 25646):?>
+                    <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $itemRes?>&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+<?= urlencode('Gesamtbestand der Manuskriptgruppen A-Y')?>">Manuscripten</a></li>
                 <?php else: ?>
                     <?php $element = searchElement($itemRes, $this);?>
-                    <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $element->id() ?>&sort_by=dcterms_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+<?= urlencode($element->title())?>"><?= $element->value("dcterms:identifier")?></a></li>
+                    <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $element->id() ?>&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+<?= urlencode($element->title())?>"><?= $element->value("schema:identifier")?></a></li>
                 <?php endif; ?>
             <?php endforeach; ?>
         </ul>
@@ -142,7 +142,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                     <?php endif; ?>
                     <div class="item-top-information-wrapper__item-top-information-scrollable-content item-top-information-scrollable-content sticky-scrollable-content">
                         <div class="item-top-information-scrollable-content__item-title-section item-title-section scrollable-sticky-section">
-                            <h1 class="item-title-section__item-title item-title h1"><?= $item->value("dcterms:identifier");?></h1>
+                            <h1 class="item-title-section__item-title item-title h1"><?= $item->value("schema:name");?></h1>
                             <div class="item-title-section__item-page-button-icon item-page-button-icon sticky-button">
                                 <svg width="18" height="22" viewBox="0 0 18 22" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M3.72727 1C2.22301 1 1 2.12109 1 3.5V18.5C1 19.8789 2.22301 21 3.72727 21H13.7112C15.2155 21 16.4385 19.8789 16.4385 18.5V7.36364V5.5L10.6631 1H8.81818H3.72727Z" stroke="#00407A" stroke-width="2" stroke-linejoin="round"/>
@@ -151,43 +151,65 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                             </div>
                         </div>
                         <div class="item-top-information-scrollable-content__item-metadata-section item-metadata-section">
-                            <?php foreach($itemData['values'] as $key => $value): ?>
-                                <?php if($key == "transcription" || $key == "publications"): ?>
-                                    <?php break; ?>
-                                <?php endif; ?>
-                                <?php if (is_array($value)): ?>
-                                    <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item <?= ($full != '') ? 'full' : '' ?>">
-                                        <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5"><?= $key ?></h5>
+                            <?php $template = $item->resourceTemplate(); ?>
+                            <?php if($template): ?>
+                                <?php $itemValues = $item->values(); ?>
+                                <?php foreach ($template->resourceTemplateProperties() as $templateProperty): ?>
+                                    <?php
+                                        $property = $templateProperty->property();
+                                        $key     = $property->term();
+                                        if (!isset($itemValues[$key])) {
+                                            continue;
+                                        }
+                                        $values = $itemValues[$key]['values'];
+                                        $label = $templateProperty->alternateLabel() ?: $property->label();
+                                        $full = in_array($key, ['schema:name', 'schema:description']);
+
+                                    ?>
+                                    <?php if (in_array($key, ['transcription', 'publications', 'schema:contentUrl', 'schema:category'])) continue; ?>
+                                    <?php if($item->resourceTemplate()->label() == "Manuscript page" && $key == "schema:name") continue; ?>
+                                    <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item <?= $full ? 'full' : '' ?>">
+                                        <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5">
+                                            <?= $templateProperty->alternateLabel() ?: $property->label() ?>
+                                        </h5>
                                         <div class="item-metadata-item__metadata-values metadata-values">
-                                            <?php foreach($value as $keyValue => $valueOfValue): ?>
+                                            <?php foreach ($values as $value): ?>
                                                 <div class="metadata-values__metadata-value metadata-value">
-                                                    <div class="metadata-value__metadata-arrow metadata-arrow">
-                                                        <img src="<?= $this->assetUrl('img/full-arrow.svg')?>" alt="full arrow icon"/>
-                                                    </div>
-                                                    <?php if($key == "links"): ?>
-                                                        <a href="<?= ($valueOfValue['link'] != '') ? $valueOfValue['link'] : '#'?>" class="metadata-value__metadata-value-link metadata-value-link body-text">
-                                                            <?= $valueOfValue['text']; ?>
+                                                    <?php if ($value->type() === 'uri'): ?>
+                                                        <?php if($key != "schema:holdingArchive"): ?>
+                                                            <div class="metadata-value__metadata-arrow metadata-arrow">
+                                                                <img
+                                                                    src="<?= $this->assetUrl('img/full-arrow.svg') ?>"
+                                                                    alt="full arrow icon"
+                                                                />
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        <a href="<?= $this->escapeHtml($value->uri()) ?>"
+                                                        class="metadata-value__metadata-value-link metadata-value-link body-text"
+                                                        target="_blank"
+                                                        rel="noopener">
+                                                            <?= $this->escapeHtml($value->value()) ?>
                                                         </a>
-                                                    <?php else: ?>
-                                                        <p class="metadata-value__metadata-item-text metadata-item-text body-text"><?= $valueOfValue ?></p>
+                                                    <?php
+                                                        elseif ($value->type() === 'resource'):
+                                                            $resource = $value->valueResource();
+                                                            echo $resource
+                                                                ? $resource->link($value->asHtml(), null, ['class' => 'body-text'])
+                                                                : '';
+                                                        else:
+                                                    ?>
+                                                        <p class="metadata-value__metadata-item-text metadata-item-text body-text">
+                                                            <?= $value->asHtml() ?>
+                                                        </p>
                                                     <?php endif; ?>
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
                                     </div>
-                                <?php else: ?>
-                                    <?php $full = "" ?>
-                                    <?php if($key == "title" || $key == "description"):?>
-                                        <?php $full = true; ?>
-                                    <?php endif; ?>
-                                    <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item <?= ($full != '') ? 'full' : '' ?>">
-                                        <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5"><?= $key ?></h5>
-                                        <p class="item-metadata-item__metadata-item-text metadata-item-text body-text"><?= $value ?></p>
-                                    </div>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
-                        <?php if($item->resourceTemplate()->label() == "ManuscriptPage"): ?>
+                        <?php if($item->resourceTemplate()->label() == "Manuscript page"): ?>
                             <div class="item-top-information-scrollable-content__item-transcription-section item-transcription-section">
                                 <h2 class="item-transcription-section__transcription-section-title transcription-section-title h2">Transcription</h2>
                                 <div class="item-transcription-section__transcription-person transcription-person">
@@ -196,7 +218,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                     </div>
                                     <p class="transcription-person__person-name person-name body-text"><?= $itemData['values']['transcription']['person'] ?></p>
                                 </div>
-                                <p class="item-transcription-section__transcription-text transcription-text body-text"><?= $itemData['values']['transcription']['content'] ?></p>
+                                <div class="item-transcription-section__transcription-text transcription-text body-text"><?= $item->value('schema:transcript') ?></div>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -225,7 +247,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
             </div>
         <?php endif; ?>
         <?php 
-            $parentId = 7138; //$item['rootFolder'];
+            $parentId = 7138; //$item['schema:partOf'];
             $children = $parentItem['values']['subjectValues']; //getSubjectValues($parentid, $this);
         ?>
         <?php if(count($children) != 0): ?>
@@ -254,7 +276,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                         </div>
                                     </div>
                                     <div class="browse-result__browse-bottom-section browse-bottom-section item-card-bottom-section">
-                                        <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $child['values']['dcterms:identifier']?></h4>
+                                        <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $child['values']['schema:name']?></h4>
                                         <div class="item-card-bottom-section__date-section date-section">
                                             <div class="date-section__date date">
                                                 <div class="date__date-icon date-icon">     
@@ -262,7 +284,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                                     <path d="M22.6562 12.5C22.6562 15.1936 21.5862 17.7769 19.6816 19.6816C17.7769 21.5862 15.1936 22.6562 12.5 22.6562C9.80639 22.6562 7.22311 21.5862 5.31845 19.6816C3.41378 17.7769 2.34375 15.1936 2.34375 12.5C2.34375 9.80639 3.41378 7.22311 5.31845 5.31845C7.22311 3.41378 9.80639 2.34375 12.5 2.34375C15.1936 2.34375 17.7769 3.41378 19.6816 5.31845C21.5862 7.22311 22.6562 9.80639 22.6562 12.5ZM0 12.5C0 15.8152 1.31696 18.9946 3.66117 21.3388C6.00537 23.683 9.18479 25 12.5 25C15.8152 25 18.9946 23.683 21.3388 21.3388C23.683 18.9946 25 15.8152 25 12.5C25 9.18479 23.683 6.00537 21.3388 3.66117C18.9946 1.31696 15.8152 0 12.5 0C9.18479 0 6.00537 1.31696 3.66117 3.66117C1.31696 6.00537 0 9.18479 0 12.5ZM11.3281 5.85938V12.5C11.3281 12.8906 11.5234 13.2568 11.8506 13.4766L16.5381 16.6016C17.0752 16.9629 17.8027 16.8164 18.1641 16.2744C18.5254 15.7324 18.3789 15.0098 17.8369 14.6484L13.6719 11.875V5.85938C13.6719 5.20996 13.1494 4.6875 12.5 4.6875C11.8506 4.6875 11.3281 5.20996 11.3281 5.85938Z" fill="black"/>
                                                 </svg>
                                                 </div>
-                                                <p class="date__date-text date-text body-text"><?= ($child['values']['dcterms:date'] != null) ? $child['values']['dcterms:date'] : "Unknown"?></p>
+                                                <p class="date__date-text date-text body-text"><?= ($child['values']['schema:dateCreated'] != null) ? $child['values']['schema:dateCreated'] : "Unknown"?></p>
                                             </div>
                                             <div class="date-section__arrow-icon arrow-icon">
                                                 <svg width="10" height="19" viewBox="0 0 10 19" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -75,6 +75,7 @@ class SchemaOrg extends AbstractHarvesterMap
                 }
                 //remove params from url (from_cache etc)
                 $url = strtok($url, '?');
+                $url = $url . '?size=800,';
                 $resource['o:media'][] = [
                     'o:ingester' => 'url',
                     'o:filename' => $url,

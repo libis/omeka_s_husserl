@@ -1,4 +1,21 @@
 <?php
+class EmptyValue {
+    public $type;
+    public $value;
+
+    public function __construct($type, $value) {
+        $this->type = $type;
+        $this->value = $value;
+    }
+
+    public function type() {
+        return $this->type;
+    }
+
+    public function asHtml() {
+        return "<span>{$this->value}</span>";
+    }
+};
 
 $itemData = [
     "values" => [
@@ -37,42 +54,6 @@ $itemData = [
                 "title" => "Die Urarche Erde Bewegt Sich Nicht, N-N., Phenomenological Research",
                 "pages" => "",
             ]
-        ]
-    ]
-];
-
-$parentItem = [
-    "values" => [
-        "id" => 7138,
-        "subjectValues" => [
-            "pageOne" => [
-                "values" => [
-                    "id" => 11111,
-                    "schema:name" => "A I 1/1b",
-                    "schema:dateCreated" => "1912",
-                    "url" => "#",
-                ],
-                "media" => [
-                    [
-                        "altText" => "",
-                        "thumbnailUrl" => "http://localhost:9013/husserl/files/large/0deb5c720db747efe0283d6620d958fc8d70761a.jpg"
-                    ]
-                ]
-            ],
-            "pageTwo" => [
-                "values" => [
-                    "id" => 11111,
-                    "schema:name" => "A I 1/1b",
-                    "schema:dateCreated" => "1912",
-                    "url" => "#",
-                ],
-                "media" => [
-                    [
-                        "altText" => "",
-                        "thumbnailUrl" => "http://localhost:9013/husserl/files/large/0deb5c720db747efe0283d6620d958fc8d70761a.jpg"
-                    ]
-                ]
-            ],
         ]
     ]
 ];
@@ -153,30 +134,62 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                         <div class="item-top-information-scrollable-content__item-metadata-section item-metadata-section">
                             <?php $template = $item->resourceTemplate(); ?>
                             <?php if($template): ?>
-                                <?php $itemValues = $item->values(); ?>
+                                <?php 
+                                    $itemValues = $item->values();                                     
+                                    $groupKeys = ['schema:creator', 'schema:contributor'];
+                                    $groupShowed = false;
+
+                                    $propertiesByTerm = [];
+                                    foreach ($template->resourceTemplateProperties() as $temp) {
+                                        $propertiesByTerm[$temp->property()->term()] = $temp;
+                                    }
+                                ?>
                                 <?php foreach ($template->resourceTemplateProperties() as $templateProperty): ?>
                                     <?php
                                         $property = $templateProperty->property();
-                                        $key     = $property->term();
-                                        if (!isset($itemValues[$key])) {
+                                        $key = $property->term();
+                                        if(in_array($key, ["schema:creator", "schema:contributor"]) && !$groupShowed && (isset($propertiesByTerm["schema:creator"]) && isset($propertiesByTerm["schema:contributor"]))) {
+                                            $labelFirstLine = $propertiesByTerm["schema:creator"]->alternateLabel() ?: $propertiesByTerm["schema:creator"]->property()->label();
+                                            $label = $labelFirstLine . ' / ' . ($propertiesByTerm["schema:contributor"]->alternateLabel() ?: $propertiesByTerm["schema:contributor"]->property()->label());
+
+                                            $values = (isset($itemValues["schema:creator"]) ? $itemValues["schema:creator"]['values'][0] : "Not available") . ' / ' . (isset($itemValues["schema:contributor"]) ? $itemValues["schema:contributor"]['values'][0] : "Not available");
+
+                                            $values = [
+                                                new EmptyValue("text", $values)
+                                            ];
+                                            $groupShowed = true;
+                                        }
+                                        else if (in_array($key, ["schema:creator", "schema:contributor"]) && $groupShowed) {
                                             continue;
                                         }
-                                        $values = $itemValues[$key]['values'];
-                                        $label = $templateProperty->alternateLabel() ?: $property->label();
+                                        // check if value is empty but needed to be shown in the front-end ==> not available
+                                        else if (!isset($itemValues[$key]) && in_array($key, ["schema:pagination", "schema:dateCreated", "schema:significantLinks", "schema:creator", "schema:contributor"])) {                                            
+                                            $label = $templateProperty->alternateLabel() ?: $property->label();
+                                            $values = [
+                                                new EmptyValue("text", "Not available")
+                                            ];
+                                        }
+                                        else if(!isset($itemValues[$key])) {
+                                            continue;
+                                        }
+                                        else {
+                                            $label = $templateProperty->alternateLabel() ?: $property->label();
+                                            $values = $itemValues[$key]['values'];
+                                        }
+                                        
                                         $full = in_array($key, ['schema:name', 'schema:description']);
-
                                     ?>
-                                    <?php if (in_array($key, ['transcription', 'publications', 'schema:contentUrl', 'schema:category'])) continue; ?>
+                                    <?php if (in_array($key, ['transcription', 'publications', 'schema:transcript', 'schema:contentUrl', 'schema:category', 'schema:isPartOf', 'schema:alternateName'])) continue; ?>
                                     <?php if($item->resourceTemplate()->label() == "Manuscript page" && $key == "schema:name") continue; ?>
                                     <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item <?= $full ? 'full' : '' ?>">
                                         <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5">
-                                            <?= $templateProperty->alternateLabel() ?: $property->label() ?>
+                                            <?= $label?>
                                         </h5>
                                         <div class="item-metadata-item__metadata-values metadata-values">
                                             <?php foreach ($values as $value): ?>
                                                 <div class="metadata-values__metadata-value metadata-value">
                                                     <?php if ($value->type() === 'uri'): ?>
-                                                        <?php if($key != "schema:holdingArchive"): ?>
+                                                        <?php if($key == "schema:links"): ?>
                                                             <div class="metadata-value__metadata-arrow metadata-arrow">
                                                                 <img
                                                                     src="<?= $this->assetUrl('img/full-arrow.svg') ?>"
@@ -190,14 +203,14 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                                         rel="noopener">
                                                             <?= $this->escapeHtml($value->value()) ?>
                                                         </a>
-                                                    <?php
-                                                        elseif ($value->type() === 'resource'):
-                                                            $resource = $value->valueResource();
-                                                            echo $resource
-                                                                ? $resource->link($value->asHtml(), null, ['class' => 'body-text'])
-                                                                : '';
-                                                        else:
-                                                    ?>
+                                                    <?php elseif ($value->type() === 'resource'): ?>
+                                                        <?php $resource = $value->valueResource(); ?>
+                                                            <?= $resource ? $resource->link($value->asHtml(), null, ['class' => 'body-text']) : ''; ?>
+                                                    <?php elseif ($key == 'schema:containedIn'): ?>
+                                                        <p class="metadata-value__metadata-item-text metadata-item-text body-text">
+                                                            <?= str_replace('$$', '/', $value->asHtml()) ?>
+                                                        </p>
+                                                    <?php else: ?>
                                                         <p class="metadata-value__metadata-item-text metadata-item-text body-text">
                                                             <?= $value->asHtml() ?>
                                                         </p>
@@ -209,14 +222,14 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
-                        <?php if($item->resourceTemplate()->label() == "Manuscript page"): ?>
+                        <?php if($item->resourceTemplate()->label() == "Manuscript page" && $item->value('schema:transcript') != null ): ?>
                             <div class="item-top-information-scrollable-content__item-transcription-section item-transcription-section">
                                 <h2 class="item-transcription-section__transcription-section-title transcription-section-title h2">Transcription</h2>
                                 <div class="item-transcription-section__transcription-person transcription-person">
                                     <div class="transcription-person__person-icon person-icon">
                                         <img src="<?= $this->assetUrl('img/person.svg')?>" alt="person icon"/>
                                     </div>
-                                    <p class="transcription-person__person-name person-name body-text"><?= $itemData['values']['transcription']['person'] ?></p>
+                                    <p class="transcription-person__person-name person-name body-text"><?= $item->value('schema:contributor') ?></p>
                                 </div>
                                 <div class="item-transcription-section__transcription-text transcription-text body-text"><?= $item->value('schema:transcript') ?></div>
                             </div>
@@ -225,7 +238,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                 </div>
             </div>
         </div>
-        <?php if($item->resourceTemplate()->label() == "ManuscriptPage"): ?>
+        <?php if($item->resourceTemplate()->label() == "Manuscript page"): ?>
             <div class="item-information__item-publications-section item-publications-section">
                 <h2 class="item-publications-section__publications-title publications-title h2">Publications</h2>
                 <div class="item-publications-section__table-section table-section">
@@ -247,25 +260,40 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
             </div>
         <?php endif; ?>
         <?php 
-            $parentId = 7138; //$item['schema:partOf'];
-            $children = $parentItem['values']['subjectValues']; //getSubjectValues($parentid, $this);
+            $parentFolder = $item->value('schema:isPartOf', ['type' => 'resource']);
+            $parentid = $parentFolder->valueResource()->id();            
+            $results = $this->api()->search('items', [
+                'property' => [[
+                    'property' => 'schema:isPartOf',
+                    'type'     => 'res',
+                    'text'     => $parentid,
+                ]],
+                'sort_by'    => 'random',
+                'limit'   => 13,
+            ])->getContent();            
+            $results = array_values(array_filter(
+                $results,
+                fn ($i) => $i->id() !== $item->id()
+            ));
+            $children = array_slice($results, 0, 12);
         ?>
         <?php if(count($children) != 0): ?>
             <div class="item-information__item-other-pages-section item-other-pages-section">
-                <h2 class="item-other-pages-section__other-pages-title other-pages-title h2"><?= ($item->resourceTemplate()->label() == "ManuscriptPage") ? "Other pages in the folder" : "Pages of this manuscript" ?></h2>
+                <h2 class="item-other-pages-section__other-pages-title other-pages-title h2"><?= ($item->resourceTemplate()->label() == "Manuscript page") ? "Other pages in the folder" : "Pages of this manuscript" ?></h2>
                 <div class="splide item-other-pages-section__item-cards item-cards item-card-slider" count="<?= count($children)?>">
                     <div class="splide__track item-card-slider__item-card-slider-track item-card-slider-track slider-track">
                         <div class="splide__list item-card-slider-track__item-card-slider-list item-card-slider-list slider-group">
-                            <?php foreach ($children as $child):?>
-                                <?php $url = $child['values']['url']; ?>
+                            <?php foreach ($children as $child): ?>
+                                <?php if($child->id() == $item->id()) continue; ?>
+                                <?php $url = $child->siteUrl($this->site->slug()); ?>
                                 <a href="<?= $url; ?>" class="splide__slide browse-results__browse-result browse-result item-card">
                                     <div class="browse-result__browse-top-section browse-top-section item-card-top-section">
                                         <div class="item-card-top-section__item-card-image item-card-image">
                                             <?php 
-                                            $media = $child['media'];
+                                            $media = $child->media();
                                             if($media):
-                                                $altText = $media[0]['altText'];
-                                                $mediaurl = str_replace('http:', '', $media[0]['thumbnailUrl']);
+                                                $altText = $media[0]->altText();
+                                                $mediaurl = str_replace('http:', '', $media[0]->thumbnailUrl('large'));
                                             else:
                                                 $mediaurl = "";
                                             endif;
@@ -276,7 +304,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                         </div>
                                     </div>
                                     <div class="browse-result__browse-bottom-section browse-bottom-section item-card-bottom-section">
-                                        <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $child['values']['schema:name']?></h4>
+                                        <h4 class="item-card-bottom-section__item-card-title item-card-title h4"><?= $child->value('schema:name')?></h4>
                                         <div class="item-card-bottom-section__date-section date-section">
                                             <div class="date-section__date date">
                                                 <div class="date__date-icon date-icon">     
@@ -284,7 +312,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                                     <path d="M22.6562 12.5C22.6562 15.1936 21.5862 17.7769 19.6816 19.6816C17.7769 21.5862 15.1936 22.6562 12.5 22.6562C9.80639 22.6562 7.22311 21.5862 5.31845 19.6816C3.41378 17.7769 2.34375 15.1936 2.34375 12.5C2.34375 9.80639 3.41378 7.22311 5.31845 5.31845C7.22311 3.41378 9.80639 2.34375 12.5 2.34375C15.1936 2.34375 17.7769 3.41378 19.6816 5.31845C21.5862 7.22311 22.6562 9.80639 22.6562 12.5ZM0 12.5C0 15.8152 1.31696 18.9946 3.66117 21.3388C6.00537 23.683 9.18479 25 12.5 25C15.8152 25 18.9946 23.683 21.3388 21.3388C23.683 18.9946 25 15.8152 25 12.5C25 9.18479 23.683 6.00537 21.3388 3.66117C18.9946 1.31696 15.8152 0 12.5 0C9.18479 0 6.00537 1.31696 3.66117 3.66117C1.31696 6.00537 0 9.18479 0 12.5ZM11.3281 5.85938V12.5C11.3281 12.8906 11.5234 13.2568 11.8506 13.4766L16.5381 16.6016C17.0752 16.9629 17.8027 16.8164 18.1641 16.2744C18.5254 15.7324 18.3789 15.0098 17.8369 14.6484L13.6719 11.875V5.85938C13.6719 5.20996 13.1494 4.6875 12.5 4.6875C11.8506 4.6875 11.3281 5.20996 11.3281 5.85938Z" fill="black"/>
                                                 </svg>
                                                 </div>
-                                                <p class="date__date-text date-text body-text"><?= ($child['values']['schema:dateCreated'] != null) ? $child['values']['schema:dateCreated'] : "Unknown"?></p>
+                                                <p class="date__date-text date-text body-text"><?= ($child->value('schema:dateCreated') != null) ? $child->value('schema:dateCreated') : "Unknown"?></p>
                                             </div>
                                             <div class="date-section__arrow-icon arrow-icon">
                                                 <svg width="10" height="19" viewBox="0 0 10 19" fill="none" xmlns="http://www.w3.org/2000/svg">

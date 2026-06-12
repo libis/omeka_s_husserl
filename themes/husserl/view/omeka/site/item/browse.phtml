@@ -11,7 +11,7 @@ $query = $this->params()->fromQuery();
 
 function getId($j, $curentItem) {
     if($j == 0) {
-       return $id = 25646;   
+       return $id = 28130;   
     }
     else {
         return $id = $curentItem; 
@@ -70,7 +70,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                 <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/page/collections">Collections</a></li>
                 <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/search">Archive</a></li>
                 <?php foreach($resPathId as $item): ?>
-                    <?php if($item == 25646):?>
+                    <?php if($item == 28130):?>
                         <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $item ?>">manuscripten</a></li>
                     <?php else: ?>
                         <?php $element = searchElement($item, $this);?>
@@ -120,9 +120,9 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                 <?php // check if the user requested an ID ?>
                 <?php if (isset($_GET['requestedItem'])) :?>
                     <ul class="browse-aside__browse-top-items browse-top-items browse-items">
-                        <?php if($resPathId[0] == 25646):?>
+                        <?php if($resPathId[0] == 28130):?>
                             <li class="browse-items__browse-item browse-item big-body-text">
-                                <p class="browse-item-link open" data-link="<?= $site->url() . '/item/browse/?requestedItem=25646' .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
+                                <p class="browse-item-link open" data-link="<?= $site->url() . '/item/browse/?requestedItem=28130' .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
                                     Manuscripten
                                     <span class="arrow-after"></span>
                                 </p>
@@ -150,7 +150,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                                                 ?>
                                                 <?php // write out the child and add on li element classes based on the state of the element ?>
                                                 <li class="browse-items__browse-item browse-item big-body-text">
-                                                    <p class="browse-item-link <?= (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) ? 'open' : 'close'; ?> <?= ($template == "ManuscriptFolder") ? 'folder' : 'page-item'; ?>" data-link="<?= $site->url() . '/item/browse/?requestedItem=' . $childId .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($child['val']->resource()->value("schema:title"))?>" onclick="saveBrowseData(event)">
+                                                    <p class="browse-item-link <?= (isset($resPathId[$j + 1]) && $childId == $resPathId[$j + 1]) ? 'open' : 'close'; ?> <?= ($template == "Archival folder") ? 'folder' : 'page-item'; ?>" data-link="<?= $site->url() . '/item/browse/?requestedItem=' . $childId .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($child['val']->resource()->value("schema:name"))?>" onclick="saveBrowseData(event)">
                                                         <?= $child['val']->resource()->value("schema:identifier");?>
                                                         <span class="arrow-after"></span>
                                                     </p>
@@ -180,7 +180,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                             </li>
                         <?php else: ?>
                             <li class="browse-items__browse-item browse-item big-body-text">
-                                <p class="browse-item-link close" data-link="<?= $site->url() . '/item/browse/?requestedItem=25646' .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
+                                <p class="browse-item-link close" data-link="<?= $site->url() . '/item/browse/?requestedItem=28130' .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode("Gesamtbestand der Manuskriptgruppen A-Y")?>" onclick="saveBrowseData(event)">
                                     Manuscripten
                                     <span class="arrow-after"></span>
                                 </p>
@@ -195,7 +195,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                     </ul>
                 <? else: ?>
                     <?php
-                        $topRes = $this->api()->read('items',25646,[]);
+                        $topRes = $this->api()->read('items',28130,[]);
                         $topRes = $topRes->getContent();
                     ?>
                     <ul class="browse-aside__browse-top-items browse-top-items browse-items">
@@ -230,18 +230,37 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                 <<?= ($requestedRes->resourceTemplate()->label() == "Manuscript page" || isset($childIsPage) )? 'a href="' .$resourceUrl .'"' : 'div' ?> class="browse-results__item-preview item-preview metadata-show-block manuscriptPage-metadata-block">
                     <h3 class="item-preview__item-preview-title item-preview-title metadata-show-title h3"><?= $requestedRes->value('schema:name'); ?></h3>
                     <div class="item-preview__item-metadata-list item-metadata-list">
-                        <?php foreach($requestedRes->values() as $term => $property): ?>
-                            <?php if((strtolower($escape($property['property']->label())) == "title") || (strtolower($escape($property['property']->label())) == "date created") || (strtolower($escape($property['property']->label())) == "isPartOf") || (strtolower($escape($property['property']->label())) == "is referenced by")): ?>
-                            <?php else: ?>
-                                <?php $propertyValues = $property['values']; ?>
-                                <?php if(count($propertyValues) == 1): ?>
-                                    <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item">
-                                        <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5"><?= $escape($property['property']->label()); ?></h5>
-                                        <p class="item-metadata-item__metadata-item-text metadata-item-text body-text"><?= strip_tags($propertyValues[0]->asHtml()) ?></p>
-                                    </div>
+                        <?php $template = $requestedRes->resourceTemplate(); ?>
+                        <?php if($template): ?>
+                            <?php $itemValues = $requestedRes->values(); ?>
+                            <?php foreach ($template->resourceTemplateProperties() as $templateProperty): ?>
+                                <?php
+                                    $property = $templateProperty->property();
+                                    $term = $property->term();
+                                    if (!isset($itemValues[$term])) {
+                                        continue;
+                                    }
+                                    $values = $itemValues[$term]['values'];
+                                    $label = $templateProperty->alternateLabel() ?: $property->label();
+                                ?>
+                                <?php if (in_array($term, ['schema:hasPart'])) continue; ?>
+                                <?php if ($term == 'schema:containedIn'): ?>
+                                    <?php if(count($values) == 1): ?>
+                                        <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item">
+                                            <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5"><?= $escape($label); ?></h5>
+                                            <p class="item-metadata-item__metadata-item-text metadata-item-text body-text"><?= str_replace('$$', '/', $values[0]->asHtml()) ?></p>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <?php if(count($values) == 1): ?>
+                                        <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item">
+                                            <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5"><?= $escape($label); ?></h5>
+                                            <p class="item-metadata-item__metadata-item-text metadata-item-text body-text"><?= strip_tags($values[0]->asHtml()) ?></p>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php endif; ?>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                     <?php if(isset($childIsPage) || $requestedRes->resourceTemplate()->label() == "ManuscriptPage"): ?>
                         <div class="item-preview__item-more-information item-more-information">
@@ -271,11 +290,11 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                     $perPage  = 9;
                     $offset   = ($page - 1) * $perPage;
                     $total    = count($childrenOfRequest);
-                    $pagedChildrenOfRequest = array_slice($children, $offset, $perPage);
+                    $pagedChildrenOfRequest = array_slice($childrenOfRequest, $offset, $perPage);
                 ?>
 
                 <?php if(count($childrenOfRequest) != 0): ?>
-                    <h4 class="browse-results__results-list-title results-list-title h4"> Items in <?= ($requestedRes->id() == "25646") ? $requestedRes->value('schema:name') : $requestedRes->value('schema:identifier') ?></h4>
+                    <h4 class="browse-results__results-list-title results-list-title h4"> Items in <?= ($requestedRes->id() == "28130") ? $requestedRes->value('schema:name') : $requestedRes->value('schema:identifier') ?></h4>
                     <ul class="browse-results__resource-list resource-list browse-results-list">
                         <?php foreach ($pagedChildrenOfRequest as $key => $item): ?>
                             <?php if($item->resourceTemplate()->label() == "Manuscript page"): ?>
@@ -344,11 +363,14 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                             <?php endif; ?>
                         <?php endforeach; ?>
                     </ul>
-                    <div class="search-results-count">
-                        <?php
-                            echo $this->pagination();
-                        ?>
-                    </div>
+                    <?php if ($total > $perPage): ?>
+                        <div class="search-results-count">
+                            <?php
+                                echo $this->paginationSearch('common/pagination', $total, $page, $perPage)
+                            ?>
+                        </div>
+                        <?php endif; ?>
+                    
                 <?php endif; ?>
             </div>
         <?php endif; ?>

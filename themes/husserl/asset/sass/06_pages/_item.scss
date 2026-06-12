@@ -148,6 +148,15 @@
                 }
                 .item-transcription-section {
                     margin-bottom: 80px;
+
+                    .transcription-text .endnotes {
+                        margin-top: 25px;
+                        margin-left: 15px;
+
+                        li {
+                            list-style: unset;
+                        }
+                    }
                 }
             }
             .item-publications-section {

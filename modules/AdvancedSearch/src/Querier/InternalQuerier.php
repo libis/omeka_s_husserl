@@ -47,13 +47,21 @@ class InternalQuerier extends AbstractQuerier
         $api = $this->services->get('Omeka\ApiManager');
 
         // The response is failed by default until filled.
-        $this->response = new Response;
-        $this->response->setApi($api);
+        $this->response = new Response();
+        $this->response
+            ->setApi($api)
+            ->setQuery($this->query);
 
-        $this->byResourceType = $this->query ? $this->query->getByResourceType() : false;
-        $this->response->setByResourceType($this->byResourceType);
+        $this->byResourceType = $this->query
+            ? $this->query->getByResourceType()
+            : false;
 
         $this->args = $this->getPreparedQuery();
+
+        $this->response
+            // Here, the resource types are the ones supported by the querier.
+            ->setResourceTypes($this->resourceTypes)
+        ;
 
         // When no query or resource types are set.
         if ($this->args === null) {
@@ -64,120 +72,81 @@ class InternalQuerier extends AbstractQuerier
         $plugins = $this->services->get('ControllerPluginManager');
         $hasReferences = $plugins->has('references');
 
-        // Omeka S v4.1 does not allow to search fulltext and return scalar ids.
-        /** @see https://github.com/omeka/omeka-s/pull/2224 */
-        $requireFix2224 = isset($this->args['fulltext_search'])
-            // A full text search cannot be "*" alone. Anyway it has no meaning.
-            && in_array($this->args['fulltext_search'], ['', '*'], true)
-            && substr((string) $this->query->getSort(), 0, 9) === 'relevance';
+        // Versions < 3.4.49 required to get all ids early, but this need was
+        // only used to create the link for bulk export (but it can use a query)
+        // and to prepare the mapping features when a map is displayed on an
+        // item set in some theme. Furthermore, to get all ids created an issue
+        // when there was a fulltext_search, so a fix was done (/** @link https://github.com/omeka/omeka-s/pull/2224 */).
+        // Important: the full list of ids is used for the facets too.
 
-        // The standard api way implies a double query, because scalar doesn't
-        // set the full total and doesn't use paginator, but return all values.
-        // So get all ids, then slice it here.
-        // TODO Check if this fix is still needed.
-        $dataQuery = $this->args;
-        $limit = empty($dataQuery['limit']) ? null : (int) $dataQuery['limit'];
-        $offset = empty($dataQuery['offset']) ? 0 : (int) $dataQuery['offset'];
-        unset($dataQuery['limit'], $dataQuery['offset']);
+        // The new way is to get the full resources, like omeka browse, and to
+        // get the ids on request only, so checked and limited, via a yield.
 
         // Some query arguments and facets are not manageable via resource type
-        // "resources".
+        // "resources" in Omeka v4.1 (no search on mixed "resources").
         $isSpecificQuery = $this->isSpecificQuery(true);
-
-        // Return scalar doesn't allow to get the total of results.
-        // So skip offset and limit, then apply them in order to avoid the
-        // double query.
-        // Important: the full list of ids is used for the facets too.
-        // TODO Check if this internal api paginator is quicker in all cases (small/long results) than previous double query.
 
         // Resources types are filtered from the query or from the indexes.
         if ($this->byResourceType || $isSpecificQuery) {
             foreach ($this->resourceTypes as $resourceType) {
                 try {
-                    if ($requireFix2224) {
-                        $apiResponse = $api->search($resourceType, $dataQuery, ['returnScalar' => 'id', 'require_fix_2224' => true]);
-                        $totalResults = $apiResponse->getRequest()->getOption('total_results', 0);
-                        $result = $apiResponse->getRequest()->getOption('results', []);
-                    } else {
-                        $apiResponse = $api->search($resourceType, $dataQuery, ['returnScalar' => 'id']);
-                        $totalResults = $apiResponse->getTotalResults();
-                        $result = $apiResponse->getContent();
-                    }
+                    $apiResponse = $api->search($resourceType, $this->args);
+                    $totalResults = $apiResponse->getTotalResults();
+                    $result = $apiResponse->getContent();
                 } catch (\Omeka\Api\Exception\ExceptionInterface $e) {
                     throw new QuerierException($e->getMessage(), $e->getCode(), $e);
                 }
-                // TODO Currently experimental. To replace by a query + arg "querier=internal".
-                $this->response->setAllResourceIdsForResourceType($resourceType, array_keys($result) ?: []);
-                if ($result && ($offset || $limit)) {
-                    $result = array_slice($result, $offset, $limit ?: null);
-                    // $apiResponse->setContent($result);
-                }
                 $this->response->setResourceTotalResults($resourceType, $totalResults);
-                if ($totalResults) {
-                    $result = array_map(fn ($v) => ['id' => $v], $result);
-                } else {
-                    $result = [];
-                }
-                $this->response->addResults($resourceType, $result);
+                $this->response->setResourcesForType($resourceType, $result);
             }
             $totalResults = array_sum($this->response->getResourceTotalResults());
             $this->response->setTotalResults($totalResults);
         } else {
+            // It is not possible to return the resource type for now with
+            // doctrine, but it is useless.
+            $mainResourceType = count($this->resourceTypes) === 1
+                ? reset($this->resourceTypes)
+                : 'resources';
             try {
-                // It is not possible to return the resource type for now with
-                // doctrine, but it is useless.
-                $mainResourceType = count($this->resourceTypes) === 1 ? reset($this->resourceTypes) : 'resources';
-                if ($requireFix2224) {
-                    $apiResponse = $api->search($mainResourceType, $dataQuery, ['returnScalar' => 'id', 'require_fix_2224' => true]);
-                    $totalResults = $apiResponse->getRequest()->getOption('total_results', 0);
-                    $result = $apiResponse->getRequest()->getOption('results', []);
-                } else {
-                    $apiResponse = $api->search($mainResourceType, $dataQuery, ['returnScalar' => 'id']);
-                    $totalResults = $apiResponse->getTotalResults();
-                    $result = $apiResponse->getContent();
-                }
+                $apiResponse = $api->search($mainResourceType, $this->args);
+                $totalResults = $apiResponse->getTotalResults();
+                $result = $apiResponse->getContent();
             } catch (\Omeka\Api\Exception\ExceptionInterface $e) {
                 throw new QuerierException($e->getMessage(), $e->getCode(), $e);
             }
-            // TODO Currently experimental. To replace by a query + arg "querier=internal".
-            $this->response->setAllResourceIdsForResourceType('resources', array_keys($result) ?: []);
-            if ($result && ($offset || $limit)) {
-                $result = array_slice($result, $offset, $limit ?: null);
-                // $apiResponse->setContent($result);
-            }
-            $this->response->setResourceTotalResults('resources', $totalResults);
-            if ($totalResults) {
-                $result = array_map(fn ($v) => ['id' => $v], $result);
-            } else {
-                $result = [];
-            }
-            $this->response->addResults('resources', $result);
+            $this->response->setResourceTotalResults($mainResourceType, $totalResults);
+            $this->response->setResources($result);
             $this->response->setTotalResults($totalResults);
         }
 
-        $this->response->setCurrentPage($limit ? 1 + (int) floor($offset / $limit) : 1);
-        $this->response->setPerPage($limit);
+        $this->response->setCurrentPage($this->query->getPage());
+        $this->response->setPerPage($this->query->getPerPage());
 
-        // Remove specific results when settings are not by resource type.
+        // Remove specific results when settings are not by resource type, so
+        // merge all results and keep only "resources".
         // TODO The order may be different when "resources" is not used.
         // Facets are always grouped.
-        // This is the same in SolariumQuerier.
+        // TODO Clarify: if there is "resources", why reprocess?
         if ($isSpecificQuery && !$this->byResourceType && count($this->resourceTypes) > 1) {
-            $allResourceIdsByType = $this->response->getAllResourceIds(null, true);
-            if (isset($allResourceIdsByType['resources'])) {
-                $this->response->setAllResourceIdsByResourceType(['resources' => $allResourceIdsByType['resources']]);
+            // Here, the resources were stored by type above.
+            $resourcesByType = $this->response->getResources(null, false);
+            $this->response->setResourcesForType(null, null);
+            $total = $this->response->getTotalResults();
+            if ($total) {
+                if (isset($resourcesByType['resources'])) {
+                    $this->response->setResourcesForType('resources', $resourcesByType['resources']);
+                } else {
+                    $this->response->setResourcesForType('resources', array_merge(...array_values($resourcesByType)));
+                }
             } else {
-                $this->response->setAllResourceIdsByResourceType(['resources' => array_merge(...array_values($allResourceIdsByType))]);
+                $this->response->setResourcesForType('resources', []);
             }
-            $resultsByType = $this->response->getResults();
-            if (isset($resultsByType['resources'])) {
-                $this->response->setResults(['resources' => $resultsByType['resources']]);
-            } else {
-                $this->response->setResults(['resources' => array_replace(...array_values($resultsByType))]);
-            }
+            // Total may be different for resources?
             $totalResultsByType = $this->response->getResourceTotalResults();
-            $total = isset($totalResultsByType['resources']) ? $totalResultsByType['resources'] : array_sum($totalResultsByType);
-            $this->response->setResourceTotalResults('resources', $total);
+            $total = isset($totalResultsByType['resources'])
+                ? $totalResultsByType['resources']
+                : array_sum($totalResultsByType);
+            $this->response->setAllResourceTotalResults(['resources' => $total]);
             $this->response->setTotalResults($total);
         }
 
@@ -195,19 +164,17 @@ class InternalQuerier extends AbstractQuerier
         $this->response->setApi($this->services->get('Omeka\ApiManager'));
 
         $this->args = $this->getPreparedQuery();
-        if (is_null($this->args)) {
+        if ($this->args === null) {
             return $this->response
                 ->setMessage('An issue occurred.'); // @translate
         }
 
         $suggestOptions = $this->query->getSuggestOptions();
-        if (!empty($suggestOptions['direct'])) {
-            return $this->querySuggestionsDirect();
-        }
 
-        // TODO Manage site id and item set id and any other filter query.
-        // TODO Use the index full text?
-        // TODO Manage site here?
+        // Direct query without index, used for field-specific suggestions.
+        if (!empty($suggestOptions['direct'])) {
+            return $this->querySuggestionsForField();
+        }
 
         // The mode index, resource types, fields, and length are managed during
         // indexation.
@@ -218,9 +185,6 @@ class InternalQuerier extends AbstractQuerier
                 ->setMessage('An issue occurred for the suggester.'); // @translate
         }
 
-        $isPublic = $this->query->getIsPublic();
-        $column = $isPublic ? 'public' : 'all';
-
         $modeSearch = $suggestOptions['mode_search'] ?? 'start';
 
         /** @var \Doctrine\DBAL\Connection $connection */
@@ -229,30 +193,61 @@ class InternalQuerier extends AbstractQuerier
         $bind = [
             'suggester' => $suggester,
             'limit' => $this->query->getLimit(),
-            'value_like' => ($modeSearch === 'contain' ? '%' : '')
-                . str_replace(['%', '_'], ['\%', '\_'], $q) . '%',
         ];
         $types = [
             'suggester' => \PDO::PARAM_INT,
             'limit' => \PDO::PARAM_INT,
-            'value_like' => \PDO::PARAM_STR,
         ];
+
+        // Determine site filter and column:
+        // - Admin (isPublic=false): use `total` column (all resources including private)
+        // - Public (isPublic=true): use `total_public` column (public resources only)
+        // - With site: filter by site_id
+        // - Without site: use global index (site_id = 0)
+        $isPublic = $this->query->getIsPublic();
+        $siteId = $this->query->getSiteId();
+
+        // Choose column based on visibility.
+        $column = $isPublic ? 'total_public' : 'total';
+
+        // Choose site filter (site_id = 0 means global).
+        $sqlSiteFilter = 'AND ss.`site_id` = :site_id';
+        $bind['site_id'] = $siteId ?: 0;
+        $types['site_id'] = \PDO::PARAM_INT;
+
+        // Choose search method based on mode:
+        // - "start": use LIKE 'term%' (B-tree index efficient for prefix search)
+        // - "contain": use FULLTEXT MATCH() AGAINST() (much faster than LIKE '%term%')
+        if ($modeSearch === 'contain') {
+            // FULLTEXT search: searches for words, not substrings.
+            // Boolean mode allows partial word matching with wildcard.
+            $bind['value_match'] = $q . '*';
+            $types['value_match'] = \PDO::PARAM_STR;
+            $sqlTextFilter = 'AND MATCH(s.`text`) AGAINST(:value_match IN BOOLEAN MODE)';
+        } else {
+            // Prefix search with LIKE (uses B-tree index).
+            $bind['value_like'] = strtr($q, ['%' => '\%', '_' => '\_']) . '%';
+            $types['value_like'] = \PDO::PARAM_STR;
+            $sqlTextFilter = 'AND s.`text` LIKE :value_like';
+        }
 
         $sql = <<<SQL
             SELECT DISTINCT
-                `text` AS "value",
-                `total_$column` AS "data"
-            FROM `search_suggestion` AS `search_suggestion`
-            WHERE `search_suggestion`.`suggester_id` = :suggester
-                AND `search_suggestion`.`text` LIKE :value_like
-            ORDER BY data DESC
+                s.`text` AS "value",
+                ss.`$column` AS "data"
+            FROM `search_suggestion` s
+            JOIN `search_suggestion_site` ss ON ss.`suggestion_id` = s.`id`
+            WHERE s.`suggester_id` = :suggester
+                $sqlTextFilter
+                $sqlSiteFilter
+            ORDER BY ss.`$column` DESC
             LIMIT :limit
             ;
             SQL;
 
         try {
             $results = $connection->executeQuery($sql, $bind, $types)->fetchAllAssociative();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->err($e->getMessage());
             return $this->response
                 ->setMessage('An internal issue in database occurred.'); // @translate
@@ -262,12 +257,19 @@ class InternalQuerier extends AbstractQuerier
             ->setIsSuccess(true);
     }
 
-    protected function querySuggestionsDirect(): Response
+    /**
+     * Query suggestions directly from database for a specific field.
+     *
+     * Used when suggestions are requested for a specific field without a
+     * pre-built suggester index. This is slower than indexed suggestions
+     * but allows field-specific autocompletion.
+     *
+     * @todo Optimize with per-field suggestion index or use FULLTEXT search.
+     * @todo Support site filtering via item_site join for item sets.
+     * @todo Add caching for frequently requested fields.
+     */
+    protected function querySuggestionsForField(): Response
     {
-        // TODO Manage site id and item set id and any other filter query.
-        // TODO Use the full text search table.
-        // TODO Manage the field query args for suggestion.
-
         $mapResourcesToClasses = [
             'items' => \Omeka\Entity\Item::class,
             'item_sets' => \Omeka\Entity\ItemSet::class,
@@ -282,7 +284,7 @@ class InternalQuerier extends AbstractQuerier
         $bind = [
             'limit' => $this->query->getLimit(),
             'value_length' => mb_strlen($q),
-            'length' => (int) ($this->query->getSuggestOptions()['length'] ?: 50),
+            'length' => (int) ($this->query->getSuggestOptions()['length'] ?: 20),
         ];
         $types = [
             'limit' => \PDO::PARAM_INT,
@@ -325,16 +327,15 @@ class InternalQuerier extends AbstractQuerier
         if ($excludedFields) {
             $ids = $this->easyMeta->propertyIds($excludedFields);
             if ($ids) {
-                $sqlFields .= 'AND `value`.`property_id` NOT IN (:excluded_property_ids)';
+                $sqlFields .= ' AND `value`.`property_id` NOT IN (:excluded_property_ids)';
                 $bind['excluded_property_ids'] = array_values($ids);
                 $types['excluded_property_ids'] = $connection::PARAM_INT_ARRAY;
             }
         }
 
-        // FIXME The sql for site doesn't manage site item sets.
         $site = $this->query->getSiteId();
         if ($site) {
-            $sqlSite = 'JOIN `item_site` ON `item_site`.`item_id` = `resource`.`id` AND `item_site`.`site_id` = ' . $site;
+            $sqlSite = 'JOIN `item_site` ON `item_site`.`item_id` = `resource`.`id` AND `item_site`.`site_id` = ' . (int) $site;
         } else {
             $sqlSite = '';
         }
@@ -350,7 +351,6 @@ class InternalQuerier extends AbstractQuerier
 
         $mode = $this->query->getSuggestOptions()['mode_search'] ?: 'start';
         if ($mode === 'contain') {
-            // TODO Improve direct sql for full suggestions.
             $sql = <<<SQL
                 SELECT DISTINCT
                     SUBSTRING(TRIM(REPLACE(REPLACE(`value`.`value`, "\n", " "), "\r", " ")), 1, :length) AS "value",
@@ -370,39 +370,9 @@ class InternalQuerier extends AbstractQuerier
                 LIMIT :limit
                 ;
                 SQL;
-            $bind['value_like'] = '%' . str_replace(['%', '_'], ['\%', '\_'], $q) . '%';
+            $bind['value_like'] = '%' . strtr($q, ['%' => '\%', '_' => '\_']) . '%';
             $types['value_like'] = \PDO::PARAM_STR;
         } elseif ($mode === 'start') {
-            /*
-            $sql = <<<SQL
-                SELECT DISTINCT
-                    SUBSTRING(SUBSTRING_INDEX(
-                        CONCAT(
-                            TRIM(REPLACE(REPLACE(`value`.`value`, "\n", " "), "\r", " ")),
-                        " "), " ", 1
-                    ), 1, :length) AS "value",
-                    COUNT(SUBSTRING(SUBSTRING_INDEX(
-                        CONCAT(
-                            TRIM(REPLACE(REPLACE(`value`.`value`, "\n", " "), "\r", " ")),
-                        " "), " ", 1
-                    ), 1, :length)) as "data"
-                FROM `value` AS `value`
-                INNER JOIN
-                    `resource` ON `resource`.`id` = `value`.`resource_id`
-                    $sqlResourceTypes
-                $sqlSite
-                WHERE
-                    `value`.`value` LIKE :value_like
-                GROUP BY SUBSTRING(SUBSTRING_INDEX(
-                        CONCAT(
-                            TRIM(REPLACE(REPLACE(`value`.`value`, "\n", " "), "\r", " ")),
-                        " "), " ", 1
-                    ), 1, :length)
-                ORDER BY data DESC
-                LIMIT :limit
-                ;
-                SQL;
-                */
             $sql = <<<SQL
                 SELECT DISTINCT
                     SUBSTRING(
@@ -442,7 +412,7 @@ class InternalQuerier extends AbstractQuerier
                 LIMIT :limit
                 ;
                 SQL;
-            $bind['value_like'] = str_replace(['%', '_'], ['\%', '\_'], $q) . '%';
+            $bind['value_like'] = strtr($q, ['%' => '\%', '_' => '\_']) . '%';
             $types['value_like'] = \PDO::PARAM_STR;
         } else {
             return $this->response
@@ -455,7 +425,7 @@ class InternalQuerier extends AbstractQuerier
             $this->logger->err($e->getMessage());
             return $this->response
                 ->setMessage('An internal issue in database occurred.'); // @translate
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->err($e->getMessage());
             return $this->response
                 ->setMessage('An internal issue occurred.'); // @translate
@@ -482,7 +452,7 @@ class InternalQuerier extends AbstractQuerier
      * @see \AdvancedSearch\Querier\InternalQuerier::queryValues()
      * @see \Reference\Mvc\Controller\Plugin\References
      */
-    public function queryValues(string $field): array
+    public function queryValues(string $field, ?string $prefix = null, int $limit = 0): array
     {
         // Check if the field is a special or a multifield.
 
@@ -505,58 +475,124 @@ class InternalQuerier extends AbstractQuerier
             return [];
         }
 
-        $entityManager = $this->services->get('Omeka\EntityManager');
-        $qb = $entityManager->createQueryBuilder();
+        $isOldOmeka = version_compare(\Omeka\Module::VERSION, '4.2.0', '<');
+        $qb = $isOldOmeka
+            ? $this->services->get('Omeka\EntityManager')->createQueryBuilder()
+            : $this->services->get('Omeka\ApiAdapterManager')->get('items')->createQueryBuilder();
         $expr = $qb->expr();
 
         // For example to list all authors that are a resource.
-        $fieldQueryArgs = $this->query ? $this->query->getFieldsQueryArgs() : [];
+        // TODO Manage custom vocabs with item set.
+        // TODO This usage of arg type is not standard and uncommon. Documentate it.
+        $fieldQueryArgs = $this->query ? $this->query->getFieldQueryArgs($field) : null;
         $isResourceQuery = $fieldQueryArgs
-            && isset($fieldQueryArgs[$field]['type'])
-            && isset($fieldQueryArgs[$fieldQueryArgs[$field]['type']])
-            && in_array($fieldQueryArgs[$fieldQueryArgs[$field]['type']], SearchResources::FIELD_QUERY['main_type']['resource']);
+            && isset($fieldQueryArgs['type'])
+            && isset($fieldQueryArgs[$fieldQueryArgs['type']])
+            && in_array($fieldQueryArgs[$fieldQueryArgs['type']], SearchResources::FIELD_QUERY['main_type']['resource']);
 
         if ($isResourceQuery) {
             $qb
-                ->select('valueResource.title AS val')
+                ->select('valueResource.title AS v')
                 ->from(\Omeka\Entity\Value::class, 'value')
                 // This join allow to check visibility automatically too.
                 ->innerJoin(\Omeka\Entity\Item::class, 'resource', Join::WITH, $expr->eq('value.resource', 'resource'))
                 ->innerJoin(\Omeka\Entity\Item::class, 'valueResource', Join::WITH, $expr->eq('value.valueResource', 'valueResource'))
-                ->andWhere($expr->in('value.property', ':properties'))
-                ->setParameter('properties', implode(',', $propertyIds))
-                ->groupBy('val')
-                ->orderBy('val', 'asc');
+                // Always return a non-empty string, not null.
+                ->where('valueResource.title IS NOT NULL')
+                ->andWhere('valueResource.title != ""');
         } else {
             $qb
-                ->select('COALESCE(value.value, valueResource.title, value.uri) AS val')
+                // Always return a string, not null.
+                // Doctrine rejects empty string withy double quote.
+                ->select("COALESCE(value.value, valueResource.title, value.uri, '') AS v")
                 ->from(\Omeka\Entity\Value::class, 'value')
                 // This join allow to check visibility automatically too.
                 ->innerJoin(\Omeka\Entity\Item::class, 'resource', Join::WITH, $expr->eq('value.resource', 'resource'))
                 // The values should be distinct for each type.
                 ->leftJoin(\Omeka\Entity\Item::class, 'valueResource', Join::WITH, $expr->eq('value.valueResource', 'valueResource'))
-                ->andWhere($expr->in('value.property', ':properties'))
-                ->setParameter('properties', implode(',', $propertyIds))
-                ->groupBy('val')
-                ->orderBy('val', 'asc');
+                ->where("COALESCE(value.value, valueResource.title, value.uri, '') != ''");
+        }
+
+        if (!empty($fieldQueryArgs['lang'])) {
+            $fieldLangs = is_array($fieldQueryArgs['lang']) ? $fieldQueryArgs['lang'] : [$fieldQueryArgs['lang']];
+            if (in_array('', $fieldLangs)) {
+                $qb
+                    ->andWhere($expr->orX(
+                        $expr->isNull('value.lang'),
+                        $expr->in('value.lang', ':lang'))
+                    );
+            } else {
+                $qb
+                    ->andWhere($expr->in('value.lang', ':lang'));
+            }
+            $qb
+                ->setParameter('lang', array_values($fieldLangs), \Doctrine\DBAL\Connection::PARAM_STR_ARRAY);
+        }
+
+        if (!empty($fieldQueryArgs['datatype'])) {
+            $fieldDataTypes = is_array($fieldQueryArgs['datatype']) ? $fieldQueryArgs['datatype'] : [$fieldQueryArgs['datatype']];
+            $qb
+                ->andWhere($expr->in('value.type', ':datatype'))
+                ->setParameter('datatype', array_values($fieldDataTypes), \Doctrine\DBAL\Connection::PARAM_STR_ARRAY);
         }
 
         $siteId = $this->query->getSiteId();
-        $siteAlias = 'site';
         if ($siteId) {
+            $siteAlias = 'site';
             $qb
                 ->innerJoin('resource.sites', $siteAlias, 'WITH', $expr->eq("$siteAlias.id", ':site_id'))
                 ->setParameter('site_id', $siteId);
-            // TODO Manage settigns site_attachements_only. See ItemAdapter.
+            // TODO Manage settings site_attachements_only. See ItemAdapter.
         }
 
-        $list = array_column($qb->getQuery()->getScalarResult(), 'val', 'val');
+        $qb
+            ->andWhere($expr->in('value.property', ':properties'))
+            ->setParameter('properties', array_values($propertyIds), \Doctrine\DBAL\Connection::PARAM_INT_ARRAY)
+            ->groupBy('v')
+            ->orderBy('v', 'asc');
 
-        // Fix false empty duplicate or values without title.
-        $list = array_keys(array_flip($list));
-        unset($list['']);
+        if ($prefix !== null && $prefix !== '') {
+            $qb
+                ->andWhere($expr->like('v', ':prefix'))
+                ->setParameter('prefix', $prefix . '%');
+        }
+        if ($limit > 0) {
+            $qb->setMaxResults($limit);
+        }
 
+        $list = $qb->getQuery()->getSingleColumnResult();
         return array_combine($list, $list);
+    }
+
+    /**
+     * With internal querier, this method should be avoided when the total
+     * resources is too big for the server, else a memory overflow can occur.
+     *
+     * {@inheritDoc}
+     * @see \AdvancedSearch\Querier\AbstractQuerier::allResourceIdsByResourceType()
+     */
+    public function queryAllResourceIds(?string $resourceType = null, bool $byResourceType = false): array
+    {
+        $result = [];
+
+        // One-level recursivity.
+        if (!$resourceType) {
+            foreach ($this->resourceTypes as $resourceType) {
+                $result[$resourceType] = $this->queryAllResourceIds($resourceType);
+            }
+            return $result;
+        }
+
+        $dataQuery = $this->args;
+        unset($dataQuery['page'], $dataQuery['per_page'], $dataQuery['limit'], $dataQuery['offset']);
+
+        try {
+            /** @var \Omeka\Api\Manager $api */
+            $api = $this->services->get('Omeka\ApiManager');
+            return $api->search($resourceType, $dataQuery, ['returnScalar' => 'id'])->getContent();
+        } catch (\Omeka\Api\Exception\ExceptionInterface $e) {
+            throw new QuerierException($e->getMessage(), $e->getCode(), $e);
+        }
     }
 
     /**
@@ -646,6 +682,7 @@ class InternalQuerier extends AbstractQuerier
             $this->args['sort_order'] = $sortOrder === 'desc' ? 'desc' : 'asc';
         }
 
+        // Limit is per page and offset is page x limit.
         $limit = $this->query->getLimit();
         if ($limit) {
             $this->args['limit'] = $limit;
@@ -684,7 +721,8 @@ class InternalQuerier extends AbstractQuerier
 
         if ($this->query->getOption('remove_diacritics', false)) {
             if (extension_loaded('intl')) {
-                $transliterator = \Transliterator::createFromRules(':: NFD; :: [:Nonspacing Mark:] Remove; :: NFC;');
+                static $transliterator;
+                $transliterator ??= \Transliterator::createFromRules(':: NFD; :: [:Nonspacing Mark:] Remove; :: NFC;');
                 $q = $transliterator->transliterate($q);
             } elseif (extension_loaded('iconv')) {
                 $q = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $q);
@@ -693,11 +731,12 @@ class InternalQuerier extends AbstractQuerier
         }
 
         // TODO Try to support the exact search and the full text search (removed in version 3.5.17.3).
-        if (mb_substr($q, 0, 1) === '"' && mb_substr($q, -1) === '"') {
+        $isWrappedWithQuote = mb_substr($q, 0, 1) === '"' && mb_substr($q, -1) === '"';
+        if ($isWrappedWithQuote) {
             $q = trim($q, '" ');
         }
 
-        if ($this->query->getOption('default_search_partial_word', false)) {
+        if ($isWrappedWithQuote || $this->query->getOption('default_search_partial_word', false)) {
             $this->args['filter'][] = [
                 'join' => 'and',
                 'field' => '',
@@ -741,7 +780,8 @@ class InternalQuerier extends AbstractQuerier
 
         if ($this->query->getOption('remove_diacritics', false)) {
             if (extension_loaded('intl')) {
-                $transliterator = \Transliterator::createFromRules(':: NFD; :: [:Nonspacing Mark:] Remove; :: NFC;');
+                static $transliterator;
+                $transliterator ??= \Transliterator::createFromRules(':: NFD; :: [:Nonspacing Mark:] Remove; :: NFC;');
                 $q = $transliterator->transliterate($q);
             } elseif (extension_loaded('iconv')) {
                 $q = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $q);
@@ -750,11 +790,12 @@ class InternalQuerier extends AbstractQuerier
         }
 
         // TODO Try to support the exact search and the full text search (removed in previous version).
-        if (mb_substr($q, 0, 1) === '"' && mb_substr($q, -1) === '"') {
+        $isWrappedWithQuote = mb_substr($q, 0, 1) === '"' && mb_substr($q, -1) === '"';
+        if ($isWrappedWithQuote) {
             $q = trim($q, '" ');
         }
 
-        if ($this->query->getOption('default_search_partial_word', false)) {
+        if ($isWrappedWithQuote || $this->query->getOption('default_search_partial_word', false)) {
             $this->args['filter'][] = [
                 'join' => 'and',
                 'field' => '',
@@ -810,11 +851,26 @@ class InternalQuerier extends AbstractQuerier
     {
         $flatArray = function ($values): array {
             if (!is_array($values)) {
+                // Scalar value.
                 return [$values];
-            } elseif (is_array(reset($values))) {
+            } elseif (!is_array(reset($values))) {
+                // Simple level array.
+                return $values;
+            }
+            // Manage sub arrays.
+            if (array_key_exists('val', $values)) {
+                // The array may be a simple filter.
+                return is_array($values['val']) ? $values['val'] : [$values['val']];
+            }
+            // The array may be an array of values or an array of filters.
+            $firstValue = reset($values);
+            if (array_key_exists('val', $firstValue)) {
+                $values = array_column($values, 'val');
+                $values = array_map(fn ($v) => is_array($v) ? $v : [$v], $values);
                 return array_merge(...array_values($values));
             }
-            return $values;
+            // Else it is an unknown array of arrays to extract.
+            return array_merge(...array_values($values));
         };
 
         // Empty values are already filtered by the form adapter.
@@ -831,7 +887,7 @@ class InternalQuerier extends AbstractQuerier
                 }
                 // Only managed resource types are searchable.
                 // The arg is already set above.
-                $this->args['resource_type'] = array_unique(array_intersect($this->resourceType, array_merge($this->args['resource_type'], $values)));
+                $this->args['resource_type'] = array_unique(array_intersect($this->resourceTypes, array_merge($this->args['resource_type'] ?? [], $values)));
                 continue 2;
 
             // "is_public" is automatically managed by this internal adapter
@@ -920,43 +976,104 @@ class InternalQuerier extends AbstractQuerier
                 if (!$field) {
                     break;
                 }
+                $fieldEnd = !empty($fieldData['field_end'])
+                    ? $this->fieldToIndex($fieldData['field_end'])
+                    : null;
                 $firstKey = key($values);
                 // Check for a facet range.
                 if (count($values) <= 2 && ($firstKey === 'from' || $firstKey === 'to')) {
-                    if (isset($values['from']) && $values['from'] !== '') {
-                        $this->args['filter'][] = [
-                            'join' => 'and',
-                            'field' => $field,
-                            'type' => '≥',
-                            'val' => $values['from'],
-                        ];
-                    }
-                    if (isset($values['to']) && $values['to'] !== '') {
-                        $this->args['filter'][] = [
-                            'join' => 'and',
-                            'field' => $field,
-                            'type' => '≤',
-                            'val' => $values['to'],
-                        ];
+                    if ($fieldEnd) {
+                        // Interval overlap on uncertain dates: match resources
+                        // whose [start, end] intersects the queried [from, to],
+                        // i.e. start ≤ to AND end ≥ from.
+                        if (isset($values['to']) && $values['to'] !== '') {
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $field,
+                                'type' => '≤',
+                                'val' => $values['to'],
+                            ];
+                        }
+                        if (isset($values['from']) && $values['from'] !== '') {
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $fieldEnd,
+                                'type' => '≥',
+                                'val' => $values['from'],
+                            ];
+                        }
+                    } else {
+                        if (isset($values['from']) && $values['from'] !== '') {
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $field,
+                                'type' => '≥',
+                                'val' => $values['from'],
+                            ];
+                        }
+                        if (isset($values['to']) && $values['to'] !== '') {
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $field,
+                                'type' => '≤',
+                                'val' => $values['to'],
+                            ];
+                        }
                     }
                 } else {
-                    $fieldQueryArgs = $this->query->getFieldQueryArgs($fieldName);
-                    if ($fieldQueryArgs) {
-                        $this->args['filter'][] = [
-                            'join' => $fieldQueryArgs['join'] ?? 'and',
-                            'field' => $field,
-                            'except' => $fieldQueryArgs['except'] ?? null,
-                            'type' => $fieldQueryArgs['type'] ?? 'eq',
-                            'val' => $flatArray($values),
-                            'datatype' => $fieldQueryArgs['datatype'] ?? null,
-                        ];
+                    // Check if first_digits is enabled for this facet.
+                    // When enabled, use range filter (>= value AND < value+1) instead of equals.
+                    // This is faster than "starts with" (LIKE) as it uses indexes.
+                    $facetType = $fieldData['type'] ?? 'Checkbox';
+                    $isRangeType = in_array($facetType, ['RangeDouble', 'SelectRange']);
+                    $firstDigitsDefault = $isRangeType;
+                    $useFirstDigits = ($fieldData['first_digits']
+                        ?? $fieldData['options']['first_digits']
+                        ?? $firstDigitsDefault) === true
+                        || in_array($fieldData['first_digits']
+                            ?? $fieldData['options']['first_digits']
+                            ?? ($firstDigitsDefault ? 'true' : 'false'), [1, '1', 'true'], true);
+
+                    if ($useFirstDigits) {
+                        // Use range filter for each value (e.g., >= 2014 AND < 2015).
+                        $flatValues = $flatArray($values);
+                        foreach ($flatValues as $val) {
+                            if (!is_numeric($val)) {
+                                continue;
+                            }
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $field,
+                                'type' => '≥',
+                                'val' => (string) $val,
+                            ];
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $field,
+                                'type' => '<',
+                                'val' => (string) ((int) $val + 1),
+                            ];
+                        }
                     } else {
-                        $this->args['filter'][] = [
-                            'join' => 'and',
-                            'field' => $field,
-                            'type' => 'eq',
-                            'val' => $flatArray($values),
-                        ];
+                        $fieldQueryArgs = $this->query->getFieldQueryArgs($fieldName);
+                        if ($fieldQueryArgs) {
+                            $this->args['filter'][] = [
+                                'join' => $fieldQueryArgs['join'] ?? 'and',
+                                'field' => $field,
+                                'except' => $fieldQueryArgs['except'] ?? null,
+                                'type' => $fieldQueryArgs['type'] ?? 'eq',
+                                'val' => $flatArray($values),
+                                'lang' => $fieldQueryArgs['lang'] ?? null,
+                                'datatype' => $fieldQueryArgs['datatype'] ?? null,
+                            ];
+                        } else {
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $field,
+                                'type' => 'eq',
+                                'val' => $flatArray($values),
+                            ];
+                        }
                     }
                 }
                 break;
@@ -999,6 +1116,23 @@ class InternalQuerier extends AbstractQuerier
                 if (!$field) {
                     break;
                 }
+
+                // Check if first_digits is enabled for this form filter.
+                // When enabled, use range filter (>= value AND < value+1).
+                $formFilterData = $this->query->getFormFilter($fieldName);
+                $useFirstDigits = false;
+                if ($formFilterData) {
+                    $filterType = $formFilterData['type'] ?? 'Text';
+                    $isRangeType = in_array($filterType, ['RangeDouble', 'Range', 'Number']);
+                    $firstDigitsDefault = $isRangeType;
+                    $useFirstDigits = ($formFilterData['first_digits']
+                        ?? $formFilterData['options']['first_digits']
+                        ?? $firstDigitsDefault) === true
+                        || in_array($formFilterData['first_digits']
+                            ?? $formFilterData['options']['first_digits']
+                            ?? ($firstDigitsDefault ? 'true' : 'false'), [1, '1', 'true'], true);
+                }
+
                 $fieldQueryArgs = $this->query->getFieldQueryArgs($fieldName);
                 foreach ($values as $value) {
                     if (is_array($value)) {
@@ -1024,6 +1158,7 @@ class InternalQuerier extends AbstractQuerier
                                 'except' => $fieldQueryArgs['except'] ?? null,
                                 'type' => $fieldQueryArgs['type'] ?? 'eq',
                                 'val' => $value,
+                                'lang' => $fieldQueryArgs['lang'] ?? null,
                                 'datatype' => $fieldQueryArgs['datatype'] ?? null,
                             ];
                         } else {
@@ -1035,13 +1170,28 @@ class InternalQuerier extends AbstractQuerier
                             ];
                         }
                     } else {
-                        if ($fieldQueryArgs) {
+                        // Use range filter for first_digits numeric values.
+                        if ($useFirstDigits && is_numeric($value)) {
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $field,
+                                'type' => '≥',
+                                'val' => (string) $value,
+                            ];
+                            $this->args['filter'][] = [
+                                'join' => 'and',
+                                'field' => $field,
+                                'type' => '<',
+                                'val' => (string) ((int) $value + 1),
+                            ];
+                        } elseif ($fieldQueryArgs) {
                             $this->args['filter'][] = [
                                 'join' => $fieldQueryArgs['join'] ?? 'and',
                                 'field' => $field,
                                 'except' => $fieldQueryArgs['except'] ?? null,
                                 'type' => $fieldQueryArgs['type'] ?? 'eq',
                                 'val' => $value,
+                                'lang' => $fieldQueryArgs['lang'] ?? null,
                                 'datatype' => $fieldQueryArgs['datatype'] ?? null,
                             ];
                         } else {
@@ -1060,19 +1210,72 @@ class InternalQuerier extends AbstractQuerier
 
     protected function filterQueryRanges(array $dateRangeFilters): void
     {
-        foreach ($dateRangeFilters as $field => $filterValues) {
-            if ($field === 'created' || $field === 'modified') {
+        foreach ($dateRangeFilters as $fieldName => $filterValues) {
+            $fieldEnd = null;
+            if ($fieldName === 'created' || $fieldName === 'modified') {
                 $argName = 'datetime';
+                $field = $fieldName;
             } else {
-                $field = $this->fieldToIndex($field);
+                $field = $this->fieldToIndex($fieldName);
                 if (!$field) {
                     continue;
                 }
                 $argName = 'filter';
+                $formFilterData = $this->query
+                    ? $this->query->getFormFilter($fieldName)
+                    : null;
+                if ($formFilterData && !empty($formFilterData['field_end'])) {
+                    $fieldEnd = $this->fieldToIndex($formFilterData['field_end']);
+                }
             }
+
+            // EDTF datatype: route to edtf[] args supported by module
+            // DataTypeEdtf. Requires the field query args to declare datatype
+            // "edtf".
+            $fieldQueryArgs = $this->query
+                ? $this->query->getFieldQueryArgs($fieldName)
+                : null;
+            $datatypes = isset($fieldQueryArgs['datatype'])
+                ? (is_array($fieldQueryArgs['datatype'])
+                    ? $fieldQueryArgs['datatype']
+                    : [$fieldQueryArgs['datatype']])
+                : [];
+            $isEdtf = in_array('edtf', $datatypes, true);
+            if ($isEdtf) {
+                $propertyId = $this->easyMeta
+                    ->propertyId($fieldName);
+                if ($propertyId) {
+                    $this->filterQueryRangesEdtf(
+                        $propertyId, $filterValues
+                    );
+                    continue;
+                }
+            }
+
             foreach ($filterValues as $filterValue) {
                 // Skip simple and query filters (for hidden queries).
                 if (!is_array($filterValue)) {
+                    continue;
+                }
+                if ($fieldEnd) {
+                    // Interval overlap on uncertain dates: start ≤ to AND end ≥
+                    // from.
+                    if (isset($filterValue['to']) && strlen($filterValue['to'])) {
+                        $this->args[$argName][] = [
+                            'join' => 'and',
+                            'field' => $field,
+                            'type' => '≤',
+                            'val' => $filterValue['to'],
+                        ];
+                    }
+                    if (isset($filterValue['from']) && strlen($filterValue['from'])) {
+                        $this->args[$argName][] = [
+                            'join' => 'and',
+                            'field' => $fieldEnd,
+                            'type' => '≥',
+                            'val' => $filterValue['from'],
+                        ];
+                    }
                     continue;
                 }
                 if (isset($filterValue['from']) && strlen($filterValue['from'])) {
@@ -1091,6 +1294,37 @@ class InternalQuerier extends AbstractQuerier
                         'val' => $filterValue['to'],
                     ];
                 }
+            }
+        }
+    }
+
+    /**
+     * Build edtf[] range args for DataTypeEdtf adapter.
+     *
+     * @see \DataTypeEdtf\DataType\Edtf::buildQuery()
+     */
+    protected function filterQueryRangesEdtf(
+        int $propertyId, array $filterValues
+    ): void {
+        foreach ($filterValues as $filterValue) {
+            if (!is_array($filterValue)) {
+                continue;
+            }
+            if (isset($filterValue['from'])
+                && strlen($filterValue['from'])
+            ) {
+                $this->args['edtf']['gte'] = [
+                    'val' => $filterValue['from'],
+                    'pid' => $propertyId,
+                ];
+            }
+            if (isset($filterValue['to'])
+                && strlen($filterValue['to'])
+            ) {
+                $this->args['edtf']['lte'] = [
+                    'val' => $filterValue['to'],
+                    'pid' => $propertyId,
+                ];
             }
         }
     }
@@ -1122,6 +1356,9 @@ class InternalQuerier extends AbstractQuerier
      */
     protected function isSpecificQuery(bool $useArgsWithFacets = false): bool
     {
+        // TODO Manage search "resources".
+        // No resource types mean "resources". "resources" is not fully managed:
+        // only a query without keys specific to a resource are managed.
         $singleResourceType = count($this->resourceTypes) === 1;
         if ($singleResourceType && reset($this->resourceTypes) !== 'resources') {
             return false;
@@ -1192,8 +1429,8 @@ class InternalQuerier extends AbstractQuerier
      */
     protected function fieldToIndex(string $field)
     {
-        return $this->easyMeta->propertyTerm($field)
-            ?? $this->query->getAliases()[$field]['fields']
+        return $this->query->getAliases()[$field]['fields']
+            ?? $this->easyMeta->propertyTerm($field)
             ?? $this->underscoredNameToTerm($field)
             ?? null;
     }
@@ -1288,6 +1525,15 @@ class InternalQuerier extends AbstractQuerier
                 'sort_by' => 'total',
                 'sort_order' => 'DESC',
             ],
+            // Default total alpha order is desc.
+            'total_alpha' => [
+                'sort_by' => 'total',
+                'sort_order' => 'DESC',
+            ],
+            'total_alpha desc' => [
+                'sort_by' => 'total',
+                'sort_order' => 'DESC',
+            ],
             // Default values order is asc.
             'values' => [
                 'sort_by' => 'values',
@@ -1355,6 +1601,23 @@ class InternalQuerier extends AbstractQuerier
                 $facetOptions['per_page'] = 0;
                 $facetOptions['is_facet_range'] = true;
             }
+            // Option "first_digits" extracts year from dates and aggregates values.
+            // Enabled by default for RangeDouble and SelectRange, disabled for others.
+            $facetType = $facetData['type'] ?? 'Checkbox';
+            $isRangeType = in_array($facetType, ['RangeDouble', 'SelectRange']);
+            $firstDigitsDefault = $isRangeType;
+            $rawFirstDigits = $facetData['first_digits']
+                ?? $facetData['options']['first_digits']
+                ?? $firstDigitsDefault;
+            if ($rawFirstDigits === true || in_array($rawFirstDigits, [1, '1', 'true'], true)) {
+                $facetOptions['first_digits'] = true;
+            } elseif ($rawFirstDigits === false || in_array($rawFirstDigits, [0, '0', 'false'], true)) {
+                $facetOptions['first_digits'] = false;
+            } elseif (is_numeric($rawFirstDigits) && (int) $rawFirstDigits > 1) {
+                $facetOptions['first_digits'] = (int) $rawFirstDigits;
+            } else {
+                $facetOptions['first_digits'] = $firstDigitsDefault;
+            }
             $referenceOptions['meta_options'][$facetName] = $facetOptions;
         }
 
@@ -1381,36 +1644,25 @@ class InternalQuerier extends AbstractQuerier
 
         if (!$isSpecificQuery) {
             $mainResourceType = count($this->resourceTypes) === 1 ? reset($this->resourceTypes) : 'resources';
+            $totalRess = $this->response->getTotalResults();
             // Like Solr, get only available useful values or all existing values.
             /** @see https://solr.apache.org/guide/solr/latest/query-guide/faceting.html */
             if ($isAllFacets) {
-                // Do the query one time for all facets, for each resource types.
-                // Itis not possible when there are facets for item set or site
+                // Do the query one time for all facets, for each resource type.
+                // It is not possible when there are facets for item set or site
                 // because they are removed from the query.
+                // FIXME Where the item sets and facets are removed from the query?
                 // TODO Check if item sets and sites are still an exception for references.
                 /** @see \Reference\Mvc\Controller\Plugin\References::searchQuery() */
-                if ((in_array('o:item_set', $referenceMetadata) && (isset($this->argsWithoutActiveFacets['item_set_id']) || isset($this->argsWithoutActiveFacets['item_set']) || isset($this->argsWithoutActiveFacets['itemset'])))
-                    || (in_array('o:site', $referenceMetadata) && (isset($this->argsWithoutActiveFacets['site_id']) || isset($this->argsWithoutActiveFacets['site'])))
-                ) {
-                    $referenceQuery = $this->argsWithoutActiveFacets;
-                } else {
-                    /** @var \Omeka\Api\Manager $api */
-                    $api = $this->services->get('Omeka\ApiManager');
-                    $ids = $api->search($mainResourceType, $this->argsWithoutActiveFacets, ['returnScalar' => 'id'])->getContent();
-                    if (!$ids) {
-                        return;
-                    }
-                    $referenceQuery = ['id' => array_keys($ids)];
-                }
+                $referenceQuery = $this->argsWithoutActiveFacets;
+            } elseif (!$totalRess) {
+                return;
             } else {
                 // For performance, use the full list of resource ids when possible,
-                // instead of the original query.
-                // $referenceQuery = $this->args;
-                $ids = $this->response->getAllResourceIds();
-                if (!$ids) {
-                    return;
-                }
-                $referenceQuery = ['id' => array_values($ids)];
+                // instead of the original query, that implies to run query twice.
+                // This is no more possible, because the full list of ids is no
+                // more filled early.
+                $referenceQuery = $this->args;
             }
 
             $referenceOptions['resource_name'] = $mainResourceType;
@@ -1419,11 +1671,15 @@ class InternalQuerier extends AbstractQuerier
                 ->setQuery($referenceQuery)
                 ->setOptions($referenceOptions)
                 ->list();
-            foreach (array_keys($referenceMetadata) as $facetName) foreach ($values[$facetName]['o:references'] ?? [] as $value => $count) {
-                $facetCountsByField[$facetName][$value] = [
-                    'value' => $value,
-                    'count' => $count,
-                ];
+            // When first_digits is enabled, Reference already returns aggregated
+            // year values at the SQL level, so no PHP aggregation is needed.
+            foreach (array_keys($referenceMetadata) as $facetName) {
+                foreach ($values[$facetName]['o:references'] ?? [] as $value => $count) {
+                    $facetCountsByField[$facetName][$value] = [
+                        'value' => $value,
+                        'count' => $count,
+                    ];
+                }
             }
             $this->response->setFacetCounts(array_map('array_values', $facetCountsByField));
             return;
@@ -1434,54 +1690,35 @@ class InternalQuerier extends AbstractQuerier
 
         // The query already contains the arg "resource_type".
         foreach ($this->byResourceType ? $this->resourceTypes : ['resources'] as $resourceType) {
-            // Like Solr, get only available useful values or all existing values.
-            /** @see https://solr.apache.org/guide/solr/latest/query-guide/faceting.html */
+            $totalRess = $this->response->getTotalResults();
             if ($isAllFacets) {
-                // Do the query one time for all facets, for each resource types.
-                // Itis not possible when there are facets for item set or site
-                // because they are removed from the query.
-                // TODO Check if item sets and sites are still an exception for references.
-                /** @see \Reference\Mvc\Controller\Plugin\References::searchQuery() */
-                if ((in_array('o:item_set', $referenceMetadata) && (isset($this->argsWithoutActiveFacets['item_set_id']) || isset($this->argsWithoutActiveFacets['item_set']) || isset($this->argsWithoutActiveFacets['itemset'])))
-                    || (in_array('o:site', $referenceMetadata) && (isset($this->argsWithoutActiveFacets['site_id']) || isset($this->argsWithoutActiveFacets['site'])))
-                ) {
-                    $referenceQuery = $this->argsWithoutActiveFacets;
-                } else {
-                    /** @var \Omeka\Api\Manager $api */
-                    $api = $this->services->get('Omeka\ApiManager');
-                    $ids = $api->search($resourceType, $this->argsWithoutActiveFacets, ['returnScalar' => 'id'])->getContent();
-                    if (!$ids) {
-                        continue;
-                    }
-                    $referenceQuery = ['id' => array_values($ids)];
-                }
+                $referenceQuery = $this->argsWithoutActiveFacets;
+            } elseif (!$totalRess) {
+                continue;
             } else {
-                // For performance, use the full list of resource ids when possible,
-                // instead of the original query.
-                // $referenceQuery = $this->args;
-                $ids = $this->response->getAllResourceIds($resourceType, false);
-                if (!$ids) {
-                    continue;
-                }
-                $referenceQuery = ['id' => array_values($ids)];
+                $referenceQuery = $this->args;
             }
+
             $referenceOptions['resource_name'] = $resourceType;
             $values = $references
                 ->setMetadata($referenceMetadata)
                 ->setQuery($referenceQuery)
                 ->setOptions($referenceOptions)
                 ->list();
-            foreach (array_keys($referenceMetadata) as $facetName) foreach ($values[$facetName]['o:references'] ?? [] as $value => $count) {
-                if (empty($facetCountsByField[$facetName][$value])) {
-                    $facetCountsByField[$facetName][$value] = [
-                        'value' => $value,
-                        'count' => $count,
-                    ];
-                } else {
-                    $facetCountsByField[$facetName][$value] = [
-                        'value' => $value,
-                        'count' => $count + $facetCountsByField[$facetName][$value]['count'],
-                    ];
+            // When first_digits is enabled, Reference already returns aggregated
+            // year values at the SQL level. Here we merge counts across resource
+            // types when querying multiple types separately.
+            foreach (array_keys($referenceMetadata) as $facetName) {
+                foreach ($values[$facetName]['o:references'] ?? [] as $value => $count) {
+                    if (empty($facetCountsByField[$facetName][$value])) {
+                        $facetCountsByField[$facetName][$value] = [
+                            'value' => $value,
+                            'count' => $count,
+                        ];
+                    } else {
+                        // Merge counts from multiple resource types.
+                        $facetCountsByField[$facetName][$value]['count'] += $count;
+                    }
                 }
             }
         }
@@ -1512,7 +1749,7 @@ class InternalQuerier extends AbstractQuerier
     {
         static $sites;
 
-        if (is_null($sites)) {
+        if ($sites === null) {
             /** @var \Doctrine\DBAL\Connection $connection */
             $connection = $this->services->get('Omeka\Connection');
             $qb = $connection->createQueryBuilder();
@@ -1553,7 +1790,7 @@ class InternalQuerier extends AbstractQuerier
     {
         static $users;
 
-        if (is_null($users)) {
+        if ($users === null) {
             /** @var \Doctrine\DBAL\Connection $connection */
             $connection = $this->services->get('Omeka\Connection');
             $qb = $connection->createQueryBuilder();
@@ -1583,11 +1820,11 @@ class InternalQuerier extends AbstractQuerier
     {
         static $properties;
 
-        if (is_null($properties)) {
+        if ($properties === null) {
             $usedPropertyByTerms = $this->easyMeta->propertyIdsUsed();
             $properties = [];
             foreach (array_keys($usedPropertyByTerms) as $term) {
-                $properties[str_replace(':', '_', $term)] = $term;
+                $properties[strtr($term, [':' => '_'])] = $term;
             }
         }
 

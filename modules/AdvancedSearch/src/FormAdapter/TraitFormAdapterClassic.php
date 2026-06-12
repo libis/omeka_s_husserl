@@ -79,7 +79,13 @@ trait TraitFormAdapterClassic
         }
 
         $vars['skipFormAction'] = !empty($options['skip_form_action']);
-        if (!$vars['skipFormAction']) {
+        $vars['formAction'] = $options['form_action'] ?? null;
+        // If form_action is explicitly provided, always use it.
+        // Otherwise, if skip_form_action is true, don't set any action (use current page).
+        // Otherwise, use the default search page URL.
+        if (!empty($options['form_action'])) {
+            $form->setAttribute('action', $options['form_action']);
+        } elseif (!$vars['skipFormAction']) {
             $status = $services->get('Omeka\Status');
             $isAdmin = $status->isAdminRequest();
             $formActionUrl = $isAdmin
@@ -122,20 +128,6 @@ trait TraitFormAdapterClassic
             ->setFieldsQueryArgs($formSettings['fields_query_args'] ?? [])
             ->setOption('remove_diacritics', !empty($formSettings['remove_diacritics']))
             ->setOption('default_search_partial_word', !empty($formSettings['default_search_partial_word']));
-
-        // Solr doesn't allow unavailable args anymore (invalid or unknown).
-        // Furthermore, fields are case sensitive.
-        $onlyAvailableFields = !empty($formSettings['only_available_fields']);
-        if ($onlyAvailableFields) {
-            $availableFields = $formSettings['available_fields'] ?? [];
-            if ($availableFields) {
-                $checkAvailableField = fn ($field) => isset($availableFields[$field]);
-            } else {
-                $checkAvailableField = fn ($field) => false;
-            }
-        } else {
-            $checkAvailableField = fn ($field) => true;
-        }
 
         // TODO Manage the "browse_attached_items" / "site_attachments_only".
 
@@ -269,25 +261,31 @@ trait TraitFormAdapterClassic
 
                     // TODO The filter field can be multiple (as array).
 
+                    // Helper to check if a filter value is non-empty (supports arrays).
+                    $hasValue = function ($val): bool {
+                        if (is_array($val)) {
+                            return (bool) array_filter($val, fn ($v) => is_string($v) && trim($v) !== '');
+                        }
+                        return is_string($val) && trim($val) !== '';
+                    };
+
                     if (empty($joiner)) {
                         if (empty($operator)) {
                             foreach ($value as $filter) {
                                 if (isset($filter['field'])
                                     && isset($filter['val'])
-                                    && !is_array($filter['val'])
-                                    && trim($filter['val']) !== ''
-                                    && $checkAvailableField($filter['field'])
+                                    && $hasValue($filter['val'])
                                 ) {
                                     $query->addFilterQuery($filter['field'], $filter['val'], $filter['type'] ?? $typeDefault, $filter['join'] ?? null);
                                 }
                             }
                         } else {
                             foreach ($value as $filter) {
-                                if (isset($filter['field']) && $checkAvailableField($filter['field'])) {
+                                if (isset($filter['field'])) {
                                     $type = empty($filter['type']) ? $typeDefault : $filter['type'];
                                     if (in_array($type, SearchResources::FIELD_QUERY['value_none'])) {
                                         $query->addFilterQuery($filter['field'], null, $type);
-                                    } elseif (isset($filter['val']) && trim($filter['val']) !== '') {
+                                    } elseif (isset($filter['val']) && $hasValue($filter['val'])) {
                                         $query->addFilterQuery($filter['field'], $filter['val'], $type);
                                     }
                                 }
@@ -296,7 +294,7 @@ trait TraitFormAdapterClassic
                     } else {
                         if (empty($operator)) {
                             foreach ($value as $filter) {
-                                if (isset($filter['field']) && isset($filter['val']) && trim($filter['val']) !== '' && $checkAvailableField($filter['field'])) {
+                                if (isset($filter['field']) && isset($filter['val']) && $hasValue($filter['val'])) {
                                     $type = empty($filter['type']) ? $typeDefault : $filter['type'];
                                     $join = isset($filter['join']) && in_array($filter['join'], ['or', 'not']) ? $filter['join'] : 'and';
                                     $query->addFilterQuery($filter['field'], $filter['val'], $type, $join);
@@ -304,12 +302,12 @@ trait TraitFormAdapterClassic
                             }
                         } else {
                             foreach ($value as $filter) {
-                                if (isset($filter['field']) && $checkAvailableField($filter['field'])) {
+                                if (isset($filter['field'])) {
                                     $type = empty($filter['type']) ? $typeDefault : $filter['type'];
                                     if (in_array($type, SearchResources::FIELD_QUERY['value_none'])) {
                                         $join = isset($filter['join']) && in_array($filter['join'], ['or', 'not']) ? $filter['join'] : 'and';
                                         $query->addFilterQuery($filter['field'], null, $type, $join);
-                                    } elseif (isset($filter['val']) && trim($filter['val']) !== '') {
+                                    } elseif (isset($filter['val']) && $hasValue($filter['val'])) {
                                         $join = isset($filter['join']) && in_array($filter['join'], ['or', 'not']) ? $filter['join'] : 'and';
                                         $query->addFilterQuery($filter['field'], $filter['val'], $type, $join);
                                     }
@@ -394,10 +392,6 @@ trait TraitFormAdapterClassic
                     break;
 
                 case 'thesaurus':
-                    if (!$checkAvailableField($name)) {
-                        continue 2;
-                    }
-
                     if (is_string($value)
                         || $isSimpleList($value)
                     ) {
@@ -405,9 +399,6 @@ trait TraitFormAdapterClassic
                     }
 
                     foreach ($value as $field => $vals) {
-                        if (!$checkAvailableField($field)) {
-                            continue;
-                        }
                         if (!is_string($vals) && !$isSimpleList($vals)) {
                             continue;
                         }
@@ -418,11 +409,7 @@ trait TraitFormAdapterClassic
                     break;
 
                 default:
-                    if (!$checkAvailableField($name)) {
-                        continue 2;
-                    }
-
-                    if (is_string($value)
+                    if (is_scalar($value)
                         || $isSimpleList($value)
                     ) {
                         // Manage simple field "Text", that should not be
@@ -511,6 +498,7 @@ trait TraitFormAdapterClassic
          * @var \Laminas\ServiceManager\ServiceLocatorInterface $services
          * @var \Laminas\Log\Logger $logger
          * @var \Laminas\I18n\Translator\Translator $translator
+         * @var \Omeka\Settings\SiteSettings $siteSettings
          * @var \Omeka\Settings\FallbackSettings $fallbackSettings
          * @var \Omeka\Mvc\Controller\Plugin\UserIsAllowed $userIsAllowed
          * @var \AdvancedSearch\FormAdapter\FormAdapterInterface $formAdapter
@@ -522,6 +510,7 @@ trait TraitFormAdapterClassic
         $translator = $services->get('MvcTranslator');
         $userIsAllowed = $plugins->get('userIsAllowed');
         $fallbackSettings = $services->get('Omeka\Settings\Fallback');
+        $siteSettings = $site ? $services->get('Omeka\Settings\Site') : null;
 
         $response = new Response();
 
@@ -598,10 +587,6 @@ trait TraitFormAdapterClassic
             $searchFormSettings['available_fields'] = [];
         }
 
-        // Solr doesn't allow unavailable args anymore (invalid or unknown).
-        $searchFormSettings['only_available_fields'] = $engineAdapter
-            && $engineAdapter instanceof \SearchSolr\EngineAdapter\Solarium;
-
         // TODO Copy the option for per page in the search config form (keeping the default).
 
         // Specific options. There are options that may change the process to
@@ -619,9 +604,10 @@ trait TraitFormAdapterClassic
 
         // TODO Add a max per_page.
         $searchConfigSettings['results']['pagination_per_page'] = !empty($searchConfigSettings['results']['pagination_per_page'])
-            ? $searchConfigSettings['results']['pagination_per_page']
-            : $fallbackSettings->get('pagination_per_page', $site ? ['site', 'global'] : ['global'], Paginator::PER_PAGE);
+            ? (int) $searchConfigSettings['results']['pagination_per_page']
+            : (int) $fallbackSettings->get('pagination_per_page', $site ? ['site', 'global'] : ['global'], Paginator::PER_PAGE);
 
+        // TODO Clarify.
         $searchFormSettings['request']['per_page'] = $searchConfigSettings['results']['pagination_per_page'];
 
         // This is the main process done by this method.
@@ -637,6 +623,17 @@ trait TraitFormAdapterClassic
             $query->setFiltersQueryHidden($hiddenFilters);
         }
 
+        $fieldBoosts = $this->searchConfig->subSetting('index', 'field_boosts', []);
+        $query->setFieldBoosts($fieldBoosts);
+
+        // Set query default field if provided
+        // $searchConfigSettings['request']['query_default_field'] = 'public_property_values_txt'; // Fake retrieval
+        if (!empty($searchConfigSettings['request']['query_default_field'])) {
+            $query->setQueryDefaultField(
+                $searchConfigSettings['request']['query_default_field']
+            );
+        }
+
         // Add global parameters.
 
         $searchEngineSettings = $searchEngine->settings();
@@ -648,16 +645,15 @@ trait TraitFormAdapterClassic
 
         // FIXME Researcher and author may not access all private resources. So index resource owners and roles?
         // Default is public only.
-        $accessToAdmin = $userIsAllowed('Omeka\Controller\Admin\Index', 'browse');
-        if ($accessToAdmin) {
+        if ($userIsAllowed('Omeka\Controller\Admin\Index', 'browse')
+            || $userIsAllowed(\Omeka\Entity\Resource::class, 'view-all')
+        ) {
             $query->setIsPublic(false);
         }
 
         if ($site) {
             $query->setSiteId($site->id());
         }
-
-        $query->setByResourceType(!empty($searchConfigSettings['results']['by_resource_type']));
 
         // Check resources.
         $resourceTypes = $query->getResourceTypes();
@@ -706,10 +702,32 @@ trait TraitFormAdapterClassic
                 'display_count' => false,
             ];
             foreach ($searchConfigSettings['facet']['facets'] as &$facetConfig) {
+                if ($site
+                    && !empty($facetConfig['language_site'])
+                    && ($facetConfig['language_site'] === 'site'
+                        || ($facetConfig['language_site'] === 'site_setting' && $siteSettings->get('filter_locale_values', false, $site->id()))
+                    )
+                ) {
+                    $locale = $siteSettings->get('locale', null, $site->id());
+                    if ($locale) {
+                        $locales = [
+                            $locale,
+                            substr($locale, 0, 2),
+                            // TODO It should be a null, but $resource->value() requires a string.
+                            '',
+                        ];
+                        $facetConfig['languages'] = array_unique(array_merge($locales, array_values($facetConfig['languages'] ?? [])));
+                    }
+                }
                 $facetConfig += $facetConfigDefault;
             }
             unset($facetConfig);
             $query->setFacets($searchConfigSettings['facet']['facets']);
+        }
+
+        // Set form filters configuration for access in the querier.
+        if (!empty($searchConfigSettings['form']['filters'])) {
+            $query->setFormFilters($searchConfigSettings['form']['filters']);
         }
 
         $query->setOption('facet_list', $searchConfigSettings['facet']['list'] ?? 'available');
@@ -748,9 +766,6 @@ trait TraitFormAdapterClassic
             $facetCounts = array_intersect_key($facetCounts, $searchConfigSettings['facet']['facets']);
             $response->setFacetCounts($facetCounts);
         }
-
-        $totalResults = array_map(fn ($resource) => $response->getResourceTotalResults($resource), $searchEngineSettings['resource_types']);
-        $plugins->get('paginator')(max($totalResults), $query->getPage() ?: 1, $query->getPerPage());
 
         return $response
             ->setIsSuccess(true)

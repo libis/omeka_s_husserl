@@ -6,9 +6,15 @@ use Laminas\Mvc\Exception\RuntimeException;
 use Laminas\View\Model\ViewModel;
 use Omeka\Api\Exception as ApiException;
 use Omeka\Api\Representation\SiteRepresentation;
+use Omeka\Site\Theme\Theme;
 
 class PageController extends \Omeka\Controller\Site\PageController
 {
+    public function __construct(?Theme $currentTheme)
+    {
+        $this->currentTheme = $currentTheme;
+    }
+
     public function showAction()
     {
         /**
@@ -89,7 +95,9 @@ class PageController extends \Omeka\Controller\Site\PageController
         }
 
         if ($isPageSlug) {
-            $pageBodyClass = 'page site-page-' . preg_replace('([^a-zA-Z0-9\-])', '-', $slug);
+            $pageBodyClass = 'page '
+                . $page->layoutDataValue('class')
+                . ' site-page-' . preg_replace('([^a-zA-Z0-9\-])', '-', $slug);
         } else {
             $pageBodyClass = 'page site-page';
         }
@@ -103,6 +111,18 @@ class PageController extends \Omeka\Controller\Site\PageController
             'displayNavigation' => true,
         ]);
 
+        // Set the configured page template, if any.
+        if ($this->currentTheme) {
+            $templateName = $page->layoutDataValue('template_name');
+            if ($templateName) {
+                // Verify that the current theme provides this template.
+                $config = $this->currentTheme->getConfigSpec();
+                if (isset($config['page_templates'][$templateName])) {
+                    $view->setTemplate(sprintf('common/page-template/%s', $templateName));
+                }
+            }
+        }
+
         $contentView = clone $view;
         $contentView
             ->setTemplate('omeka/site/page/content')
@@ -115,13 +135,12 @@ class PageController extends \Omeka\Controller\Site\PageController
     protected function defaultSite(): ?SiteRepresentation
     {
         $defaultSiteId = (int) $this->settings()->get('default_site');
-        if ($defaultSiteId) {
-            try {
-                return $this->api()->read('sites', ['id' => $defaultSiteId])->getContent();
-            } catch (ApiException\NotFoundException $e) {
-                // Nothing.
-            }
+        try {
+            return $defaultSiteId
+                ? $this->api()->read('sites', ['id' => $defaultSiteId])->getContent()
+                : null;
+        } catch (ApiException\NotFoundException $e) {
+            return null;
         }
-        return null;
     }
 }

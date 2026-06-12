@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2017-2025
+ * Copyright Daniel Berthereau, 2017-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -75,6 +75,7 @@ abstract class AbstractQuerier implements QuerierInterface
 
     public function setQuery(Query $query): self
     {
+        $query->setQuerier($this);
         $this->query = $query;
         return $this;
     }
@@ -83,7 +84,9 @@ abstract class AbstractQuerier implements QuerierInterface
 
     abstract public function querySuggestions(): Response;
 
-    abstract public function queryValues(string $field): array;
+    abstract public function queryValues(string $field, ?string $prefix = null, int $limit = 0): array;
+
+    abstract public function queryAllResourceIds(?string $resourceType = null, bool $byResourceType = false): array;
 
     abstract public function getPreparedQuery();
 }

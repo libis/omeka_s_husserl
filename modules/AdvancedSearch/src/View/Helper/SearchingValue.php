@@ -84,32 +84,31 @@ class SearchingValue extends AbstractHelper
                     'filter' => [[
                         'field' => $property,
                         'type' => $vr ? 'res' : 'eq',
-                        'value' => $vr ? $vr->id() : $uriOrVal,
+                        'val' => $vr ? $vr->id() : $uriOrVal,
                     ]],
                 ];
             } else {
                 // For resource, the id may or may not be indexed in Solr, so
-                // use title. And the property may not be indexed too, anyway.
+                // use title. But generally, the vr id title is more often
+                // indexed than the id alone. So use the two values.
+                // And the property may not be indexed too, anyway.
                 if ($vr) {
-                    $urlQuery = ['filter' => [
-                        [
-                            'field' => $property,
-                            'type' => 'res',
-                            'value' => $vr->id(),
-                        ],
-                        [
-                            'join' => 'or',
+                    $urlQuery = [
+                        'filter' => [[
                             'field' => $property,
                             'type' => 'eq',
-                            'value' => $vr->displayTitle(),
-                        ],
-                    ]];
+                            'val' => [
+                                $vr->displayTitle(),
+                                $vr->id(),
+                            ],
+                        ]],
+                    ];
                 } else {
                     $urlQuery = [
                         'filter' => [[
                             'field' => $property,
                             'type' => 'eq',
-                            'value' => $uriOrVal,
+                            'val' => $uriOrVal,
                         ]],
                     ];
                 }
@@ -146,7 +145,9 @@ class SearchingValue extends AbstractHelper
             return $searchUrl;
         }
 
-        $searchLabel = $vr ? $html : (strlen($val) ? $val : $uri);
+        $searchLabel = $vr
+            ? html_entity_decode($html, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5)
+            : (strlen($val) ? $val : $uri);
 
         if ($asArray) {
             return [

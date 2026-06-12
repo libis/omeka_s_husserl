@@ -1,0 +1,48 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SiteRepresentation $site
+ * @var \Menu\Form\MenuForm $form
+ * @var \Omeka\Form\ConfirmForm $confirmForm
+ * @var string $name
+ * @var array|null $jstree
+ * @var array $linkedPages
+ * @var array $notLinkedPages
+ */
+
+$plugins = $this->getHelperPluginManager();
+$translate = $plugins->get('translate');
+
+$this->htmlElement('body')->appendAttribute('class', 'edit menus');
+
+$deleteButton = $this->userIsAllowed(\Menu\Controller\SiteAdmin\MenuController::class, 'delete')
+    ? '<a href="#" class="delete button">' . $translate('Delete') . '</a>'
+    : null;
+?>
+
+<?= $this->pageTitle($name, 1, $translate('Menu'), $translate('Edit')) ?>
+<?php $this->trigger('view.edit.before'); ?>
+<?= $this->partial('menu/site-admin/menu/form', [
+    'site' => $site,
+    'form' => $form,
+    'name' => $name,
+    'jstree' => $jstree,
+    'linkedPages' => $linkedPages,
+    'notLinkedPages' => $notLinkedPages,
+    'submitLabel' => $translate('Save'),
+    'deleteButton' => $deleteButton,
+    'sectionNavEvent' => 'view.edit.section_nav',
+    'action' => 'edit',
+]) ?>
+
+<?php if ($deleteButton): ?>
+<?= $this->partial('menu/site-admin/menu/delete-confirm', [
+    'site' => $site,
+    'form' => $confirmForm,
+    'resourceLabel' => sprintf('menu "%s"', $name),
+    'name' => $name,
+    'wrapSidebar' => true,
+]) ?>
+<?php endif; ?>
+
+<?php $this->trigger('view.edit.after'); ?>

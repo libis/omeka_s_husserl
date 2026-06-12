@@ -27,7 +27,7 @@ It can be extended in two ways:
 - Adapters that will do the real work (indexing and querying).
 
 The default form answers to most of the common needs. It can be configured in
-the admin interface to make it a basic form _à la_ Google, or to build a complex
+the admin interface to make it a basic form _à la Google_, or to build a complex
 form with or without auto-suggestion, advanced filters, sort fields,
 facets, collection selector, resource class selector, resource template
 selector, properties filters with various input elements, like numbers or date
@@ -126,23 +126,23 @@ Furthermore:
 - search no item set, no class, no template, no owner or no site. To search
   missing value, use `0`, for example `item_set_id=0`.
 - sort by a list of ids with `sort_by=ids`. The list of ids can be set in keys
-  `id` or `sort_ids` as an array or as a comma-separated list.
+  `id` or `sort_ids` as an array or as a comma-separated list. Furthermore, take
+  care of the sort order, that may be "desc" when not set in front-end, or "asc"
+  when used with api. So it is recommenced to force it by adding `sort_order=asc`
+  to avoid issues.
 
-Finally, an option allows to display only the used properties and classes in the
+Finally, an option allows to display only the used proper
+ties and classes in the
 advanced search form, with chosen-select.
 
 **IMPORTANT**: the improvements done on query argument "property" were moved to
-"filter" and will be removed in a future version. So use the key "filter"
-instead of "property" for future compatibility.
+"filter" and were removed. So use the key "filter" instead of "property" for future compatibility.
 
 
 Installation
 ------------
 
 This module is dependant of module [Common], that should be installed first.
-
-The module uses an external library [jQuery-Autocomplete], so use the release
-zip to install it, or use and init the source.
 
 * From the zip
 
@@ -160,6 +160,16 @@ composer install --no-dev
 ```
 
 See general end user documentation for [installing a module].
+
+
+- For test
+
+The module includes a comprehensive test suite with unit and functional tests.
+Run them from the root of Omeka:
+
+```sh
+vendor/bin/phpunit -c modules/AdvancedSearch/phpunit.xml --testdox
+```
 
 ### Optional dependencies
 
@@ -280,8 +290,8 @@ different.
 
 ### Configuration of the search engine
 
-Currently, two search engines are supported: the default sql and [Solr] through
-the module [Search Solr].
+Currently, two search engines are supported: the default sql one and [Solr]
+through the module [Search Solr].
 
 ### Before the query
 
@@ -298,6 +308,14 @@ options, separated with a `=`.
 
 For advanced filters, similar to the Omeka ones, use "advanced" as field name
 and type.
+
+#### Index
+
+The index can be aggregated, for example to search "Person" will search in
+fields dcterms:creator and dcterms:contributor. This is mainly useful for the
+internal search engine, because there are indexes with Solr.
+
+For Solr, it is possible to define boost multiplier for each index.
 
 ### After the query
 
@@ -328,6 +346,7 @@ type = Range
 label = Year
 min = 1789
 max = 1804
+integer = true
 ```
 
 The section is a unique name.
@@ -342,11 +361,13 @@ Only the key "field" is required.
 
 - Input types may be Checkbox (default), RangeDouble, Select, SelectRange, Thesaurus, Tree.
   - "RangeDouble" and "SelectRange" are used to specify an interval of numbers
-    or dates. The options "min" and "max" should be set to limit it, for example
-    `min = 1789` and `max = 1804`. For Range, the option "step" can be set too.
-    With Solr, it works only with date and numbers.
-  - "Thesaurus" requires the module Thesaurus and a specific option `thesaurus`,
-    with the id.
+    or dates. The options "min" and "max" may be set to limit it, for example
+    `min = 1789` and `max = 1804`. You can force conversion to integer with
+    option `integer = 1`, for example to keep only the year from dates.
+    For Range, the option "step" can be set too, for example `step = 10`.
+    With Solr, such a field works only with date and numbers.
+  - "Thesaurus" requires the module Thesaurus and a specific option "thesaurus",
+    with the id, for example `thesaurus = 51`.
   - "Tree" can be used for item sets when module ItemSetsTree is enabled and
     data indexed recursively.
 - "languages", "data_types" and "main_types" are filters to limit results from
@@ -370,6 +391,8 @@ Only the key "field" is required.
   facets. Of course, "more" cannot be greater than "limit".
 - "state" defines the state of a facet and may be "static" (default), "opened"
   or "closed".
+- "options" are useful for some types (see above).
+- "attributes" are appended as html attributes to fields.
 
 
 Internal engine (mysql)
@@ -413,20 +436,54 @@ $query['filter'][] = [
     'type' => 'in',
     'val' => "text to search",
 ];
-// With property (deprecated).
-$query['property'][] = [
-    'joiner' => 'and',
-    'property' => '',
-    'except' => $excludedFields,
-    'type' => 'in',
-    'text' => "text to search",
-];
 ```
 
 The excluded fields may be one or multiple property ids or terms.
 
 The title cannot be excluded currently, because it is automatically added by
 the core.
+
+### Resource navigation block
+
+The resource page block layout `Resource navigation` adds a `< prev / next >`
+navigation on an item show page, within the context of the last browse of the
+user: search results, item set (collection/album), user selection, or an
+arbitrary series of items (a `Browse preview` block on a site page).
+
+Four navigation contexts are supported, enabled via the site setting
+`Block Resource navigation: active contexts`:
+
+- `search`: last search results (auto-stored by a view listener on search
+  controllers).
+- `collection`: item set browse or an item set of the item (fallback, see site
+  setting `Block Resource navigation: fallback item set`).
+- `selection`: user selection of the module Selection.
+- `series`: an arbitrary list built from any `Browse preview` block, when the
+  block uses the dedicated template `Advanced Search: Browse preview with
+  resource navigation`. The series is recorded in session when the user views
+  the page containing the block.
+
+Series label is resolved in this order:
+
+1. If the block is placed inside a `block group` (module BlockPlus) with two
+   `heading` blocks, the first heading is used as the type label and the
+   second as the series name, rendered as `<heading 1> : <heading 2>`.
+2. Else if the block group contains a single `heading` block, it is used as
+   the series name.
+3. Else the heading of the `browse preview` block itself is used.
+4. Else a generic `Browse` label is displayed.
+
+The "back" link attached to the label points to the page that contains the
+block.
+
+To enable the series navigation from any theme, assign the block template
+`Advanced Search: Browse preview with resource navigation` on the `Browse
+preview` block. The template renders the default core browse preview and
+records the series in the session.
+
+To propagate context through shared URLs (for collections and selections),
+the block reads the query parameters `resource_nav_item_set=<id>` and
+`resource_nav_selection=<id>` and stores them on prev/next URLs.
 
 ### Visibility
 
@@ -452,15 +509,11 @@ results too, that is used when no paginator is enable. The argument `limit`
 cannot go further.
 
 When ready, the api search is available via multiple means.
-- Add `index=1` as query in the block layouts that use it, like [Browse preview].
-- Do a standard search with `$this->api()->search()` with the value `'index' => true`
-  appended to the argument `$data` or `$options` (recommended when possible to
-  avoid to mix the query and the parameters).
-- Do a standard search in the theme with the view helpers `$this->apiSearch()`,
-  and `$this->apiSearchOne()`, that have the same arguments than `$this->api()->search()`
-  and `$this->api()->searchOne()`. The result is an Omeka Response.
 - Use the controller plugins `$this->apiSearch()` and `$this->apiSearchOne()`.
-- The main api manager understand these arguments too.
+  These have the same arguments as `$this->api()->search()` and
+  `$this->api()->searchOne()`. The result is an Omeka Response.
+- Use the view helpers `$this->apiSearch()` and `$this->apiSearchOne()` in themes.
+- Use the service `AdvancedSearch\IndexSearch` for programmatic access.
 - If the api config is made available on a site, it will be a quick access to
   the results at `/s/mysite/api_search_page`.
 
@@ -487,11 +540,15 @@ be some minutes with Solr, according to your configuration).
 Deprecated improvements of the advanced search elements
 -------------------------------------------------------
 
-The default advanced search form is improved mainly for the element "property"
+The default advanced search form was improved mainly for the element "property"
 to support multiple properties, many more search types, and multiple values.
-For example you can search for dcterms:creator and dcterms:contributor at the
-same time, and search for strings that look like "bossuet" and "ralelais", and
-only for data type literal:
+This improvement was removed in order to keep standard queries without the
+module. The upgrade process of the module converted all these queries into
+"filter", but you may check if some remain.
+
+In previous versions, before version 3.4.59, it was possible to search for
+dcterms:creator and dcterms:contributor at the same time, and search for strings
+that look like "bossuet" and "ralelais", and only for data type literal:
 
 ```
 property[0] => [
@@ -502,6 +559,7 @@ property[0] => [
 ```
 
 Such a query should be replaced by this one:
+
 ```
 filter[0] => [
   field => [dcterms:creator, dcterms:contributor],
@@ -510,9 +568,26 @@ filter[0] => [
 ]
 ```
 
-The change should be done mainly in the site pages when there are queries, for
-example for the block Browse Preview. You can do it directly in the user
-interface. There will be an automatic upgrade when the feature will be removed.
+The change was done automatically in version 3.4.59, but you may have some
+remaining queries in site pages or some settings.
+
+
+Upgrade from module Search
+--------------------------
+
+When the modules are too much old, it may be simpler to uninstall Search and to
+recreate the config with module Advanced Search.
+
+- Php should be 7.4 to 8.1.
+- Upgrade to Omeka S v3.2.
+- Install Search 3.5.25.3.
+- Upgrade Search.
+- Install Advanced Search version 3.3.6.6.
+- Upgrade Advanced Search.
+- Upgrade Omeka S to last version.
+- Upgrade Advanced Search to the last version.
+- Remove or upgrade Search to the last version.
+- With last versions, the two modules can be used at the same time.
 
 
 TODO
@@ -545,6 +620,7 @@ TODO
 - [x] Manage pagination when item set is redirected to search.
 - [ ] Reorder items in items set (from module Next, see MvcListeners).
 - [x] Integrate the override in a way a direct call to adapter->buildQuery() can work with advanced property search (see Reference and some other modules).
+- [ ] Add an option to expand/collapse tree facets (ItemSetsTree, Thesaurus) by default, with a threshold on the number of items.
 - [ ] Rename search config "name" by "title" or "label".
 - [ ] Add hidden query to site settings.
 - [ ] DateRange field (_dr) may not appear in the type of index in mapping.
@@ -561,9 +637,15 @@ TODO
 - [ ] Manage aliases and labels of properties for each resource template with FilterSelect.
 - [ ] Use aliases to manage standard search with solr.
 - [ ] Make all filter types usable with multiple values.
-- [ ] Replace search config form by the styles of the navigation form or the advanced resource template form.
+- [ ] Replace search config form by the styles of the navigation form or the advanced resource template form.
 - [ ] Do not include indexes in form so get multiple form with an index.
-- [ ] Autmatic min/max for facet range double.
+- [x] Automatic min/max for facet range double.
+- [ ] Restructure with late binding: the response calls the querier when needed, so the querier does not need to fill all data early.
+- [ ] RangeDouble: sort items without date values last when no filter is active.
+- [ ] RangeDouble: exclude items without date when filter is active, include when not.
+- [ ] RangeDouble: add admin option to enable/disable "ignore extremes" behavior per field.
+- [ ] Stopwords by language according to values (and manage values without languages and a default language)
+- [ ] Autosuggestion: for solr, use _txt or _ss according to property, length of values and type too.
 
 No more todo:
 
@@ -616,10 +698,6 @@ conditions as regards security.
 The fact that you are presently reading this means that you have had knowledge
 of the CeCILL license and that you accept its terms.
 
-### Libraries
-
-- jQuery-Autocomplete : [MIT]
-
 
 Copyright
 ---------
@@ -627,8 +705,7 @@ Copyright
 See commits for full list of contributors.
 
 * Copyright BibLibre, 2016-2017 (see [BibLibre])
-* Copyright Daniel Berthereau, 2017-2025 (see [Daniel-KM])
-* Copyright Tomas Kirda 2017 (library jQuery-Autocomplete)
+* Copyright Daniel Berthereau, 2017-2026 (see [Daniel-KM])
 
 This module is a merge of features from the deprecated modules [Advanced Search Plus],
 [Search] and [Psl Search Form] and derivative ones.
@@ -649,7 +726,6 @@ for the digital library [Corpus du Louvre].
 [installing a module]: https://omeka.org/s/docs/user-manual/modules/#installing-modules
 [this patch]: https://github.com/omeka/omeka-s/pull/1519/files
 [Common]: https://gitlab.com/Daniel-KM/Omeka-S-module-Common
-[jQuery-Autocomplete]: https://github.com/devbridge/jQuery-Autocomplete
 [Reference]: https://gitlab.com/Daniel-KM/Omeka-S-module-Reference
 [Advanced Search Plus]: https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearchPlus
 [Psl Search Form]: https://gitlab.com/Daniel-KM/Omeka-S-module-PslSearchForm
@@ -660,7 +736,6 @@ for the digital library [Corpus du Louvre].
 [GNU/GPL]: https://www.gnu.org/licenses/gpl-3.0.html
 [FSF]: https://www.fsf.org
 [OSI]: http://opensource.org
-[MIT]: https://github.com/devbridge/jQuery-Autocomplete/blob/master/license.txt
 [Search]: https://gitlab.com/Daniel-KM/Omeka-S-module-Search
 [BibLibre]: https://github.com/biblibre
 [GitLab]: https://gitlab.com/Daniel-KM

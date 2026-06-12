@@ -10,11 +10,11 @@ use Laminas\Mvc\Controller\Plugin\AbstractPlugin;
 use XMLReader;
 
 /**
- * Get a more precise media type for files, mainly xml and json ones.
- *
- * @todo Make more precise media type for text/plain and application/json.
+ * Get a more precise media type for files: xml, json, zip and binary ones.
  *
  * @see \Omeka\File\TempFile
+ *
+ * Copy or old adaptations:
  *
  * @see \Common\Mvc\Controller\Plugin\SpecifyMediaType
  * @see \EasyAdmin\Mvc\Controller\Plugin\SpecifyMediaType
@@ -26,6 +26,7 @@ use XMLReader;
  * @see \ExtractText /data/media-types/media-type-identifiers
  * @see \IiifSearch /data/media-types/media-type-identifiers
  * @see \IiifServer\Iiif\TraitIiifType
+ * @see \ModelViewer /data/media-types/media-type-identifiers
  * @see \XmlViewer /data/media-types/media-type-identifiers
  */
 class SpecifyMediaType extends AbstractPlugin
@@ -82,6 +83,18 @@ class SpecifyMediaType extends AbstractPlugin
         }
         if ($mediaType === 'application/zip') {
             $mediaType = $this->getMediaTypeZip() ?: $mediaType;
+        }
+        if ($mediaType === 'application/json') {
+            $mediaType = $this->getMediaTypeJson() ?: $mediaType;
+        }
+        if ($mediaType === 'text/html') {
+            $mediaType = $this->getMediaTypeHtml() ?: $mediaType;
+        }
+        if ($mediaType === 'application/octet-stream') {
+            $mediaType = $this->getMediaTypeOctetStream() ?: $mediaType;
+        }
+        if ($mediaType === 'text/plain') {
+            $mediaType = $this->getMediaTypeText() ?: $mediaType;
         }
         return $mediaType;
     }
@@ -194,15 +207,219 @@ class SpecifyMediaType extends AbstractPlugin
      *
      * In many cases, the media type is saved in a uncompressed file "mimetype"
      * at the beginning of the zip file. If present, get it.
+     *
+     * Also detects USDZ archives (first entry is a .usdc or .usda).
+     * @link https://openusd.org/release/spec_usdz.html
      */
     protected function getMediaTypeZip(): ?string
     {
-        $handle = fopen($this->filepath, 'rb');
+        $handle = @fopen($this->filepath, 'rb');
+        if (!$handle) {
+            return null;
+        }
         $contents = fread($handle, 256);
         fclose($handle);
-        return substr($contents, 30, 8) === 'mimetype'
-            ? substr($contents, 38, strpos($contents, 'PK', 38) - 38)
-            : null;
+
+        if (strlen($contents) < 32) {
+            return null;
+        }
+
+        // Many formats (EPUB, ODF…) store the type in an uncompressed
+        // "mimetype" file as first entry.
+        if (substr($contents, 30, 8) === 'mimetype') {
+            $end = strpos($contents, 'PK', 38);
+            if ($end !== false) {
+                return substr($contents, 38, $end - 38);
+            }
+        }
+
+        // USDZ: uncompressed ZIP whose first entry is a .usdc/.usda.
+        $nameLen = unpack('v', substr($contents, 26, 2))[1] ?? 0;
+        if ($nameLen > 0 && $nameLen < 200) {
+            $firstName = substr($contents, 30, $nameLen);
+            $ext = strtolower(pathinfo($firstName, PATHINFO_EXTENSION));
+            if ($ext === 'usdc' || $ext === 'usda') {
+                return 'model/vnd.usdz+zip';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract a more precise json media type when possible.
+     *
+     * Detects glTF, GeoJSON and JSON-LD among generic json
+     * files. Only files up to 5 MB are decoded to avoid memory
+     * issues with very large datasets (e.g. GeoJSON).
+     *
+     * @link https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html
+     * @link https://datatracker.ietf.org/doc/html/rfc7946
+     * @link https://www.w3.org/TR/json-ld11/
+     */
+    protected function getMediaTypeJson(): ?string
+    {
+        if (@filesize($this->filepath) > 5242880) {
+            return null;
+        }
+
+        $content = @file_get_contents($this->filepath);
+        if (!$content) {
+            return null;
+        }
+
+        $json = @json_decode($content, true);
+        if (!is_array($json)) {
+            return null;
+        }
+
+        // glTF 2.0: required top-level "asset" with "version".
+        if (isset($json['asset']['version'])) {
+            return 'model/gltf+json';
+        }
+
+        // GeoJSON (RFC 7946): "type" is one of 9 values.
+        if (isset($json['type'])
+            && in_array($json['type'], [
+                'FeatureCollection', 'Feature',
+                'Point', 'MultiPoint',
+                'LineString', 'MultiLineString',
+                'Polygon', 'MultiPolygon',
+                'GeometryCollection',
+            ])
+        ) {
+            return 'application/geo+json';
+        }
+
+        // JSON-LD (W3C): "@context" at top level.
+        if (array_key_exists('@context', $json)) {
+            return 'application/ld+json';
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect hOCR among html files.
+     *
+     * hOCR is an html-based format for ocr output (tesseract, etc.) with
+     * extension ".hocr.html". Since finfo returns "text/html", check file
+     * extension or content for hOCR markers.
+     */
+    protected function getMediaTypeHtml(): ?string
+    {
+        // Quick check: compound extension ".hocr.html" or ".hocr".
+        $filepath = $this->filepath;
+        if (substr($filepath, -10) === '.hocr.html'
+            || substr($filepath, -5) === '.hocr'
+        ) {
+            return 'text/vnd.hocr+html';
+        }
+
+        // Content check: look for hOCR class markers in first 4 KB.
+        $handle = @fopen($filepath, 'rb');
+        if (!$handle) {
+            return null;
+        }
+        $head = fread($handle, 4096);
+        fclose($handle);
+        if ($head && strpos($head, 'ocr_page') !== false) {
+            return 'text/vnd.hocr+html';
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect 3D model formats among generic octet-stream files.
+     *
+     * PHP's bundled libmagic (< 5.45) does not recognize GLB and FBX.
+     *
+     * @link https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
+     */
+    protected function getMediaTypeOctetStream(): ?string
+    {
+        $handle = @fopen($this->filepath, 'rb');
+        if (!$handle) {
+            return null;
+        }
+        $head = fread($handle, 32);
+        fclose($handle);
+
+        if (strlen($head) < 4) {
+            return null;
+        }
+
+        // GLB (glTF Binary): 12-byte header starting with "glTF".
+        if (substr($head, 0, 4) === 'glTF') {
+            return 'model/gltf-binary';
+        }
+
+        // FBX Binary (Autodesk FilmBox): 23-byte header
+        // "Kaydara FBX Binary  \0".
+        // No IANA type; the type below is used by ModelViewer.
+        if (strlen($head) >= 21
+            && substr($head, 0, 21) === "Kaydara FBX Binary  \x00"
+        ) {
+            return 'model/vnd.filmbox';
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect specialized formats among files reported as text/plain.
+     *
+     * finfo returns text/plain for several binary or structured formats whose
+     * header happens to be printable ascii.
+     *
+     * @link https://www.asprs.org/wp-content/uploads/2019/07/LAS_1_4_r15.pdf
+     * @link https://openusd.org/release/spec_usdz.html
+     */
+    protected function getMediaTypeText(): ?string
+    {
+        $handle = @fopen($this->filepath, 'rb');
+        if (!$handle) {
+            return null;
+        }
+        $head = fread($handle, 16);
+        fclose($handle);
+
+        if (strlen($head) < 4) {
+            return null;
+        }
+
+        // LAS (LIDAR point cloud): magic "LASF" at offset 0.
+        if (substr($head, 0, 4) === 'LASF') {
+            return 'application/vnd.las';
+        }
+
+        // USDC (USD Crate binary): magic "PXR-USDC" at offset 0.
+        // No specific IANA type for USDC; model/vnd.usda covers only
+        // the ascii variant. The generic model/vnd.usd is used here.
+        if (strlen($head) >= 8
+            && substr($head, 0, 8) === 'PXR-USDC'
+        ) {
+            return 'model/vnd.usd';
+        }
+
+        // USDA (USD ascii): magic "#usda " at offset 0.
+        if (strlen($head) >= 6
+            && substr($head, 0, 6) === '#usda '
+        ) {
+            return 'model/vnd.usda';
+        }
+
+        // PLY (Stanford Polygon Format): magic "ply\n" or "ply\r\n".
+        // No IANA-registered type; application/x-ply is commonly used
+        // by tools such as MeshLab.
+        if (substr($head, 0, 4) === "ply\n"
+            || substr($head, 0, 5) === "ply\r\n"
+        ) {
+            return 'application/x-ply';
+        }
+
+        return null;
     }
 
     /**
@@ -253,18 +470,18 @@ class SpecifyMediaType extends AbstractPlugin
         }
 
         $regex = <<<'REGEX'
-/
-  (
-    (?: [\x00-\x7F]               # single-byte sequences   0xxxxxxx
-    |   [\xC0-\xDF][\x80-\xBF]    # double-byte sequences   110xxxxx 10xxxxxx
-    |   [\xE0-\xEF][\x80-\xBF]{2} # triple-byte sequences   1110xxxx 10xxxxxx * 2
-    |   [\xF0-\xF7][\x80-\xBF]{3} # quadruple-byte sequence 11110xxx 10xxxxxx * 3
-    ){1,100}                      # ...one or more times
-  )
-| ( [\x80-\xBF] )                 # invalid byte in range 10000000 - 10111111
-| ( [\xC0-\xFF] )                 # invalid byte in range 11000000 - 11111111
-/x
-REGEX;
+            /
+            (
+                (?: [\x00-\x7F]               # single-byte sequences   0xxxxxxx
+                |   [\xC0-\xDF][\x80-\xBF]    # double-byte sequences   110xxxxx 10xxxxxx
+                |   [\xE0-\xEF][\x80-\xBF]{2} # triple-byte sequences   1110xxxx 10xxxxxx * 2
+                |   [\xF0-\xF7][\x80-\xBF]{3} # quadruple-byte sequence 11110xxx 10xxxxxx * 3
+                ){1,100}                      # ...one or more times
+            )
+            | ( [\x80-\xBF] )                 # invalid byte in range 10000000 - 10111111
+            | ( [\xC0-\xFF] )                 # invalid byte in range 11000000 - 11111111
+            /x
+            REGEX;
 
         $utf8replacer = function ($captures) {
             if ($captures[1] !== '') {
@@ -300,7 +517,7 @@ REGEX;
         $dom->strictErrorChecking = false;
         $dom->validateOnParse = false;
         $dom->recover = true;
-        $dom->loadXML($xmlContent);
+        $dom->loadXML($xmlContent, LIBXML_NONET);
         libxml_clear_errors();
         libxml_use_internal_errors(false);
         return $dom;

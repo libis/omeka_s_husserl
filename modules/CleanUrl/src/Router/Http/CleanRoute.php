@@ -10,6 +10,7 @@ use const CleanUrl\SLUGS_CORE;
 use const CleanUrl\SLUGS_RESERVED;
 use const CleanUrl\SLUGS_SITE;
 
+use CleanUrl\ResourceNameTrait;
 use CleanUrl\View\Helper\GetMediaFromPosition;
 use CleanUrl\View\Helper\GetResourceFromIdentifier;
 use CleanUrl\View\Helper\GetResourceIdentifier;
@@ -26,11 +27,14 @@ use Traversable;
  * Manage clean urls for all Omeka resources and pages according to the config.
  *
  * @todo Store all routes of all resources and pages in the database?
+ * @todo Store at least the identifier in a specific table to allow to create urls in bulk or quickly.
  *
  * Partially derived from route \Laminas\Router\Http\Regex and \Laminas\Router\Http\Segment.
  */
 class CleanRoute implements RouteInterface
 {
+    use ResourceNameTrait;
+
     /**
      * @var \Omeka\Api\Manager
      */
@@ -55,6 +59,16 @@ class CleanRoute implements RouteInterface
      * @var GetResourceIdentifier
      */
     protected $getResourceIdentifier;
+
+    /**
+     * Priority used for route stacks.
+     *
+     * The property should be public.
+     * @see \Laminas\Router\RouteInterface
+     *
+     * @var int
+     */
+    public $priority;
 
     /**
      * @var array
@@ -138,7 +152,7 @@ class CleanRoute implements RouteInterface
 
         $matches = [];
 
-        if (!is_null($pathOffset)) {
+        if ($pathOffset !== null) {
             $pathOffset = (int) $pathOffset;
         }
 
@@ -147,13 +161,28 @@ class CleanRoute implements RouteInterface
             return null;
         }
 
+        // Quick context detection to skip non-matching routes.
+        $isAdmin = strpos($path, '/admin/') === 0;
+        $isPublicPrefix = !$isAdmin && SLUG_SITE !== '' && strpos($path, '/' . SLUG_SITE) === 0;
+
+        $reserved = '|' . SLUGS_CORE . SLUGS_RESERVED . '|';
+        $useOffset = $pathOffset !== null;
+
         foreach ($this->routes as /* $routeName =>*/ $data) {
+            // Skip routes that can't match based on path prefix.
+            if ($isAdmin && $data['part'] !== 'admin') {
+                continue;
+            }
+            if ($isPublicPrefix && $data['part'] === 'admin') {
+                continue;
+            }
+
             $regex = $data['regex'];
 
-            if (is_null($pathOffset)) {
-                $result = preg_match('(^' . $regex . '$)', $path, $matches);
-            } else {
+            if ($useOffset) {
                 $result = preg_match('(\G' . $regex . '$)', $path, $matches, 0, $pathOffset);
+            } else {
+                $result = preg_match('(^' . $regex . '$)', $path, $matches);
             }
 
             if (!$result) {
@@ -171,7 +200,6 @@ class CleanRoute implements RouteInterface
 
             // Check if the resource identifier is a reserved word.
             // They are managed here currently for simplicity.
-            $reserved = '|' . SLUGS_CORE . SLUGS_RESERVED . '|';
             foreach ($params as $key => $value) {
                 if (mb_stripos($reserved, '|' . $value . '|') !== false) {
                     continue 2;
@@ -285,11 +313,7 @@ class CleanRoute implements RouteInterface
         }
 
         $this->assembledParams = $this->routes[$routeName]['parts'];
-        return str_replace(
-            array_keys($replace),
-            array_values($replace),
-            $this->routes[$routeName]['spec']
-        );
+        return strtr($this->routes[$routeName]['spec'], $replace);
     }
 
     public function getAssembledParams()
@@ -357,7 +381,7 @@ class CleanRoute implements RouteInterface
             ],
         ];
         $mapRouteName = $map[$routeName][$controllerName] ?? '';
-        if (empty($routeName)) {
+        if (empty($mapRouteName)) {
             return null;
         }
 
@@ -435,7 +459,7 @@ class CleanRoute implements RouteInterface
 
         // Second, get identifiers.
         foreach ($result as $part => $value) {
-            if (!is_null($value) && $value !== '') {
+            if ($value !== null && $value !== '') {
                 continue;
             }
             switch ($part) {
@@ -471,9 +495,10 @@ class CleanRoute implements RouteInterface
                     break;
                 case 'item_set_identifier':
                 case 'item_set_identifier_short':
+                    $skipPrefix = strpos($part, '_short') !== false;
                     switch ($resourceType) {
                         case 'item_sets':
-                            $result[$part] = $this->getResourceIdentifier->__invoke($resource, false, (bool) strpos($part, '_short'));
+                            $result[$part] = $this->getResourceIdentifier->__invoke($resource, false, $skipPrefix);
                             break;
                         case 'items':
                             $itemSets = $resource->itemSets();
@@ -481,7 +506,7 @@ class CleanRoute implements RouteInterface
                                 return [];
                             }
                             $itemSet = reset($itemSets);
-                            $result[$part] = $this->getResourceIdentifier->__invoke($itemSet, false, (bool) strpos($part, '_short'));
+                            $result[$part] = $this->getResourceIdentifier->__invoke($itemSet, false, $skipPrefix);
                             break;
                         case 'media':
                             $itemSets = $resource->item()->itemSets();
@@ -489,7 +514,7 @@ class CleanRoute implements RouteInterface
                                 return [];
                             }
                             $itemSet = reset($itemSets);
-                            $result[$part] = $this->getResourceIdentifier->__invoke($itemSet, false, (bool) strpos($part, '_short'));
+                            $result[$part] = $this->getResourceIdentifier->__invoke($itemSet, false, $skipPrefix);
                             break;
                     }
                     break;
@@ -507,14 +532,15 @@ class CleanRoute implements RouteInterface
                     break;
                 case 'item_identifier':
                 case 'item_identifier_short':
+                    $skipPrefix = strpos($part, '_short') !== false;
                     switch ($resourceType) {
                         case 'item_sets':
                             return [];
                         case 'items':
-                            $result[$part] = $this->getResourceIdentifier->__invoke($resource, false, (bool) strpos($part, '_short'));
+                            $result[$part] = $this->getResourceIdentifier->__invoke($resource, false, $skipPrefix);
                             break;
                         case 'media':
-                            $result[$part] = $this->getResourceIdentifier->__invoke($resource->item(), false, (bool) strpos($part, '_short'));
+                            $result[$part] = $this->getResourceIdentifier->__invoke($resource->item(), false, $skipPrefix);
                             break;
                     }
                     break;
@@ -530,12 +556,13 @@ class CleanRoute implements RouteInterface
                     break;
                 case 'media_identifier':
                 case 'media_identifier_short':
+                    $skipPrefix = strpos($part, '_short') !== false;
                     switch ($resourceType) {
                         case 'item_sets':
                         case 'items':
                             return [];
                         case 'media':
-                            $result[$part] = $this->getResourceIdentifier->__invoke($resource, false, (bool) strpos($part, '_short'));
+                            $result[$part] = $this->getResourceIdentifier->__invoke($resource, false, $skipPrefix);
                             break;
                     }
                     break;
@@ -557,39 +584,14 @@ class CleanRoute implements RouteInterface
             : [];
     }
 
-    /**
-     * Normalize the controller name.
-     *
-     * @param string $name
-     * @return string
-     */
-    protected function controllerName($name): ?string
-    {
-        $controllers = [
-            'item-set' => 'item-set',
-            'item' => 'item',
-            'media' => 'media',
-            'item_sets' => 'item-set',
-            'items' => 'item',
-            'media' => 'media',
-            'Omeka\Controller\Admin\ItemSet' => 'item-set',
-            'Omeka\Controller\Admin\Item' => 'item',
-            'Omeka\Controller\Admin\Media' => 'media',
-            'Omeka\Controller\Site\ItemSet' => 'item-set',
-            'Omeka\Controller\Site\Item' => 'item',
-            'Omeka\Controller\Site\Media' => 'media',
-            \Omeka\Entity\ItemSet::class => 'item-set',
-            \Omeka\Entity\Item::class => 'item',
-            \Omeka\Entity\Media::class => 'media',
-        ];
-        return $controllers[$name] ?? null;
-    }
-
     protected function getResourceIdFromParams(array $params, array $data): ?int
     {
         if (in_array($data['resource_identifier'], ['resource_id', 'item_set_id', 'item_id', 'media_id'])) {
-            $resourceIds = $this->api->search($data['resource_type'], ['id' => $params['resource_identifier'], 'limit' => 1], ['initialize' => false, 'returnScalar' => 'id'])->getContent();
-            return count($resourceIds) ? (int) reset($resourceIds) : null;
+            try {
+                return (int) $this->api->read($data['resource_type'], ['id' => $params['resource_identifier']], [], ['initialize' => false, 'finalize' => false, 'responseContent' => 'resource'])->getContent()->getId();
+            } catch (\Exception $e) {
+                return null;
+            }
         } elseif ($data['resource_identifier'] === 'media_position') {
             return $this->getResourceIdentifierFromParams($params, 'media_position', 'id');
         } else {
@@ -600,84 +602,87 @@ class CleanRoute implements RouteInterface
 
     protected function getResourceIdentifierFromParams(array $params, string $identifierName, string $output)
     {
-        $mapInput = [
-            'id' => [
-                'resource' => 'resources',
-                'type' => 'id',
-            ],
-            'resource_id' => [
-                'resource' => 'resources',
-                'type' => 'id',
-            ],
-            'item_set_id' => [
-                'resource' => 'item_sets',
-                'type' => 'id',
-            ],
-            'item_id' => [
-                'resource' => 'items',
-                'type' => 'id',
-            ],
-            'media_id' => [
-                'resource' => 'media',
-                'type' => 'id',
-            ],
+        static $mapInput;
+        if ($mapInput === null) {
+            $mapInput = [
+                'id' => [
+                    'resource' => 'resources',
+                    'type' => 'id',
+                ],
+                'resource_id' => [
+                    'resource' => 'resources',
+                    'type' => 'id',
+                ],
+                'item_set_id' => [
+                    'resource' => 'item_sets',
+                    'type' => 'id',
+                ],
+                'item_id' => [
+                    'resource' => 'items',
+                    'type' => 'id',
+                ],
+                'media_id' => [
+                    'resource' => 'media',
+                    'type' => 'id',
+                ],
 
-            'resource_identifier' => [
-                'resource' => 'resources',
-                'type' => 'identifier',
-            ],
-            'item_set_identifier' => [
-                'resource' => 'item_sets',
-                'type' => 'identifier',
-            ],
-            'item_identifier' => [
-                'resource' => 'items',
-                'type' => 'identifier',
-            ],
-            'media_identifier' => [
-                'resource' => 'media',
-                'type' => 'identifier',
-            ],
+                'resource_identifier' => [
+                    'resource' => 'resources',
+                    'type' => 'identifier',
+                ],
+                'item_set_identifier' => [
+                    'resource' => 'item_sets',
+                    'type' => 'identifier',
+                ],
+                'item_identifier' => [
+                    'resource' => 'items',
+                    'type' => 'identifier',
+                ],
+                'media_identifier' => [
+                    'resource' => 'media',
+                    'type' => 'identifier',
+                ],
 
-            'resource_identifier_short' => [
-                'resource' => 'resources',
-                'type' => 'identifier_short',
-            ],
-            'item_set_identifier_short' => [
-                'resource' => 'item_sets',
-                'type' => 'identifier_short',
-            ],
-            'item_identifier_short' => [
-                'resource' => 'items',
-                'type' => 'identifier_short',
-            ],
-            'media_identifier_short' => [
-                'resource' => 'media',
-                'type' => 'identifier_short',
-            ],
+                'resource_identifier_short' => [
+                    'resource' => 'resources',
+                    'type' => 'identifier_short',
+                ],
+                'item_set_identifier_short' => [
+                    'resource' => 'item_sets',
+                    'type' => 'identifier_short',
+                ],
+                'item_identifier_short' => [
+                    'resource' => 'items',
+                    'type' => 'identifier_short',
+                ],
+                'media_identifier_short' => [
+                    'resource' => 'media',
+                    'type' => 'identifier_short',
+                ],
 
-            'media_position' => [
-                'resource' => 'media',
-                'type' => 'position',
-            ],
+                'media_position' => [
+                    'resource' => 'media',
+                    'type' => 'position',
+                ],
 
-            'resource_resource' => [
-                'resource' => 'resources',
-                'type' => 'resource',
-            ],
-            'item_set_resource' => [
-                'resource' => 'item_sets',
-                'type' => 'resource',
-            ],
-            'item_resource' => [
-                'resource' => 'items',
-                'type' => 'resource',
-            ],
-            'media_resource' => [
-                'resource' => 'media',
-                'type' => 'resource',
-            ],
-        ];
+                'resource_resource' => [
+                    'resource' => 'resources',
+                    'type' => 'resource',
+                ],
+                'item_set_resource' => [
+                    'resource' => 'item_sets',
+                    'type' => 'resource',
+                ],
+                'item_resource' => [
+                    'resource' => 'items',
+                    'type' => 'resource',
+                ],
+                'media_resource' => [
+                    'resource' => 'media',
+                    'type' => 'resource',
+                ],
+            ];
+        }
 
         if (empty($params[$identifierName]) || !isset($mapInput[$identifierName])) {
             return null;
@@ -693,11 +698,11 @@ class CleanRoute implements RouteInterface
         $identifierType = $mapInput[$identifierName]['type'];
         switch ($identifierType) {
             case 'id':
-                $resources = $this->api->search($resourceType, ['id' => $resourceIdentifier, 'limit' => 1], ['initialize' => false])->getContent();
-                if (!count($resources)) {
+                try {
+                    $resource = $this->api->read($resourceType, ['id' => $resourceIdentifier], [], ['initialize' => false])->getContent();
+                } catch (\Exception $e) {
                     return null;
                 }
-                $resource = reset($resources);
                 break;
             case 'identifier':
             case 'identifier_short':
@@ -754,67 +759,28 @@ class CleanRoute implements RouteInterface
 
     protected function itemBelongsToItemSet(int $itemId, int $itemSetId): bool
     {
-        return $this->entityManager
-            ->getRepository(\Omeka\Entity\Item::class)
-            ->findOneBy(['id' => $itemId])
-            ->getItemSets()
-            ->offsetExists($itemSetId);
+        $sql = 'SELECT 1 FROM item_item_set WHERE item_id = ? AND item_set_id = ? LIMIT 1';
+        return (bool) $this->entityManager->getConnection()
+            ->executeQuery($sql, [$itemId, $itemSetId])
+            ->fetchOne();
     }
 
     protected function mediaBelongsToItem(int $mediaId, int $itemId): bool
     {
-        return (bool) $this->entityManager
-            ->getRepository(\Omeka\Entity\Media::class)
-            ->findOneBy(['id' => $mediaId, 'item' => $itemId]);
+        $sql = 'SELECT 1 FROM media WHERE id = ? AND item_id = ? LIMIT 1';
+        return (bool) $this->entityManager->getConnection()
+            ->executeQuery($sql, [$mediaId, $itemId])
+            ->fetchOne();
     }
 
     protected function mediaBelongsToItemSet(int $mediaId, int $itemSetId): bool
     {
-        $media = $this->entityManager
-            ->find(\Omeka\Entity\Media::class, $mediaId);
-        return $this->itemBelongsToItemSet($media->getItem()->getId(), $itemSetId);
+        $sql = 'SELECT 1 FROM media'
+            . ' INNER JOIN item_item_set ON media.item_id = item_item_set.item_id'
+            . ' WHERE media.id = ? AND item_item_set.item_set_id = ? LIMIT 1';
+        return (bool) $this->entityManager->getConnection()
+            ->executeQuery($sql, [$mediaId, $itemSetId])
+            ->fetchOne();
     }
 
-    /**
-     * Encode a string.
-     *
-     * This method avoids to raw-urlencode characters that don't need.
-     *
-     * @see \Laminas\Router\Http\Segment::encode()
-     *
-     * @param string $value
-     * @param bool $keepSlash
-     * @return string
-     */
-    protected function encode($value, $keepSlash = false): string
-    {
-        static $urlencodeCorrectionMap;
-
-        if (is_null($urlencodeCorrectionMap)) {
-            $urlencodeCorrectionMap = [];
-            $urlencodeCorrectionMap[false] = [
-                '%21' => '!', // sub-delims
-                '%24' => '$', // sub-delims
-                '%26' => '&', // sub-delims
-                '%27' => "'", // sub-delims
-                '%28' => '(', // sub-delims
-                '%29' => ')', // sub-delims
-                '%2A' => '*', // sub-delims
-                '%2B' => '+', // sub-delims
-                '%2C' => ',', // sub-delims
-                // '%2D' => '-', // unreserved - not touched by rawurlencode
-                // '%2E' => '.', // unreserved - not touched by rawurlencode
-                '%3A' => ':', // pchar
-                '%3B' => ';', // sub-delims
-                '%3D' => '=', // sub-delims
-                '%40' => '@', // pchar
-                // '%5F' => '_', // unreserved - not touched by rawurlencode
-                // '%7E' => '~', // unreserved - not touched by rawurlencode
-            ];
-            $urlencodeCorrectionMap[true] = $urlencodeCorrectionMap[false];
-            $urlencodeCorrectionMap[true]['%2F'] = '/';
-        }
-
-        return strtr(rawurlencode((string) $value), $urlencodeCorrectionMap[$keepSlash]);
-    }
 }

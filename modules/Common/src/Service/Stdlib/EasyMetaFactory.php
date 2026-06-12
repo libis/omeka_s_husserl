@@ -3,7 +3,7 @@
 namespace Common\Service\Stdlib;
 
 use Common\Stdlib\EasyMeta;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class EasyMetaFactory implements FactoryInterface
@@ -13,7 +13,7 @@ class EasyMetaFactory implements FactoryInterface
      *
      * @return EasyMeta
      */
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         return new EasyMeta(
             $services->get('Omeka\Connection'),

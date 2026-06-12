@@ -24,8 +24,9 @@ class FacetElements extends AbstractHelper
         $plugins = $view->getHelperPluginManager();
 
         // The type may be missing: the default is to use a checkbox.
+        // The mode was used by facet types Link and facetLinksTree.
         // Facet checkbox can be used in any case anyway, the js checks it.
-        $isFacetModeLink = ($options['mode'] ?? null) === 'link';
+        // $isFacetModeLink = ($options['mode'] ?? null) === 'link';
         $facetType = $options['type'] ?? null;
 
         // TODO Use match when Omeka will force php 8.
@@ -33,6 +34,26 @@ class FacetElements extends AbstractHelper
             default:
             case 'Checkbox':
                 $facetElements = $plugins->get('facetCheckboxes');
+                break;
+            case 'HasValue':
+                // Boolean facet: show a single checkbox with the facet label.
+                // Replace Solr values (1/0/true/false) with readable labels.
+                // Only truthy values are shown.
+                $truthy = ['1', 'true', 'yes'];
+                $label = $options['label'] ?? $facetField;
+                $filtered = [];
+                foreach ($facetValues as $fv) {
+                    $val = strtolower((string) $fv['value']);
+                    if (in_array($val, $truthy, true)) {
+                        $fv['label'] = $label;
+                        $filtered[] = $fv;
+                    }
+                }
+                $facetValues = $filtered;
+                $facetElements = $plugins->get('facetCheckboxes');
+                break;
+            case 'CheckboxFilter':
+                $facetElements = $plugins->get('facetCheckboxesFilter');
                 break;
             case 'Link':
                 $facetElements = $plugins->get('facetLinks');

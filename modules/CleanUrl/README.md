@@ -23,11 +23,19 @@ for [Omeka] and provide the same features as the original plugin and many more.
 Installation
 ------------
 
-This module uses the optional module [Generic], that may be installed first.
-
 See general end user documentation for [installing a module].
 
-Uncompress files and rename module folder `CleanUrl`.
+This module requires the module [Common], that should be installed first.
+
+* From the zip
+
+Download the last release [CleanUrl.zip] from the list of releases, and
+uncompress it in the `modules` directory.
+
+* From the source and for development
+
+If the module was installed from the source, rename the name of the folder of
+the module to `CleanUrl`.
 
 Then install it like any other Omeka module and follow the config instructions.
 
@@ -41,6 +49,15 @@ Furthermore, it contains the list of site slugs and some other settings in order
 to manage routing quickly, in particular when there are no site and page paths.
 Contrary to a previous version, this file is automatically updated and should
 not be updated manually.
+
+* For test
+
+The module includes a comprehensive test suite with unit and functional tests.
+Run them from the root of Omeka:
+
+```sh
+vendor/bin/phpunit -c modules/CleanUrl/phpunit.xml --testdox
+```
 
 
 Usage
@@ -186,6 +203,7 @@ TODO
 - [ ] Forward/Redirect to the canonical url
 - [x] Replace the check with/without space by a job that cleans all identifiers (see Bulk Check).
 - [ ] Remove the management of the space to get resources from identifiers with a prefix.
+- [ ] Improve speed to create url, in particular when creating urls in bulk (module Mapping). Create a table? Or even a single setting with the full list id/identifier?
 
 
 Warning
@@ -229,7 +247,7 @@ altered, and that no provisions are either added or removed herefrom.
 Copyright
 ---------
 
-* Copyright Daniel Berthereau, 2012-2023 (see [Daniel-KM] on GitLab)
+* Copyright Daniel Berthereau, 2012-2026 (see [Daniel-KM] on GitLab)
 * Copyright BibLibre, 2016-2017
 
 First version of this plugin has been built for [École des Ponts ParisTech].
@@ -244,8 +262,8 @@ module was rewritten to manage various requirements.
 [Omeka]: https://omeka.org/classic
 [BibLibre]: https://github.com/biblibre
 [Ark]: https://gitlab.com/Daniel-KM/Omeka-S-module-Ark
-[Generic]: https://gitlab.com/Daniel-KM/Omeka-S-module-Generic
-[Installing a module]: https://omeka.org/s/docs/user-manual/modules/#installing-modules
+[Common]: https://gitlab.com/Daniel-KM/Omeka-S-module-Common
+[installing a module]: https://omeka.org/s/docs/user-manual/modules/#installing-modules
 [omeka/omeka-s#870]: https://github.com/omeka/omeka-s/issues/870
 [config/clean_url.config.php]: https://gitlab.com/Daniel-KM/Omeka-S-module-CleanUrl/blob/master/config/clean_url.config.php#L9
 [module issues]: https://gitlab.com/Daniel-KM/Omeka-S-module-CleanUrl/-/issues

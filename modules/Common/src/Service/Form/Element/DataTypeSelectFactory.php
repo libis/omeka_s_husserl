@@ -3,15 +3,16 @@
 namespace Common\Service\Form\Element;
 
 use Common\Form\Element\DataTypeSelect;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class DataTypeSelectFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         $element = new DataTypeSelect(null, $options ?? []);
         return $element
-            ->setDataTypeManager($services->get('Omeka\DataTypeManager'));
+            ->setDataTypeManager($services->get('Omeka\DataTypeManager'))
+            ->setEasyMeta($services->get('Common\EasyMeta'));
     }
 }

@@ -3,12 +3,12 @@
 namespace Common\Service\ViewHelper;
 
 use Common\View\Helper\MediaTypeSelect;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class MediaTypeSelectFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         return new MediaTypeSelect($services->get('FormElementManager'));
     }

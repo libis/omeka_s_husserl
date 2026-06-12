@@ -1,0 +1,45 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SiteRepresentation $site
+ * @var \Omeka\Form\ConfirmForm $confirmForm
+ * @var string $name
+ * @var null $jstree The jstree is fetched dynamically
+ */
+
+$plugins = $this->getHelperPluginManager();
+$translate = $plugins->get('translate');
+
+$this->htmlElement('body')->appendAttribute('class', 'show menus');
+
+$deleteButton = $this->userIsAllowed(\Menu\Controller\SiteAdmin\MenuController::class, 'delete')
+    ? '<a href="#" class="delete button">' . $translate('Delete') . '</a>'
+    : null;
+?>
+
+<?= $this->pageTitle($name, 1, $translate('Menu')) ?>
+<?php $this->trigger('view.show.before'); ?>
+<?= $this->partial('menu/site-admin/menu/form', [
+    'site' => $site,
+    'form' => null,
+    'name' => $name,
+    'jstree' => $jstree,
+    'linkedPages' => [],
+    'notLinkedPages' => [],
+    'submitLabel' => null,
+    'deleteButton' => $deleteButton,
+    'sectionNavEvent' => 'view.show.section_nav',
+    'action' => 'show',
+]) ?>
+
+<?php if ($deleteButton): ?>
+<?= $this->partial('menu/site-admin/menu/delete-confirm', [
+    'site' => $site,
+    'form' => $confirmForm,
+    'resourceLabel' => sprintf('menu "%s"', $name),
+    'name' => $name,
+    'wrapSidebar' => true,
+]) ?>
+<?php endif; ?>
+
+<?php $this->trigger('view.show.after'); ?>

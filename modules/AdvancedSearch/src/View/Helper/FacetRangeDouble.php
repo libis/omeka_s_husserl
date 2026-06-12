@@ -7,7 +7,7 @@ class FacetRangeDouble extends AbstractFacet
     protected $partial = 'search/facet-range-double';
 
     /**
-     * @param $options "min", "max", "step" are automatically appended.
+     * @param $options "min", "max", "step" are read from "attributes" and appended to options for the template.
      *
      * {@inheritDoc}
      * @see \AdvancedSearch\View\Helper\AbstractFacet::prepareFacetData()
@@ -16,9 +16,135 @@ class FacetRangeDouble extends AbstractFacet
     {
         $isFacetModeDirect = in_array($options['mode'] ?? null, ['link', 'js']);
 
-        $options['min'] = ($options['min'] ?? '') === '' ? null : (string) $options['min'];
-        $options['max'] = ($options['max'] ?? '') === '' ? null : (string) $options['max'];
-        $options['step'] = empty($options['step']) ? null : (string) $options['step'];
+        // Get the min/max/step from attributes (like filters) or from facet values.
+        // Like any facets: they can be filtered or they can be all.
+        $attributes = $options['attributes'] ?? [];
+
+        $options['min'] = ($attributes['min'] ?? $options['min'] ?? '') === '' ? null : (string) ($attributes['min'] ?? $options['min']);
+        $options['max'] = ($attributes['max'] ?? $options['max'] ?? '') === '' ? null : (string) ($attributes['max'] ?? $options['max']);
+        $options['step'] = empty($attributes['step'] ?? $options['step'] ?? null) ? null : (string) ($attributes['step'] ?? $options['step']);
+
+        // Option "first_digits" (or legacy "integer") extracts year from dates.
+        // Enabled by default for RangeDouble facets.
+        $formatInteger = ($options['first_digits'] ?? $options['integer'] ?? true) === true
+            || in_array($options['first_digits'] ?? $options['integer'] ?? null, [1, '1', 'true'], true);
+
+        if ($formatInteger) {
+            $options['min'] = isset($options['min']) ? (int) $options['min'] : null;
+            $options['max'] = isset($options['max']) ? (int) $options['max'] : null;
+        }
+
+        if (!isset($options['min']) || !isset($options['max'])) {
+            $vals = array_column($facetValues, 'value');
+            if ($formatInteger) {
+                $vals = array_map('intval', $vals);
+            }
+            $options['min'] ??= min($vals);
+            $options['max'] ??= max($vals);
+        }
+
+        // Normalize scale breakpoints from ArrayTextarea storage (associative
+        // array value => position as strings) to a list of [value, position]
+        // pairs sorted by value. Resolve "min" / "max" placeholders to the
+        // domain extremes.
+        $scaleMode = $options['scale_mode'] ?? 'linear';
+
+        // Auto mode: derive piecewise breakpoints from quartiles of the
+        // distribution of facet values, then process as "piecewise".
+        if ($scaleMode === 'auto') {
+            $domainMin = is_numeric($options['min'] ?? null) ? (float) $options['min'] : null;
+            $domainMax = is_numeric($options['max'] ?? null) ? (float) $options['max'] : null;
+            $vals = array_values(array_filter(array_map(
+                fn ($v) => is_numeric($v['value'] ?? null) ? (float) $v['value'] : null,
+                $facetValues
+            ), fn ($v) => $v !== null));
+            sort($vals);
+            $count = count($vals);
+            if ($count >= 4 && $domainMin !== null && $domainMax !== null && $domainMax > $domainMin) {
+                $quartile = function (array $sorted, float $p) use ($count): float {
+                    $i = (int) floor(($count - 1) * $p);
+                    return (float) $sorted[$i];
+                };
+                $q25 = $quartile($vals, 0.25);
+                $q50 = $quartile($vals, 0.50);
+                $q75 = $quartile($vals, 0.75);
+                $breakpoints = [
+                    [$domainMin, 0.0],
+                    [$q25, 25.0],
+                    [$q50, 50.0],
+                    [$q75, 75.0],
+                    [$domainMax, 100.0],
+                ];
+                $unique = [];
+                foreach ($breakpoints as $bp) {
+                    $unique[(string) $bp[0]] = $bp;
+                }
+                ksort($unique, SORT_NUMERIC);
+                $bps = array_values($unique);
+                $valid = count($bps) >= 2;
+                for ($k = 1; $k < count($bps) && $valid; $k++) {
+                    if ($bps[$k][0] <= $bps[$k - 1][0] || $bps[$k][1] <= $bps[$k - 1][1]) {
+                        $valid = false;
+                    }
+                }
+                if ($valid) {
+                    $options['scale_mode'] = 'piecewise';
+                    $options['scale_breakpoints'] = $bps;
+                    $scaleMode = 'piecewise';
+                } else {
+                    $options['scale_mode'] = 'linear';
+                    $options['scale_breakpoints'] = [];
+                    $scaleMode = 'linear';
+                }
+            } else {
+                $options['scale_mode'] = 'linear';
+                $options['scale_breakpoints'] = [];
+                $scaleMode = 'linear';
+            }
+        }
+
+        if ($scaleMode === 'log') {
+            $options['scale_mode'] = 'log';
+            $options['scale_breakpoints'] = [];
+        } elseif ($scaleMode === 'piecewise' && !empty($options['scale_breakpoints']) && is_array($options['scale_breakpoints'])) {
+            $domainMin = is_numeric($options['min'] ?? null) ? (float) $options['min'] : null;
+            $domainMax = is_numeric($options['max'] ?? null) ? (float) $options['max'] : null;
+            $pairs = [];
+            foreach ($options['scale_breakpoints'] as $key => $value) {
+                if (is_array($value) && count($value) === 2) {
+                    $rawValue = $value[0];
+                    $pos = is_numeric($value[1]) ? (float) $value[1] : null;
+                } else {
+                    $rawValue = $key;
+                    $pos = is_numeric($value) ? (float) $value : null;
+                }
+                if ($pos === null) {
+                    continue;
+                }
+                if ($rawValue === 'min') {
+                    if ($domainMin === null) {
+                        continue;
+                    }
+                    $pairs[] = [$domainMin, $pos];
+                } elseif ($rawValue === 'max') {
+                    if ($domainMax === null) {
+                        continue;
+                    }
+                    $pairs[] = [$domainMax, $pos];
+                } elseif (is_numeric($rawValue)) {
+                    $pairs[] = [(float) $rawValue, $pos];
+                }
+            }
+            usort($pairs, fn ($a, $b) => $a[0] <=> $b[0]);
+            $options['scale_breakpoints'] = $pairs;
+            if (count($pairs) < 2) {
+                $options['scale_mode'] = 'linear';
+                $options['scale_breakpoints'] = [];
+            }
+        } else {
+            $options['scale_mode'] = 'linear';
+            $options['scale_breakpoints'] = [];
+        }
 
         // TODO Compute total of a numerical range when empty.
         $total = count($facetValues);
@@ -31,16 +157,14 @@ class FacetRangeDouble extends AbstractFacet
         $urlTo = null;
 
         if ($isFacetModeDirect) {
-            if ($rangeFrom !== null) {
-                $queryFromOrTo = $this->queryBase;
-                unset($queryFromOrTo['facet'][$facetField]['from']);
-                $urlFrom = $this->urlHelper->__invoke($this->route, $this->params, ['query' => $queryFromOrTo]);
-            }
-            if ($rangeTo !== null) {
-                $queryFromOrTo = $this->queryBase;
-                unset($queryFromOrTo['facet'][$facetField]['to']);
-                $urlTo = $this->urlHelper->__invoke($this->route, $this->params, ['query' => $queryFromOrTo]);
-            }
+            // Always provide a base url (without current from/to) so the js
+            // submit handler can build a new query on first use.
+            $queryBaseRange = $this->queryBase;
+            unset($queryBaseRange['facet'][$facetField]['from']);
+            unset($queryBaseRange['facet'][$facetField]['to']);
+            $urlBase = $this->urlHelper->__invoke($this->route, $this->params, ['query' => $queryBaseRange]);
+            $urlFrom = $urlBase;
+            $urlTo = $urlBase;
         }
 
         return [

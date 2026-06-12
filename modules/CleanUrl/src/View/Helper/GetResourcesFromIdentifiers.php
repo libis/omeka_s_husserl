@@ -2,12 +2,14 @@
 
 namespace CleanUrl\View\Helper;
 
+use CleanUrl\ResourceNameTrait;
 use Doctrine\DBAL\Connection;
 use Laminas\View\Helper\AbstractHelper;
 use Omeka\Api\Exception\NotFoundException;
 
 class GetResourcesFromIdentifiers extends AbstractHelper
 {
+    use ResourceNameTrait;
     /**
      * @var Connection
      */
@@ -46,14 +48,22 @@ class GetResourcesFromIdentifiers extends AbstractHelper
         // Identifiers are flipped to prepare result.
         // Even if keys are strings, they may be integers because of automatic
         // conversion for array keys.
-        $identifiers = array_fill_keys(array_filter(array_map([$this, 'trimUnicode'], array_map('rawurldecode', array_map('strval', $identifiers)))), null);
+        $cleaned = [];
+        foreach ($identifiers as $identifier) {
+            $v = $this->trimUnicode(rawurldecode((string) $identifier));
+            if ($v !== '') {
+                $cleaned[$v] = null;
+            }
+        }
+        $identifiers = $cleaned;
+        unset($cleaned);
 
         if (!count($identifiers)) {
             return [];
         }
 
         $resourceClass = $this->convertNameToResourceClass($resourceName);
-        if ($resourceName && is_null($resourceClass)) {
+        if ($resourceName && $resourceClass === null) {
             return $identifiers;
         }
         $resourceName = $this->convertResourceClassToResourceName($resourceClass);
@@ -69,21 +79,21 @@ class GetResourcesFromIdentifiers extends AbstractHelper
 
         // TODO Use EntityManager to avoid final api checks for rights, but with collation.
 
+        $identifierExpr = $isCaseSensitive
+            ? 'value.value' . $collation
+            : 'LOWER(value.value)';
+
         $qb = $this->connection->createQueryBuilder();
         $expr = $qb->expr();
         $qb
             ->select(
-                // MIN is a way to fix mysql "only_full_group_by" issue without "ANY_VALUE".
-                $isCaseSensitive
-                    ? 'MIN(value.value) AS "identifier"'
-                    : 'LOWER(MIN(value.value)) AS "identifier"',
-                'MIN(value.resource_id) AS "id"'
+                $identifierExpr . ' AS identifier',
+                'MIN(value.resource_id) AS id'
             )
             ->from('value', 'value')
             ->leftJoin('value', 'resource', 'resource', 'value.resource_id = resource.id')
-            // "identifier" with double quotes were not accepted in old versions.
-            ->addGroupBy('"identifier"' . $collation)
-            ->addOrderBy('"id"', 'ASC')
+            ->addGroupBy($identifierExpr)
+            ->addOrderBy('MIN(value.resource_id)', 'ASC')
             // An identifier is always literal: it identifies a resource inside
             // the base. It can't be an external uri or a linked resource.
             ->where('value.type = "literal"')
@@ -116,6 +126,7 @@ class GetResourcesFromIdentifiers extends AbstractHelper
         $noPrefix = !$lengthPrefix;
         $prefixIsPartOfIdentifier = $lengthPrefix
             && $this->options[$resourceName]['prefix_part_of'];
+        $lowerPrefix = $isCaseSensitive || $noPrefix ? '' : mb_strtolower($prefix);
 
         // Many cases because support sensitive case, with or without prefix,
         // and with or without space. Nevertheless, the check is quick.
@@ -151,11 +162,12 @@ class GetResourcesFromIdentifiers extends AbstractHelper
                 // Same as above, but lower keys.
                 else {
                     foreach (array_keys($identifiers) as $identifier) {
+                        $lowerIdentifier = mb_strtolower((string) $identifier);
                         if (mb_strpos((string) $identifier, $prefix) === 0) {
-                            $variants[mb_strtolower((string) $identifier)] = $identifier;
+                            $variants[$lowerIdentifier] = $identifier;
                         } else {
-                            $variants[mb_strtolower($prefix . $identifier)] = $identifier;
-                            $variants[mb_strtolower($prefix . ' ' . $identifier)] = $identifier;
+                            $variants[$lowerPrefix . $lowerIdentifier] = $identifier;
+                            $variants[$lowerPrefix . ' ' . $lowerIdentifier] = $identifier;
                         }
                     }
                 }
@@ -169,8 +181,9 @@ class GetResourcesFromIdentifiers extends AbstractHelper
                 // Same as above, but lower keys.
                 else {
                     foreach (array_keys($identifiers) as $identifier) {
-                        $variants[mb_strtolower($prefix . $identifier)] = $identifier;
-                        $variants[mb_strtolower($prefix . ' ' . $identifier)] = $identifier;
+                        $lowerIdentifier = mb_strtolower((string) $identifier);
+                        $variants[$lowerPrefix . $lowerIdentifier] = $identifier;
+                        $variants[$lowerPrefix . ' ' . $lowerIdentifier] = $identifier;
                     }
                 }
             }
@@ -193,11 +206,32 @@ class GetResourcesFromIdentifiers extends AbstractHelper
         // Get representations and check numeric identifiers as resource id.
         // It allows to check rights too (currently, Connection is used, not EntityManager).
         $api = $this->view->api();
-        foreach (array_intersect_key($result, $variants) as $identifier => $id) {
-            try {
-                $identifiers[$variants[$identifier]] = $api->read($resourceName, ['id' => $id])->getContent();
-            } catch (NotFoundException $e) {
-                // Nothing to do.
+
+        // Batch fetch resources when possible.
+        $matchedResults = array_intersect_key($result, $variants);
+        $ids = array_values($matchedResults);
+        if ($ids) {
+            if ($resourceName !== 'resources') {
+                // Use batch search for specific resource types.
+                $resources = $api->search($resourceName, ['id' => $ids])->getContent();
+                $resourcesById = [];
+                foreach ($resources as $resource) {
+                    $resourcesById[$resource->id()] = $resource;
+                }
+                foreach ($matchedResults as $identifier => $id) {
+                    if (isset($resourcesById[$id])) {
+                        $identifiers[$variants[$identifier]] = $resourcesById[$id];
+                    }
+                }
+            } else {
+                // Fallback for generic 'resources' type (no batch search available).
+                foreach ($matchedResults as $identifier => $id) {
+                    try {
+                        $identifiers[$variants[$identifier]] = $api->read($resourceName, ['id' => $id])->getContent();
+                    } catch (NotFoundException $e) {
+                        // Nothing to do.
+                    }
+                }
             }
         }
 
@@ -217,7 +251,7 @@ class GetResourcesFromIdentifiers extends AbstractHelper
     {
         $ids = array_keys(array_filter($identifiers, function ($v, $k) {
             // Check only missing resources with a integer key.
-            return is_null($v)
+            return $v === null
                 && is_numeric($k)
                 && $k == (int) $k;
         }, ARRAY_FILTER_USE_BOTH));
@@ -248,49 +282,6 @@ class GetResourcesFromIdentifiers extends AbstractHelper
         return $identifiers;
     }
 
-    protected function convertNameToResourceClass(?string $resourceName): ?string
-    {
-        $resourceClasses = [
-            'items' => \Omeka\Entity\Item::class,
-            'item_sets' => \Omeka\Entity\ItemSet::class,
-            'media' => \Omeka\Entity\Media::class,
-            'resources' => '',
-            'resource' => '',
-            'resource:item' => \Omeka\Entity\Item::class,
-            'resource:itemset' => \Omeka\Entity\ItemSet::class,
-            'resource:media' => \Omeka\Entity\Media::class,
-            // Avoid a check and make the plugin more flexible.
-            \Omeka\Api\Representation\ItemRepresentation::class => \Omeka\Entity\Item::class,
-            \Omeka\Api\Representation\ItemSetRepresentation::class => \Omeka\Entity\ItemSet::class,
-            \Omeka\Api\Representation\MediaRepresentation::class => \Omeka\Entity\Media::class,
-            \Omeka\Entity\Item::class => \Omeka\Entity\Item::class,
-            \Omeka\Entity\ItemSet::class => \Omeka\Entity\ItemSet::class,
-            \Omeka\Entity\Media::class => \Omeka\Entity\Media::class,
-            \Omeka\Entity\Resource::class => '',
-            'o:item' => \Omeka\Entity\Item::class,
-            'o:item_set' => \Omeka\Entity\ItemSet::class,
-            'o:media' => \Omeka\Entity\Media::class,
-            // Other resource types.
-            'item' => \Omeka\Entity\Item::class,
-            'item_set' => \Omeka\Entity\ItemSet::class,
-            'item-set' => \Omeka\Entity\ItemSet::class,
-            'itemset' => \Omeka\Entity\ItemSet::class,
-            'resource:item_set' => \Omeka\Entity\ItemSet::class,
-            'resource:item-set' => \Omeka\Entity\ItemSet::class,
-        ];
-        return $resourceClasses[$resourceName] ?? null;
-    }
-
-    protected function convertResourceClassToResourceName(?string $resourceClass): string
-    {
-        $resourceNames = [
-            \Omeka\Entity\ItemSet::class => 'item_sets',
-            \Omeka\Entity\Item::class => 'items',
-            \Omeka\Entity\Media::class => 'media',
-        ];
-        return $resourceNames[$resourceClass] ?? 'resources';
-    }
-
     /**
      * Trim all whitespaces.
      *
@@ -299,6 +290,6 @@ class GetResourcesFromIdentifiers extends AbstractHelper
      */
     protected function trimUnicode($string): string
     {
-        return preg_replace('/^[\s\h\v[:blank:][:space:]]+|[\s\h\v[:blank:][:space:]]+$/u', '', (string) $string);
+        return preg_replace('/^\s+|\s+$/u', '', (string) $string);
     }
 }

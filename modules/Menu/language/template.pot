@@ -1,0 +1,415 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-12 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/Controller/SiteAdmin/MenuController.php:191
+#, php-format
+msgid "%d menus successfully deleted"
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:257
+msgid "[no label]"
+msgstr ""
+
+#: src/Site/BlockLayout/Breadcrumbs.php:32
+#, php-format
+msgid ""
+"This block uses the options set in the %ssite settings%s, unless you use the "
+"template of Omeka in the config of the block."
+msgstr ""
+
+#: src/Site/Navigation/Breadcrumb/ContainerBuilder.php:308
+msgid "Current page"
+msgstr ""
+
+#: src/Site/Navigation/Breadcrumb/ContainerBuilder.php:339
+msgid "Collections"
+msgstr ""
+
+#: src/Site/Navigation/Link/Resource.php:44
+msgid "[Unknown resource]"
+msgstr ""
+
+#: src/Site/Navigation/Link/Resource.php:50
+#, php-format
+msgid "[Unknown resource #%d]"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:131
+#: view/common/block-layout/breadcrumbs.phtml:33
+#: view/common/block-layout/breadcrumbs.phtml:39
+#: view/common/block-template/breadcrumbs-standard.phtml:27
+#: view/common/breadcrumbs.phtml:53
+msgid "Breadcrumb"
+msgstr ""
+
+#: view/common/navigation-link-form/resource.phtml:39
+msgid "Resource id"
+msgstr ""
+
+#: view/common/navigation-link-form/resource.phtml:42
+msgid "Resource unavailable"
+msgstr ""
+
+#: view/common/navigation-link-form/structure.phtml:21
+msgid "Optional label"
+msgstr ""
+
+#: view/common/navigation-link-form/structure.phtml:24
+msgid "Optional html class"
+msgstr ""
+
+#: view/menu/site-admin/menu/add.phtml:18
+msgid "New menu"
+msgstr ""
+
+#: view/menu/site-admin/menu/add.phtml:18
+#: view/menu/site-admin/menu/edit.phtml:23
+#: view/menu/site-admin/menu/show-details.phtml:22
+#: view/menu/site-admin/menu/show.phtml:20
+msgid "Menu"
+msgstr ""
+
+#: view/menu/site-admin/menu/browse.phtml:28
+msgid "Menus"
+msgstr ""
+
+#: view/menu/site-admin/menu/browse.phtml:38
+msgid "Add new menu"
+msgstr ""
+
+#: view/menu/site-admin/menu/browse.phtml:75
+msgid "Select menu"
+msgstr ""
+
+#: view/menu/site-admin/menu/browse.phtml:123
+msgid "Delete menus"
+msgstr ""
+
+#: view/menu/site-admin/menu/browse.phtml:124
+msgid "Are you sure you would like to delete the selected menus?"
+msgstr ""
+
+#: view/menu/site-admin/menu/browse.phtml:126
+#, php-format
+msgid ""
+"%1$s: this action will permanently delete %2$s menus and cannot be undone."
+msgstr ""
+
+#: view/menu/site-admin/menu/browse.phtml:139
+msgid "Omeka could not find any menus."
+msgstr ""
+
+#: view/menu/site-admin/menu/delete-confirm.phtml:19
+#, php-format
+msgid "Delete menu \"%s\""
+msgstr ""
+
+#: view/menu/site-admin/menu/form.phtml:51
+#: view/menu/site-admin/menu/show-details.phtml:26
+msgid "Tops to menus"
+msgstr ""
+
+#: view/menu/site-admin/menu/form.phtml:51
+#: view/menu/site-admin/menu/show-details.phtml:26
+msgid "Create a new menu for each top menu"
+msgstr ""
+
+#: view/menu/site-admin/menu/form.phtml:63
+msgid "Open all"
+msgstr ""
+
+#: view/menu/site-admin/menu/form.phtml:64
+msgid "Close all"
+msgstr ""
+
+#: data/scripts/upgrade.php:43
+msgid "The settings for \"Breadcrumbs\" were upgraded."
+msgstr ""
+
+#: data/scripts/upgrade.php:82
+#, php-format
+msgid ""
+"The helper \"PrimaryItemSet\" was moved from module %1$sNext%2$s and a param "
+"is added for it in %3$smain settings%2$s."
+msgstr ""
+
+#: data/scripts/upgrade.php:94
+#, php-format
+msgid ""
+"A %1$ssetting%2$s has been added to update related resources when saving "
+"menu."
+msgstr ""
+
+#: data/scripts/upgrade.php:133
+msgid ""
+"Breadcrumbs were moved from module Block Plus to module Menu. Settings were "
+"migrated."
+msgstr ""
+
+#: Module.php:147
+msgid "Menu: Fill as broader when saving menu"
+msgstr ""
+
+#: Module.php:159
+msgid "Menu: Fill as narrower when saving menu"
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:84
+msgid "No menu exists with name \"{menu_name}\" in site #{site_id}."
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:93
+msgid "The settings does not require to update resources."
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:109
+msgid ""
+"No relations to create: settings \"broader\" and \"narrower\" are no defined."
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:121
+msgid "Settings for \"broader\" or \"narrower\" are not correct."
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:145
+msgid "Resource #{resource_id} does not exist."
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:158
+msgid "Resource #{resource_id} has no template and cannot be updated."
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:166
+#, php-format
+msgid "Resource #%1$d has a template not in the limited list of templates."
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:184
+msgid ""
+"The template {template_label} (#{template_id}) has no properties to update."
+msgstr ""
+
+#: src/Job/MenuUpdateTreeInResources.php:234
+msgid ""
+"End of the job: {total} menu elements, {count} resources, {count_updated}/"
+"{count_processed} resources updated, {count_error} errors."
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:16
+#: src/Site/ResourcePageBlockLayout/Breadcrumbs.php:16
+#: src/Site/BlockLayout/Breadcrumbs.php:21
+msgid "Breadcrumbs"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:32
+msgid "Menu for resource pages"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:33
+msgid ""
+"Select the menu to display on resource pages (items, media, item sets) via "
+"the resource block \"Menu\"."
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:38
+msgid "Select a menu…"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:49
+msgid "Crumbs"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:52
+msgid "Prepend home"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:53
+msgid "Include \"Collections\""
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:54
+msgid "Include main item set for item"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:55
+msgid "Include item sets tree"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:56
+msgid "Append current resource"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:57
+msgid "Append current resource as a link"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:69
+msgid "Prepended links"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:70
+msgid ""
+"List of urls followed by a label, separated by a \"=\", one by line, that "
+"will be prepended to the breadcrumb."
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:87
+msgid "Url for collections"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:88
+msgid ""
+"The url to use for the link \"Collections\", if set above. Let empty to use "
+"the default one."
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:100
+msgid "Separator"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:101
+msgid ""
+"The separator between crumbs may be set as raw text or via css. it should be "
+"set as an html text (\"&gt;\")."
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:113
+msgid "Display on home page"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:27
+msgid "Update resources on menu saving"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:31
+msgid "Only when properties below exist in resource template"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:32
+msgid ""
+"According to template property settings (requires module Advanced Resource "
+"Template)"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:44
+msgid "Limit update to specific templates"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:50
+msgid "Select templates…"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:58
+msgid "Properties to store a broader linked resource"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:59
+msgid ""
+"Automatically update resources by adding a value to it when the menu uses "
+"resources. It may be dcterms:isPartOf or skos:broader or any other property."
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:67 src/Form/SettingsFieldset.php:84
+msgid "Select properties…"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:75
+msgid "Properties to store a narrower linked resource"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:76
+msgid ""
+"Automatically update resources by adding a value to it when the menu uses "
+"resources. It may be dcterms:hasPart or skos:narrower or any other property."
+msgstr ""
+
+#: src/Form/MenuForm.php:19
+msgid "Menu name"
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:139
+msgid "menu"
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:156
+#, php-format
+msgid "Menu \"%s\" successfully deleted"
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:178
+msgid "You must select at least one menu to batch delete."
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:233
+msgid "This menu is empty and cannot be divided."
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:264
+#, php-format
+msgid "Menu \"%s\" successfully created"
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:269
+#, php-format
+msgid "Menus \"%s\" successfully created"
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:328
+#, php-format
+msgid "Menu \"%s\" uses an existing name and was renamed \"%s\"."
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:343
+#, php-format
+msgid "Menu \"%s\" was saved successfully."
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:360
+msgid ""
+"The settings require to update the resources when saving menu, but no "
+"properties are defined."
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:373
+#, php-format
+msgid ""
+"Processing update of relations of the resources, if any, in background (job "
+"%1$s#%2$d%3$s, %4$slogs%3$s)."
+msgstr ""
+
+#: src/Controller/SiteAdmin/MenuController.php:536
+#, php-format
+msgid "Menu \"%s\" uses a reserved name and was renamed \"%s\"."
+msgstr ""
+
+#: src/Site/Navigation/Link/Structure.php:13
+msgid "Structure"
+msgstr ""
+
+#: src/Site/Navigation/Link/Resource.php:29
+msgid "Invalid navigation: resource link missing resource ID"
+msgstr ""
+
+#: src/Site/BlockLayout/Menu.php:42
+msgid "Select the menu to display."
+msgstr ""
+
+#: config/module.config.php:130
+msgid "Menu: Omeka breadcrumbs"
+msgstr ""

@@ -28,6 +28,141 @@ class SearchResources
      * @var array
      */
     const FIELD_QUERY = [
+         // Canonical flat list of all filter type labels, untranslated.
+        'labels' => [
+            // Value.
+            // Include variants for comparison alphabetical and numerical.
+            'eq' => 'is exactly', // @translate
+            'neq' => 'is not exactly', // @translate
+            'in' => 'contains', // @translate
+            'nin' => 'does not contain', // @translate
+            'sw' => 'starts with', // @translate
+            'nsw' => 'does not start with', // @translate
+            'ew' => 'ends with', // @translate
+            'new' => 'does not end with', // @translate
+            'near' => 'is similar to', // @translate
+            'nnear' => 'is not similar to', // @translate
+            'ma' => 'matches', // @translate
+            'nma' => 'does not match', // @translate
+            'lt' => 'lower than', // @translate
+            'lte' => 'lower than or equal', // @translate
+            'gte' => 'greater than or equal', // @translate
+            'gt' => 'greater than', // @translate
+            '<' => '<',
+            '≤' => '≤',
+            '≥' => '≥',
+            '>' => '>',
+            'yreq' => 'during year', // @translate
+            'nyreq' => 'not during year', // @translate
+            'yrgte' => 'since year', // @translate
+            'yrlte' => 'until year', // @translate
+            'yrgt' => 'since year (excluded)', // @translate
+            'yrlt' => 'until year (excluded)', // @translate
+            // Resource (duplcated for translation).
+            'res' => 'is', // @translate
+            'nres' => 'is not', // @translate
+            'res' => 'is resource with ID', // @translate
+            'nres' => 'is not resource with ID', // @translate
+            'resq' => 'is resource matching query', // @translate
+            'nresq' => 'is not resource matching query', // @translate
+            // Linked resource (duplcated for translation).
+            'lex' => 'is a linked resource', // @translate
+            'nlex' => 'is not a linked resource', // @translate
+            'lres' => 'is linked with resource with ID', // @translate
+            'nlres' => 'is not linked with resource with ID', // @translate
+            'lres' => 'is linked with resource with ID (expert)', // @translate
+            'nlres' => 'is not linked with resource with ID (expert)', // @translate
+            'lkq' => 'is linked with resources matching query (expert)', // @translate
+            'nlkq' => 'is not linked with resources matching query (expert)', // @translate
+            // Count.
+            'ex' => 'has any value', // @translate
+            'nex' => 'has no values', // @translate
+            'exs' => 'has a single value', // @translate
+            'nexs' => 'does not have a single value', // @translate
+            'exm' => 'has multiple values', // @translate
+            'nexm' => 'does not have multiple values', // @translate
+            // Data type.
+            'dtp' => 'has data type', // @translate
+            'ndtp' => 'does not have data type', // @translate
+            'tp' => 'has main type', // @translate
+            'ntp' => 'does not have main type', // @translate
+            'tpl' => 'has type literal-like', // @translate
+            'ntpl' => 'does not have type literal-like', // @translate
+            'tpr' => 'has type resource-like', // @translate
+            'ntpr' => 'does not have type resource-like', // @translate
+            'tpu' => 'has type uri-like', // @translate
+            'ntpu' => 'does not have type uri-like', // @translate
+            // Curation.
+            'dup' => 'has duplicate values', // @translate
+            'ndup' => 'does not have duplicate values', // @translate
+            'dupt' => 'has duplicate values and type', // @translate
+            'ndupt' => 'does not have duplicate values and type', // @translate
+            'dupl' => 'has duplicate values and language', // @translate
+            'ndupl' => 'does not have duplicate values and language', // @translate
+            'duptl' => 'has duplicate values, type and language', // @translate
+            'nduptl' => 'does not have duplicate values, type and language', // @translate
+            'dupv' => 'has duplicate simple values', // @translate
+            'ndupv' => 'does not have duplicate simple values', // @translate
+            'dupvt' => 'has duplicate simple values and type', // @translate
+            'ndupvt' => 'does not have duplicate simple values and type', // @translate
+            'dupvl' => 'has duplicate simple values and language', // @translate
+            'ndupvl' => 'does not have duplicate simple values and language', // @translate
+            'dupvtl' => 'has duplicate simple values, type and language', // @translate
+            'ndupvtl' => 'does not have duplicate simple values, type and language', // @translate
+            'dupr' => 'has duplicate linked resources', // @translate
+            'ndupr' => 'does not have duplicate linked resources', // @translate
+            'duprt' => 'has duplicate linked resources and type', // @translate
+            'nduprt' => 'does not have duplicate linked resources and type', // @translate
+            'duprl' => 'has duplicate linked resources and language', // @translate
+            'nduprl' => 'does not have duplicate linked resources and language', // @translate
+            'duprtl' => 'has duplicate linked resources, type and language', // @translate
+            'nduprtl' => 'does not have duplicate linked resources, type and language', // @translate
+            'dupu' => 'has duplicate uris', // @translate
+            'ndupu' => 'does not have duplicate uris', // @translate
+            'duput' => 'has duplicate uris and type', // @translate
+            'nduput' => 'does not have duplicate uris and type', // @translate
+            'dupul' => 'has duplicate uris and language', // @translate
+            'ndupul' => 'does not have duplicate uris and language', // @translate
+            'duputl' => 'has duplicate uris, type and language', // @translate
+            'nduputl' => 'does not have duplicate uris, type and language', // @translate
+        ],
+        'core' => [
+            'eq',
+            'neq',
+            'in',
+            'nin',
+            'ex',
+            'nex',
+            'sw',
+            'nsw',
+            'ew',
+            'new',
+            'res',
+            'nres',
+            'dt',
+            'ndt',
+        ],
+        // Default filter types for sites (exclude curation, symbols, sub-query
+        // and expert linked resource types).
+        'default' => [
+            'eq', 'neq', 'in', 'nin',
+            'sw', 'nsw', 'ew', 'new',
+            'lt', 'lte', 'gte', 'gt',
+            'yreq', 'nyreq', 'yrgte', 'yrlte',
+            'res', 'nres',
+            'lex', 'nlex',
+            'ex', 'nex', 'exs', 'nexs', 'exm', 'nexm',
+            'dtp', 'ndtp', 'tp', 'ntp',
+        ],
+        // Group mapping for filter type labels.
+        'groups' => [
+            'Value' => ['eq', 'neq', 'in', 'nin', 'sw', 'nsw', 'ew', 'new', 'near', 'nnear', 'ma', 'nma', 'lt', 'lte', 'gte', 'gt', '<', '≤', '≥', '>', 'yreq', 'nyreq', 'yrgte', 'yrlte', 'yrgt', 'yrlt'],
+            'Resource' => ['res', 'nres', 'resq', 'nresq'],
+            'Linked resource' => ['lex', 'nlex', 'lres', 'nlres', 'lkq', 'nlkq'],
+            'Count' => ['ex', 'nex', 'exs', 'nexs', 'exm', 'nexm'],
+            'Data type' => ['dtp', 'ndtp', 'tp', 'ntp', 'tpl', 'ntpl', 'tpr', 'ntpr', 'tpu', 'ntpu'],
+            'Curation' => ['dup', 'ndup', 'dupt', 'ndupt', 'dupl', 'ndupl', 'duptl', 'nduptl', 'dupv', 'ndupv', 'dupvt', 'ndupvt', 'dupvl', 'ndupvl', 'dupvtl', 'ndupvtl', 'dupr', 'ndupr', 'duprt', 'nduprt', 'duprl', 'nduprl', 'duprtl', 'nduprtl', 'dupu', 'ndupu', 'duput', 'nduput', 'dupul', 'ndupul', 'duputl', 'nduputl'],
+        ],
         'reciprocal' => [
             // Value.
             'eq' => 'neq',
@@ -345,22 +480,6 @@ class SearchResources
             'duputl',
             'nduputl',
         ],
-        'core' => [
-            'eq',
-            'neq',
-            'in',
-            'nin',
-            'ex',
-            'nex',
-            'sw',
-            'nsw',
-            'ew',
-            'new',
-            'res',
-            'nres',
-            'dt',
-            'ndt',
-        ],
     ];
 
     /**
@@ -384,6 +503,11 @@ class SearchResources
      * @var \Laminas\Log\Logger
      */
     protected $logger;
+
+    /**
+     * @var bool
+     */
+    protected $isOldOmeka;
 
     /**
      * Contains two keys: aliases and query_args.
@@ -434,10 +558,7 @@ class SearchResources
 
         $override = [];
         $query = $this->startOverrideQuery($query, $override);
-        if (!empty($override)) {
-            $request->setOption('override', $override);
-        }
-
+        $request->setOption('override', $override);
         $request->setContent($query);
 
         return $this;
@@ -613,27 +734,22 @@ class SearchResources
 
         $query = $this->expandFieldQueryArgs($query);
 
-        // Add warning before cleaning. The right queries are still processed.
-        foreach ($query['property'] ?? [] as $queryRow) {
-            if (isset($queryRow['property']) && is_array($queryRow['property'])) {
-                $this->logger->warn(
-                    'The query arg "property" won’t support multiple properties in a future version, because it’s overriding the default behavior. Use arg "filter" instead. Check your queries: {url}', // @translate
-                    ['url' => $_SERVER['REQUEST_URI']]
-                );
+        // Quick clean for most of the cases.
+        // TODO Check if the quick clean is enough.
+        // "0" is a valid value.
+        $arrayFilterRecursiveEmpty = null;
+        $arrayFilterRecursiveEmpty = function (array &$array) use (&$arrayFilterRecursiveEmpty): array {
+            foreach ($array as $key => $value) {
+                if (is_array($value) && $value) {
+                    $array[$key] = $arrayFilterRecursiveEmpty($value);
+                }
+                if (in_array($array[$key], ['', null, []], true)) {
+                    unset($array[$key]);
+                }
             }
-            if (isset($queryRow['type']) && !in_array($queryRow['type'], self::FIELD_QUERY['core'])) {
-                $this->logger->warn(
-                    'The query arg "property" won’t support type {type} in a future version, because it’s overriding the default behavior. Use arg "filter" instead. Check your queries: {url}', // @translate
-                    ['type' => $queryRow['type'], 'url' => $_SERVER['REQUEST_URI']]
-                );
-            }
-            if (isset($queryRow['text']) && is_array($queryRow['text'])) {
-                $this->logger->warn(
-                    'The query arg "property" won’t support multiple values in a future version, because it’s overriding the default behavior. Use arg "filter" instead. Check your queries: {url}', // @translate
-                    ['url' => $_SERVER['REQUEST_URI']]
-                );
-            }
-        }
+            return $array;
+        };
+        $arrayFilterRecursiveEmpty($query);
 
         foreach ($query as $key => $value) {
             if ($key === 'sort_by_default' || $key === 'sort_order_default') {
@@ -950,6 +1066,7 @@ class SearchResources
                     . '/' . $queryRowProperty
                     . '/' . (empty($queryRow['except']) ? '' : serialize($queryRow['except']))
                     . '/' . (in_array($queryRow['type'], ['neq', 'nlist']) ? 'nlist' : 'list')
+                    . '/' . (empty($queryRow['lang']) ? '' : serialize($queryRow['lang']))
                     . '/' . (empty($queryRow['datatype']) ? '' : serialize($queryRow['datatype']))
                     . '/';
                 if (isset($shortProperties[$short])) {
@@ -965,6 +1082,7 @@ class SearchResources
                     $shortProperties[$short]['except'] = $queryRow['except'] ?? '';
                     $shortProperties[$short]['type'] = $queryRow['type'];
                     $shortProperties[$short]['texts'] = is_array($queryRow['text']) ? array_values($queryRow['text']) : [$queryRow['text']];
+                    $shortProperties[$short]['lang'] = $queryRow['lang'] ?? '';
                     $shortProperties[$short]['datatype'] = $queryRow['datatype'] ?? '';
                     $shortProperties[$short]['total'] = 1;
                 }
@@ -996,6 +1114,7 @@ class SearchResources
                 'except' => $shortProperty['except'],
                 'type' => $shortProperty['type'],
                 'text' => $shortProperty['texts'],
+                'lang' => $shortProperty['lang'],
                 'datatype' => $shortProperty['datatype'],
             ];
             $query['property'][$shortPropertyKey] = array_filter($propertyFilter, fn ($v) => $v !== null);
@@ -1017,10 +1136,15 @@ class SearchResources
         $shortFilters = [];
 
         foreach ($query['filter'] as $k => $queryRow) {
-            if (!is_array($queryRow)
-                || empty($queryRow['type'])
-                || !isset(self::FIELD_QUERY['reciprocal'][$queryRow['type']])
-            ) {
+            if (!is_array($queryRow)) {
+                unset($query['filter'][$k]);
+                continue;
+            }
+            if (empty($queryRow['type'])) {
+                $queryRow['type'] = 'in';
+                $query['filter'][$k]['type'] = 'in';
+            }
+            if (!isset(self::FIELD_QUERY['reciprocal'][$queryRow['type']])) {
                 unset($query['filter'][$k]);
                 continue;
             }
@@ -1127,6 +1251,7 @@ class SearchResources
                     . '/' . $queryRowFieldString
                     . '/' . (empty($queryRow['except']) ? '' : serialize($queryRow['except']))
                     . '/' . $queryRow['type']
+                    . '/' . (empty($queryRow['lang']) ? '' : serialize($queryRow['lang']))
                     . '/' . (empty($queryRow['datatype']) ? '' : serialize($queryRow['datatype']))
                     . '/';
                 if (isset($shortFilters[$short])) {
@@ -1142,6 +1267,7 @@ class SearchResources
                     $shortFilters[$short]['except'] = $queryRow['except'] ?? '';
                     $shortFilters[$short]['type'] = $queryRow['type'];
                     $shortFilters[$short]['vals'] = is_array($queryRow['val']) ? array_values($queryRow['val']) : [$queryRow['val']];
+                    $shortFilters[$short]['lang'] = $queryRow['lang'] ?? '';
                     $shortFilters[$short]['datatype'] = $queryRow['datatype'] ?? '';
                     $shortFilters[$short]['total'] = 1;
                 }
@@ -1170,6 +1296,7 @@ class SearchResources
                 'except' => $shortFilter['except'],
                 'type' => $shortFilter['type'],
                 'val' => $shortFilter['vals'],
+                'lang' => $shortFilter['lang'],
                 'datatype' => $shortFilter['datatype'],
             ];
             $query['filter'][$shortFilterKey] = array_filter($filter, fn ($v) => $v !== null);
@@ -1215,6 +1342,7 @@ class SearchResources
                     'except' => $this->searchIndex['query_args'][$field]['except'] ?? null,
                     'type' => $this->searchIndex['query_args'][$field]['type'] ?? $typeDefault,
                     'val' => $query['filter'][$key]['val'] ?? null,
+                    'lang' => $this->searchIndex['query_args'][$field]['lang'] ?? null,
                     'datatype' => $this->searchIndex['query_args'][$field]['datatype'] ?? null,
                     'label' => $this->searchIndex['form_filters_fields'][$field]
                         ?? $this->searchIndex['aliases'][$field]['label']
@@ -1240,6 +1368,7 @@ class SearchResources
                     'except' => $this->searchIndex['query_args'][$field]['except'] ?? null,
                     'type' => $this->searchIndex['query_args'][$field]['type'] ?? $typeDefault,
                     'val' => $value,
+                    'lang' => $this->searchIndex['query_args'][$field]['lang'] ?? null,
                     'datatype' => $this->searchIndex['query_args'][$field]['datatype'] ?? null,
                     // Label and next data  are kept for search filters.
                     'label' => $this->searchIndex['form_filters_fields'][$field]
@@ -1448,7 +1577,7 @@ class SearchResources
                     $join->getIndexBy()
                 );
                 if ($hasResourceType) {
-                    $resourceTypes = is_array($query['resource_type']) ? $query['resource_type'] : [$query['resource_type']];
+                    $resourceTypes = is_array($query['resource_type']) ? array_values($query['resource_type']) : [$query['resource_type']];
                     $qb
                         ->setParameter($parameterName, $resourceTypes, \Doctrine\DBAL\Connection::PARAM_STR_ARRAY);
                 } else {
@@ -1661,6 +1790,7 @@ class SearchResources
      * - property[{index}][except]: list of property IsD or terms to exclude
      * - property[{index}][type]: search type
      * - property[{index}][text]: search text or array of texts or values
+     * - property[{index}][lang]: filter on language(s)
      * - property[{index}][datatype]: filter on data type(s)
      *
      * @see self::buildQueryForRow() for details.
@@ -1694,6 +1824,7 @@ class SearchResources
             $except = $queryRow['except'] ?? null;
             $queryType = $queryRow['type'];
             $value = $queryRow['text'] ?? '';
+            $lang = $queryRow['lang'] ?? '';
             $dataType = $queryRow['datatype'] ?? '';
 
             $result = $this->buildQueryForRow(
@@ -1711,6 +1842,7 @@ class SearchResources
                     'except',
                     'queryType',
                     'value',
+                    'lang',
                     'dataType',
                     'isFilter'
                 ),
@@ -1757,6 +1889,7 @@ class SearchResources
      * - filter[{index}][except]: list of property IsD or terms to exclude
      * - filter[{index}][type]: search type
      * - filter[{index}][val]: search text or array of texts or values
+     * - filter[{index}][lang]: filter on language(s)
      * - filter[{index}][datatype]: filter on data type(s)
      *
      * @see self::buildQueryForRow() for details.
@@ -1787,9 +1920,15 @@ class SearchResources
 
             $joiner = $queryRow['join'] ?? '';
             $propertyIds = $queryRow['field'] ?? null;
+            // Field may be an array from a multi-select form.
+            if (is_array($propertyIds)) {
+                $propertyIds = array_filter($propertyIds, 'strlen');
+                $propertyIds = $propertyIds ?: null;
+            }
             $except = $queryRow['except'] ?? null;
             $queryType = $queryRow['type'];
             $value = $queryRow['val'] ?? '';
+            $lang = $queryRow['lang'] ?? '';
             $dataType = $queryRow['datatype'] ?? '';
 
             $result = $this->buildQueryForRow(
@@ -1807,6 +1946,7 @@ class SearchResources
                     'except',
                     'queryType',
                     'value',
+                    'lang',
                     'dataType',
                     'isFilter'
                 ),
@@ -1859,7 +1999,7 @@ class SearchResources
      *   - lte: lower than or equal
      *   - gte: greater than or equal
      *   - gt: greater than
-     *   Comparisons (numerical, with casting to integer for numbers):
+     *   Comparisons (numerical, with casting to integer for numbers; don't use for float):
      *   - <: lower than
      *   - ≤: lower than or equal
      *   - ≥: greater than or equal
@@ -1970,7 +2110,8 @@ class SearchResources
          * @var array|string $except
          * @var string $queryType
          * @var mixed $value
-         * @var string $dataType
+         * @var array|string $lang
+         * @var array|string $dataType
          * @var bool $isFilter
          */
         extract($vars);
@@ -1984,7 +2125,7 @@ class SearchResources
         $expr = $qb->expr();
         $entityManager = $this->adapter->getEntityManager();
 
-        $escapeSqlLike = fn ($string) => str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], (string) $string);
+        $escapeSqlLike = fn ($string) => strtr((string) $string, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']);
 
         // Adapted in SearchSolr.
         // Quick check of value.
@@ -2116,53 +2257,82 @@ class SearchResources
 
         $incorrectValue = false;
 
+        // Pre-fetch linked resource ids via dbal to avoid doctrine class
+        // discriminator left joins (value_annotation, item_set, item, media)
+        // in the dql subquery.
+        $conn = $this->adapter->getEntityManager()->getConnection();
+        $fetchLinkedIds = function (string $sqlOp, $sqlValues) use ($conn): array {
+            if (is_array($sqlValues)) {
+                return $conn->fetchFirstColumn(
+                    'SELECT id FROM resource WHERE title IN (?)',
+                    [$sqlValues],
+                    [Connection::PARAM_STR_ARRAY]
+                );
+            }
+            return $conn->fetchFirstColumn(
+                "SELECT id FROM resource WHERE title $sqlOp ?",
+                [$sqlValues]
+            );
+        };
+        $linkedExpr = function (array $ids) use ($qb, $expr, $valuesAlias) {
+            if (!$ids) {
+                return null;
+            }
+            $param = $this->adapter->createAlias();
+            $qb->setParameter(
+                $param,
+                array_map('intval', $ids),
+                Connection::PARAM_INT_ARRAY
+            );
+            return $expr->in(
+                "$valuesAlias.valueResource", ":$param"
+            );
+        };
+
         switch ($queryType) {
             case 'eq':
             case 'list':
-                $subqueryAlias = $this->adapter->createAlias();
-                $subquery = $entityManager
-                    ->createQueryBuilder()
-                    ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias);
                 if (count($value) <= 1) {
                     $value = reset($value);
                     $param = $this->adapter->createNamedParameter($qb, $value);
-                    $subquery
-                        ->where($expr->eq("$subqueryAlias.title", $param));
-                    $predicateExpr = $expr->orX(
-                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                    $linked = $linkedExpr($fetchLinkedIds('=', $value));
+                    $parts = [
                         $expr->eq("$valuesAlias.value", $param),
-                        $expr->eq("$valuesAlias.uri", $param)
-                    );
+                        $expr->eq("$valuesAlias.uri", $param),
+                    ];
+                    if ($linked) {
+                        array_unshift($parts, $linked);
+                    }
+                    $predicateExpr = $expr->orX(...$parts);
                 } else {
                     $param = $this->adapter->createNamedParameter($qb, $value);
                     $qb->setParameter(substr($param, 1), $value, Connection::PARAM_STR_ARRAY);
-                    $subquery
-                        ->where($expr->in("$subqueryAlias.title", $param));
-                    $predicateExpr = $expr->orX(
-                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                    $linked = $linkedExpr($fetchLinkedIds('IN', $value));
+                    $parts = [
                         $expr->in("$valuesAlias.value", $param),
-                        $expr->in("$valuesAlias.uri", $param)
-                    );
+                        $expr->in("$valuesAlias.uri", $param),
+                    ];
+                    if ($linked) {
+                        array_unshift($parts, $linked);
+                    }
+                    $predicateExpr = $expr->orX(...$parts);
                 }
                 break;
 
             case 'in':
-                $subqueryAlias = $this->adapter->createAlias();
-                $subquery = $entityManager
-                    ->createQueryBuilder()
-                    ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias);
                 $sub = [];
                 foreach ($value as $val) {
-                    $param = $this->adapter->createNamedParameter($qb, '%' . $escapeSqlLike($val) . '%');
-                    $subquery
-                        ->where($expr->like("$subqueryAlias.title", $param));
-                    $sub[] = $expr->orX(
-                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                    $likeVal = '%' . $escapeSqlLike($val) . '%';
+                    $param = $this->adapter->createNamedParameter($qb, $likeVal);
+                    $linked = $linkedExpr($fetchLinkedIds('LIKE', $likeVal));
+                    $parts = [
                         $expr->like("$valuesAlias.value", $param),
-                        $expr->like("$valuesAlias.uri", $param)
-                    );
+                        $expr->like("$valuesAlias.uri", $param),
+                    ];
+                    if ($linked) {
+                        array_unshift($parts, $linked);
+                    }
+                    $sub[] = $expr->orX(...$parts);
                 }
                 $predicateExpr = count($value) <= 1
                     ? reset($sub)
@@ -2170,21 +2340,19 @@ class SearchResources
                 break;
 
             case 'sw':
-                $subqueryAlias = $this->adapter->createAlias();
-                $subquery = $entityManager
-                    ->createQueryBuilder()
-                    ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias);
                 $sub = [];
                 foreach ($value as $val) {
-                    $param = $this->adapter->createNamedParameter($qb, $escapeSqlLike($value) . '%');
-                    $subquery
-                        ->where($expr->like("$subqueryAlias.title", $param));
-                    $sub[] = $expr->orX(
-                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                    $likeVal = $escapeSqlLike($val) . '%';
+                    $param = $this->adapter->createNamedParameter($qb, $likeVal);
+                    $linked = $linkedExpr($fetchLinkedIds('LIKE', $likeVal));
+                    $parts = [
                         $expr->like("$valuesAlias.value", $param),
-                        $expr->like("$valuesAlias.uri", $param)
-                    );
+                        $expr->like("$valuesAlias.uri", $param),
+                    ];
+                    if ($linked) {
+                        array_unshift($parts, $linked);
+                    }
+                    $sub[] = $expr->orX(...$parts);
                 }
                 $predicateExpr = count($value) <= 1
                     ? reset($sub)
@@ -2192,21 +2360,19 @@ class SearchResources
                 break;
 
             case 'ew':
-                $subqueryAlias = $this->adapter->createAlias();
-                $subquery = $entityManager
-                    ->createQueryBuilder()
-                    ->select("$subqueryAlias.id")
-                    ->from('Omeka\Entity\Resource', $subqueryAlias);
                 $sub = [];
                 foreach ($value as $val) {
-                    $param = $this->adapter->createNamedParameter($qb, '%' . $escapeSqlLike($value));
-                    $subquery
-                        ->where($expr->like("$subqueryAlias.title", $param));
-                    $sub[]= $expr->orX(
-                        $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
+                    $likeVal = '%' . $escapeSqlLike($val);
+                    $param = $this->adapter->createNamedParameter($qb, $likeVal);
+                    $linked = $linkedExpr($fetchLinkedIds('LIKE', $likeVal));
+                    $parts = [
                         $expr->like("$valuesAlias.value", $param),
-                        $expr->like("$valuesAlias.uri", $param)
-                    );
+                        $expr->like("$valuesAlias.uri", $param),
+                    ];
+                    if ($linked) {
+                        array_unshift($parts, $linked);
+                    }
+                    $sub[] = $expr->orX(...$parts);
                 }
                 $predicateExpr = count($value) <= 1
                     ? reset($sub)
@@ -2218,13 +2384,12 @@ class SearchResources
                 // than four characters, so the comparaison cannot be done with
                 // a static value from the php soundex() function.
                 $subqueryAlias = $this->adapter->createAlias();
-                $subquery = $entityManager
-                    ->createQueryBuilder()
+                $subquery = $this->createSubQueryBuilder()
                     ->select("$subqueryAlias.id")
                     ->from('Omeka\Entity\Resource', $subqueryAlias);
                 $sub = [];
                 foreach ($value as $val) {
-                    $param = $this->adapter->createNamedParameter($qb, $value);
+                    $param = $this->adapter->createNamedParameter($qb, $val);
                     $subquery
                         ->where($expr->eq("SOUNDEX($subqueryAlias.title)", "SOUNDEX($param)"));
                     $sub[] = $expr->orX(
@@ -2244,15 +2409,14 @@ class SearchResources
                 // The doctrine dql requires "TRUE" and will be converted to a
                 // standard mysql query.
                 $subqueryAlias = $this->adapter->createAlias();
-                $subquery = $entityManager
-                    ->createQueryBuilder()
+                $subquery = $this->createSubQueryBuilder()
                     ->select("$subqueryAlias.id")
                     ->from('Omeka\Entity\Resource', $subqueryAlias);
                 $sub = [];
                 foreach ($value as $val) {
+                    $param = $this->adapter->createNamedParameter($qb, $val);
                     $subquery
                         ->where("REGEXP($subqueryAlias.title, $param) = TRUE");
-                    $param = $this->adapter->createNamedParameter($qb, $value);
                     $sub[] = $expr->orX(
                         $expr->in("$valuesAlias.valueResource", $subquery->getDQL()),
                         "REGEXP($valuesAlias.value, $param) = TRUE",
@@ -2456,8 +2620,7 @@ class SearchResources
                 $subValuesAlias = $this->adapter->createAlias();
                 $subResourceAlias = $this->adapter->createAlias();
                 // Use a subquery so rights are automatically managed.
-                $subQb = $entityManager
-                    ->createQueryBuilder()
+                $subQb = $this->createSubQueryBuilder()
                     ->select("IDENTITY($subValuesAlias.valueResource)")
                     ->from(\Omeka\Entity\Value::class, $subValuesAlias)
                     ->innerJoin("$subValuesAlias.resource", $subResourceAlias)
@@ -2513,16 +2676,18 @@ class SearchResources
                         $expr->isNull("$valuesAlias.valueResource"),
                         $expr->orX(
                             $expr->isNull("$valuesAlias.uri"),
-                            $expr->eq("$valuesAlias.uri", '')
+                            $expr->eq("$valuesAlias.uri", ':str_empty')
                         )
                     );
+                    $qb->setParameter('str_empty', '', ParameterType::STRING);
                 } elseif ($value === 'resource') {
                     $predicateExpr = $expr->isNotNull("$valuesAlias.valueResource");
                 } elseif ($value === 'uri') {
                     $predicateExpr = $expr->andX(
                         $expr->isNotNull("$valuesAlias.uri"),
-                        $expr->neq("$valuesAlias.uri", '')
+                        $expr->neq("$valuesAlias.uri", ':str_empty')
                     );
+                    $qb->setParameter('str_empty', '', ParameterType::STRING);
                 } else {
                     $predicateExpr = $expr->eq(1, 0);
                 }
@@ -2536,9 +2701,10 @@ class SearchResources
                     $expr->isNull("$valuesAlias.valueResource"),
                     $expr->orX(
                         $expr->isNull("$valuesAlias.uri"),
-                        $expr->eq("$valuesAlias.uri", '')
+                        $expr->eq("$valuesAlias.uri", ':str_empty')
                     )
                 );
+                $qb->setParameter('str_empty', '', ParameterType::STRING);
                 break;
 
             case 'tpr':
@@ -2548,8 +2714,9 @@ class SearchResources
             case 'tpu':
                 $predicateExpr = $expr->andX(
                     $expr->isNotNull("$valuesAlias.uri"),
-                    $expr->neq("$valuesAlias.uri", '')
+                    $expr->neq("$valuesAlias.uri", ':str_empty')
                 );
+                $qb->setParameter('str_empty', '', ParameterType::STRING);
                 break;
 
             case 'dt':
@@ -2609,10 +2776,13 @@ class SearchResources
                     $groupBy[] = "$subqueryAlias.type";
                     $groupBy[] = "$subqueryAlias.lang";
                 }
-                $subquery = $entityManager
-                    ->createQueryBuilder()
+                $subquery = $this->createSubQueryBuilder()
                     ->select("IDENTITY($subqueryAlias.resource)")
                     ->from(\Omeka\Entity\Value::class, $subqueryAlias)
+                    // Exclude values with annotations: not true duplicates.
+                    ->andWhere($expr->isNull(
+                        "$subqueryAlias.valueAnnotation"
+                    ))
                     ->groupBy(...$groupBy)
                     ->having($expr->gt("COUNT($subqueryAlias.resource)", 1));
                 if ($propertyIds) {
@@ -2694,6 +2864,23 @@ class SearchResources
         // Finalize predicate expression on subject values.
         if (in_array($queryType, self::FIELD_QUERY['value_subject'])) {
             $predicateExpr = $expr->in("$valuesAlias.resource", $subQb->getDQL());
+        }
+
+        if ($lang) {
+            if (!is_array($lang) || count($lang) <= 1) {
+                $langAlias = $this->adapter->createNamedParameter($qb, is_array($lang) ? reset($lang) : $lang);
+                $predicateExpr = $expr->andX(
+                    $predicateExpr,
+                    $expr->eq("$valuesAlias.lang", $langAlias)
+                );
+            } else {
+                $langAlias = $this->adapter->createAlias();
+                $qb->setParameter($langAlias, array_values($lang), Connection::PARAM_STR_ARRAY);
+                $predicateExpr = $expr->andX(
+                    $predicateExpr,
+                    $expr->in("$valuesAlias.lang", ':' . $langAlias)
+                );
+            }
         }
 
         if ($dataType) {
@@ -2929,6 +3116,16 @@ class SearchResources
 
     protected function sortQuery(QueryBuilder $qb, array $query): self
     {
+        // Add explicit doctrine class discriminator filter so the optimizer can
+        // use composite indexes (resource_type, created/modified) instead of a
+        // full table filesort.
+        $entityClass = $this->adapter->getEntityClass();
+        if ($entityClass !== \Omeka\Entity\Resource::class) {
+            $qb->andWhere(
+                'omeka_root INSTANCE OF ' . $entityClass
+            );
+        }
+
         // Order by is the last part or a sql query.
         // Sort by listed id.
         // The list is the one set in key "sort_ids" or in main query key "id".
@@ -2942,6 +3139,7 @@ class SearchResources
             /** @see \Omeka\Api\Adapter\AbstractEntityAdapter::buildBaseQuery() */
             // Avoid a strict type issue, so convert ids as string.
             // Normally, the query is cleaned before.
+            // Take care of sort order, that is "desc" by default!
             $ids = empty($query['sort_ids']) ? $query['id'] : $query['sort_ids'];
             if (is_int($ids)) {
                 $ids = [(string) $ids];
@@ -2951,7 +3149,7 @@ class SearchResources
                 $ids = [];
             }
             $ids = array_map('trim', $ids);
-            $ids = array_filter($ids, 'strlen');
+            $ids = array_values(array_filter($ids, 'strlen'));
             if ($ids) {
                 $idsAlias = $this->adapter->createAlias();
                 $idsPlaceholder = ':' . $idsAlias;
@@ -2981,7 +3179,12 @@ class SearchResources
             // with the same score are sorted by id desc and not randomly.
             // Don't use "`" here for doctrine.
             $matchOrder = 'MATCH(omeka_fulltext_search.title, omeka_fulltext_search.text) AGAINST (:omeka_fulltext_search)';
-            $sortOrder = $query['sort_by'] === 'relevance asc' ? 'ASC' : 'DESC';
+            // Support both formats: 'relevance asc' (combined) and separate
+            // sort_by/sort_order.
+            $sortOrder = $query['sort_by'] === 'relevance asc'
+                || (($query['sort_order'] ?? '') === 'asc')
+                ? 'ASC'
+                : 'DESC';
             $qb
                 // The hidden select and "group by" avoids issue with mysql mode "only_full_group_by".
                 // But the select is not available when returning scalar ids.
@@ -3432,7 +3635,7 @@ class SearchResources
         // zone than the method getDateTimeFromValue().
         try {
             return (new DateTime((string) $value))->format('Y-m-d H:i:s');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return null;
         }
     }
@@ -3446,9 +3649,25 @@ class SearchResources
         if (in_array($month, [4, 6, 9, 11], true)) {
             return 30;
         } elseif ($month === 2) {
-            return date('L', mktime(0, 0, 0, 1, 1, $year)) ? 29 : 28;
+            return date('L', mktime(0, 0, 0, 1, 1, (int) $year)) ? 29 : 28;
         } else {
             return 31;
         }
+    }
+
+    /**
+     * Create a subquery builder compatible with Omeka S 4.2+.
+     *
+     * In Omeka S 4.2+, the adapter has its own createQueryBuilder() that should
+     * be used instead of entityManager->createQueryBuilder().
+     */
+    protected function createSubQueryBuilder(): QueryBuilder
+    {
+        if ($this->isOldOmeka === null) {
+            $this->isOldOmeka = version_compare(\Omeka\Module::VERSION, '4.2.0', '<');
+        }
+        return $this->isOldOmeka
+            ? $this->adapter->getEntityManager()->createQueryBuilder()
+            : $this->adapter->createQueryBuilder();
     }
 }

@@ -47,9 +47,19 @@ class AbstractFacet extends AbstractHelper
     protected $route = '';
 
     /**
+     * @var \Omeka\Api\Representation\SiteRepresentation
+     */
+    protected $site = null;
+
+    /**
      * @var int
      */
-    protected $siteId;
+    protected $siteId = null;
+
+    /**
+     * @var array
+     */
+    protected $siteLocales = [];
 
     /**
      * @var array
@@ -98,17 +108,27 @@ class AbstractFacet extends AbstractHelper
 
         $isSiteRequest = $plugins->get('status')->isSiteRequest();
         if ($isSiteRequest) {
-            $this->siteId = $plugins
-                ->get('Laminas\View\Helper\ViewModel')
+            $this->site = $plugins
+                ->get(\Laminas\View\Helper\ViewModel::class)
                 ->getRoot()
-                ->getVariable('site')
-                ->id();
+                ->getVariable('site');
+            $this->siteId = $this->site->id();
+            $locale = $plugins->get('siteSetting')('locale');
+            $this->siteLocales = array_unique([
+                $locale,
+                $locale ? substr($locale, 0, 2) : '',
+                // It should be null, but it is deprecated in resource->value()
+                // so use empty string for now.
+                // null,
+                '',
+            ]);
         }
 
         unset($this->queryBase['page']);
 
         // For active facets, there is no facet field.
         if ($facetField === null) {
+            /** @see \AdvancedSearch\View\Helper\FacetActives::prepareActiveFacetData() */
             $facetsData[$facetField] = $this->prepareActiveFacetData($facetValues, $options);
         } elseif (!isset($facetsData[$facetField])) {
             $facetsData[$facetField] = $this->prepareFacetData($facetField, $facetValues, $options);
@@ -133,7 +153,21 @@ class AbstractFacet extends AbstractHelper
     {
         $isFacetModeDirect = in_array($options['mode'] ?? null, ['link', 'js']);
 
-        foreach ($facetValues as /* $facetIndex => */ &$facetValue) {
+        // Filter boolean buckets when "boolean_filter" is set on the facet.
+        // Applies to fields ending with "_b" (Solr dynamic field convention)
+        // and to non-Solr boolean fields named "is_public".
+        $boolFilter = $options['boolean_filter'] ?? '';
+        $isBoolField = substr($facetField, -2) === '_b' || $facetField === 'is_public';
+        if ($boolFilter && $isBoolField) {
+            $facetValues = array_filter($facetValues, function ($f) use ($boolFilter) {
+                $v = strtolower((string) ($f['value'] ?? ''));
+                $isTruthy = in_array($v, ['1', 'true', 'yes'], true);
+                return $boolFilter === 'truthy_only' ? $isTruthy : !$isTruthy;
+            });
+        }
+
+        $skipped = [];
+        foreach ($facetValues as $facetIndex => &$facetValue) {
             $facetValueValue = (string) $facetValue['value'];
 
             // The facet value is compared against a string (the query args).
@@ -141,8 +175,14 @@ class AbstractFacet extends AbstractHelper
             if (strlen($facetValueLabel)) {
                 [$active, $url] = $this->prepareActiveAndUrl($facetField, $facetValueValue, $isFacetModeDirect);
             } else {
-                $active = false;
-                $url = '';
+                // TODO Check item sets facets that are not filtered by site with module Search Solr.
+                // The facet value is not a real value; or not in the current
+                // site and there is a bad index.
+                if (strlen($facetValueValue)) {
+                    $skipped[] = $facetValueValue;
+                }
+                unset($facetValues[$facetIndex]);
+                continue;
             }
 
             $facetValue['value'] = $facetValueValue;
@@ -151,6 +191,31 @@ class AbstractFacet extends AbstractHelper
             $facetValue['url'] = $url;
         }
         unset($facetValue);
+
+        // Aggregate to a single warning per field to avoid one log line per
+        // facet value (some indexes contain hundreds of unmatched values).
+        if ($skipped) {
+            $sample = array_slice($skipped, 0, 5);
+            $this->logger->__invoke()->warn(
+                '[AdvancedSearch] {count} facet values for field "{field}" were skipped because they have no label or are not in the current site (sample: {sample}).', // @translate
+                ['count' => count($skipped), 'field' => $facetField, 'sample' => implode(', ', $sample)]
+            );
+        }
+
+        // The facets should be reordered when option is "total then alpha".
+        $isTotalThenAlpha = strtok($options['order'] ?? '', ' ') === 'total_alpha' && !empty($options['more']);
+        if ($isTotalThenAlpha
+            && count($facetValues) > $options['more'] + 1
+        ) {
+            // This sort is normally useless since it's done earlier, but may
+            // avoid issues, in particular when the search engine does not
+            // manage it.
+            usort($facetValues, fn ($a, $b) => $b['count'] <=> $a['count']);
+            $firsts = array_slice($facetValues, 0, $options['more']);
+            $lasts = array_slice($facetValues, $options['more']);
+            usort($lasts, fn ($a, $b) => strnatcasecmp($a['value'], $b['value']));
+            $facetValues = array_merge($firsts, $lasts);
+        }
 
         return [
             'name' => $facetField,
@@ -193,7 +258,25 @@ class AbstractFacet extends AbstractHelper
      */
     protected function facetValueLabel(string $facetField, $value): ?string
     {
-        if (is_null($value) || !strlen((string) $value)) {
+        static $no;
+        static $yes;
+        static $private;
+        static $public;
+
+        // Boolean fields: translate 1/true/yes to Yes, anything else (including
+        // empty / missing bucket from Solr facet.missing) to No, since
+        // SearchSolr indexes the field only when the value is true.
+        if (substr($facetField, -2) === '_b') {
+            if (!$yes) {
+                $no = $this->translate->__invoke('No'); // @translate
+                $yes = $this->translate->__invoke('Yes'); // @translate
+            }
+            return in_array(strtolower((string) $value), ['1', 'true', 'yes'], true)
+                ? $yes
+                : $no;
+        }
+
+        if ($value === null || !strlen((string) $value)) {
             return null;
         }
 
@@ -203,9 +286,13 @@ class AbstractFacet extends AbstractHelper
                 return $value;
 
             case 'is_public':
+                if (!$public) {
+                    $private = $this->translate->__invoke('Private'); // @translate
+                    $public = $this->translate->__invoke('Public'); // @translate
+                }
                 return $value
-                    ? 'Private'
-                    : 'Public';
+                    ? $private
+                    : $public;
 
             case 'id':
                 $data = ['id' => $value];
@@ -217,83 +304,97 @@ class AbstractFacet extends AbstractHelper
                 try {
                     // Resources cannot be searched, only read.
                     $resource = $this->api->read('resources', $data)->getContent();
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                 }
                 return $resource
-                    ? (string) $resource->displayTitle()
+                    ? (string) $resource->displayTitle(null, $this->siteLocales)
                     // Manage the case where a resource was indexed but removed.
                     // In public side, the item set should belong to a site too.
                     : null;
 
             case 'owner':
             case 'owner_id':
+            // Manage Solr quickly.
+            case 'owner_id_is':
+            case 'owner_is':
                 /** @var \Omeka\Api\Representation\UserRepresentation $resource */
                 // Only allowed users can read and search users.
                 if (is_numeric($value)) {
                     try {
-                        $resource = $this->api->read('users', ['id' => $value])->getContent();
-                    } catch (\Exception $e) {
+                        return $this->api->read('users', ['id' => $value])->getContent()->name();
+                    } catch (\Throwable $e) {
                         return null;
                     }
-                    return $resource->name();
                 }
                 // No more check: email is not reference, so it always the name.
                 return $value;
 
             case 'site':
             case 'site_id':
+            // Manage Solr quickly.
+            case 'site_id_is':
+            case 'site_is':
                 /** @var \Omeka\Api\Representation\SiteRepresentation $resource */
-                if (is_numeric($value)) {
-                    try {
-                        $resource = $this->api->read('sites', ['id' => $value])->getContent();
-                    } catch (\Exception $e) {
-                        return null;
-                    }
-                    return $resource->title();
+                // Manage the case where a resource was indexed but removed.
+                try {
+                    return $this->api->read('sites', [is_numeric($value) ? 'id' : 'slug' => $value])->getContent()->title();
+                } catch (\Throwable $e) {
+                    return null;
                 }
-                $resource = $this->api->searchOne('sites', ['slug' => $value])->getContent();
-                return $resource
-                    ? $resource->title()
-                    // Manage the case where a resource was indexed but removed.
-                    : null;
 
             case 'class':
             case 'resource_class_id':
             case 'resource_class':
+            // Manage Solr quickly.
+            case 'resource_class_id_is':
+            case 'resource_class_is':
+            case 'resource_class_s':
+                /** @var \Omeka\Api\Representation\ResourceClassRepresentation $resource */
+                // Manage the case where a resource was indexed but removed.
                 if (is_numeric($value)) {
                     try {
-                        /** @var \Omeka\Api\Representation\ResourceClassRepresentation $resource */
                         $resource = $this->api->read('resource_classes', ['id' => $value])->getContent();
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         return null;
                     }
-                    return $this->translate->__invoke($resource->label());
+                } elseif (!strpos($value, ':')) {
+                    return null;
+                } else {
+                    try {
+                        $vocabularyId = $this->api->read('vocabularies', ['prefix' => strtok($value, ':')])->getContent()->id();
+                        $resource = $this->api->read('resource_classes', ['vocabulary' => $vocabularyId, 'localName' => strtok(':')])->getContent();
+                    } catch (\Throwable $e) {
+                        return null;
+                    }
                 }
-                $resource = $this->api->searchOne('resource_classes', ['term' => $value])->getContent();
-                return $resource
-                    ? $this->translate->__invoke($resource->label())
-                    // Manage the case where a resource was indexed but removed.
-                    : null;
+                return $this->translate->__invoke($resource->label());
 
             case 'template':
             case 'resource_template_id':
             case 'resource_template':
+            // Manage Solr quickly.
+            case 'resource_template_id_is':
+            case 'resource_template_is':
+            case 'resource_template_s':
+                // Manage the case where a resource was indexed but removed.
                 if (is_numeric($value)) {
                     try {
                         /** @var \Omeka\Api\Representation\ResourceTemplateRepresentation $resource */
                         $resource = $this->api->read('resource_templates', ['id' => $value])->getContent();
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         return null;
                     }
-                    return $resource->label();
+                } else {
+                    try {
+                        $resource = $this->api->read('resource_templates', ['label' => $value])->getContent();
+                    } catch (\Throwable $e) {
+                        return null;
+                    }
                 }
-                $resource = $this->api->searchOne('resource_templates', ['label' => $value])->getContent();
-                return $resource
-                    ? $resource->label()
-                    // Manage the case where a resource was indexed but removed.
-                    : null;
+                return $this->translate->__invoke($resource->label());
 
             case 'item_sets_tree':
+            // Manage Solr quickly.
             case 'item_sets_tree_is':
                 if (!is_numeric($value)) {
                     return $value;
@@ -315,15 +416,26 @@ class AbstractFacet extends AbstractHelper
 
             case 'item_set':
             case 'item_set_id':
+            // Manage Solr quickly.
+            case 'item_set_id_is':
+            case 'item_set_is':
                 $data = ['id' => $value];
                 // The site id is required in public.
+                // TODO Avoid to use searchOne(), but required for now with item set and site.
                 if ($this->siteId) {
                     $data['site_id'] = $this->siteId;
+                    /** @var \Omeka\Api\Representation\ItemSetRepresentation $resource */
+                    $resource = $this->api->searchOne('item_sets', $data)->getContent();
+                } else {
+                    /** @var \Omeka\Api\Representation\ItemSetRepresentation $resource */
+                    try {
+                        $resource = $this->api->read('item_sets', $data)->getContent();
+                    } catch (\Throwable $e) {
+                        return null;
+                    }
                 }
-                /** @var \Omeka\Api\Representation\ItemSetRepresentation $resource */
-                $resource = $this->api->searchOne('item_sets', $data)->getContent();
                 return $resource
-                    ? (string) $resource->displayTitle()
+                    ? (string) $resource->displayTitle(null, $this->siteLocales)
                     // Manage the case where a resource was indexed but removed.
                     // In public side, the item set should belong to a site too.
                     : null;

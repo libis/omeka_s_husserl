@@ -108,6 +108,12 @@ class FulltextSearchDelegator extends FulltextSearch
         $stmt->executeStatement();
     }
 
+    /**
+     * Copy:
+     * @see \AdvancedSearch\Stdlib\FulltextSearchDelegator::extractText()
+     * @see \SearchSolr\ValueExtractor\AbstractResourceEntityValueExtractor::extractContentAlto()
+     * @see \IiifServer\View\Helper\IiifAnnotationPageLine2::__invoke()
+     */
     protected function extractText(Media $media): string
     {
         if ($media->getMediaType() !== 'application/alto+xml') {
@@ -123,8 +129,8 @@ class FulltextSearchDelegator extends FulltextSearch
 
         try {
             $xmlContent = file_get_contents($filepath);
-            $xml = @simplexml_load_string($xmlContent);
-        } catch (\Exception $e) {
+            $xml = @simplexml_load_string($xmlContent, null, LIBXML_NONET);
+        } catch (\Throwable $e) {
             // No log.
             return '';
         }

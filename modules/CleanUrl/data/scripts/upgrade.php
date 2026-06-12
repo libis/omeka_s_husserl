@@ -2,7 +2,7 @@
 
 namespace CleanUrl;
 
-use Omeka\Stdlib\Message;
+use Common\Stdlib\PsrMessage;
 
 /**
  * @var Module $this
@@ -10,37 +10,52 @@ use Omeka\Stdlib\Message;
  * @var string $newVersion
  * @var string $oldVersion
  *
- * @var \Doctrine\DBAL\Connection $connection
- * @var \Doctrine\ORM\EntityManager $entityManager
  * @var \Omeka\Api\Manager $api
+ * @var \Laminas\Log\Logger $logger
+ * @var \Omeka\Settings\Settings $settings
+ * @var \Doctrine\DBAL\Connection $connection
+ * @var \Omeka\Settings\SiteSettings $siteSettings
+ * @var \Doctrine\ORM\EntityManager $entityManager
  * @var \Omeka\Mvc\Controller\Plugin\Messenger $messenger
  */
-
-@require dirname(__DIR__, 2) . '/config/cleanurl.config.php';
-$config = @require dirname(__DIR__, 2) . '/config/module.config.php';
-
 $plugins = $services->get('ControllerPluginManager');
 $api = $plugins->get('api');
+$logger = $services->get('Omeka\Logger');
 $settings = $services->get('Omeka\Settings');
+$translate = $plugins->get('translate');
+$translator = $services->get('MvcTranslator');
 $connection = $services->get('Omeka\Connection');
 $messenger = $plugins->get('messenger');
+$siteSettings = $services->get('Omeka\Settings\Site');
 $entityManager = $services->get('Omeka\EntityManager');
+
+@require_once dirname(__DIR__, 2) . '/config/cleanurl.config.php';
+$config = @require dirname(__DIR__, 2) . '/config/module.config.php';
+
+if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.81')) {
+    $message = new \Omeka\Stdlib\Message(
+        $translate('The module %1$s should be upgraded to version %2$s or later.'), // @translate
+        'Common', '3.4.81'
+    );
+    $messenger->addError($message);
+    throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $translate('Missing requirement. Unable to upgrade.')); // @translate
+}
 
 if (version_compare($oldVersion, '3.14', '<')) {
     $settings->set('clean_url_identifier_property',
         (int) $settings->get('clean_url_identifier_property'));
 
     $settings->set('clean_url_item_allowed',
-        unserialize($settings->get('clean_url_item_allowed')));
+        unserialize($settings->get('clean_url_item_allowed'), ['allowed_classes' => false]));
     $settings->set('clean_url_media_allowed',
-        unserialize($settings->get('clean_url_media_allowed')));
+        unserialize($settings->get('clean_url_media_allowed'), ['allowed_classes' => false]));
 
     $this->cacheItemSetsRegex($services);
 }
 
 if (version_compare($oldVersion, '3.15.3', '<')) {
     foreach ($config[strtolower(__NAMESPACE__)]['config'] as $name => $value) {
-        $oldName = str_replace('cleanurl_', 'clean_url_', $name);
+        $oldName = strtr($name, ['cleanurl_' => 'clean_url_']);
         $settings->set($name, $settings->get($oldName, $value));
         $settings->delete($oldName);
     }
@@ -55,18 +70,24 @@ if (version_compare($oldVersion, '3.15.13', '<')) {
     $t = $services->get('MvcTranslator');
 
     if (!method_exists($this, 'preInstallCopyConfigFiles')) {
-        $message = new Message('Your previous version is too old to do a direct upgrade to the current version. Upgrade to version 3.15.13 first, or uninstall/reinstall the module.'); // @translate
-        throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
+        $message = new PsrMessage(
+            'Your previous version is too old to do a direct upgrade to the current version. Upgrade to version 3.15.13 first, or uninstall/reinstall the module.' // @translate
+        );
+        throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message->setTranslator($translator));
     }
 
     if (!$this->preInstallCopyConfigFiles()) {
-        $message = $t->translate('Unable to copy config files "config/clean_url.config.php" and/or "config/clean_url.dynamic.php" in the config directory of Omeka.'); // @translate
+        $message = new PsrMessage(
+            'Unable to copy config files "config/clean_url.config.php" and/or "config/clean_url.dynamic.php" in the config directory of Omeka.' // @translate
+        );
         $messenger->addWarning($message);
         $logger = $services->get('Omeka\Logger');
         $logger->err('The file "clean_url.config.php" and/or "config/clean_url.dynamic.php" in the config directory of Omeka is not writeable.'); // @translate
     }
 
-    $messenger->addWarning($t->translate('Check the new config file "config/clean_url.config.php" and remove the old one in the config directory of Omeka.')); // @translate
+    $messenger->addWarning(new PsrMessage(
+        'Check the new config file "config/clean_url.config.php" and remove the old one in the config directory of Omeka.' // @translate
+    ));
 
     $settings->set('cleanurl_site_skip_main', false);
     $settings->set('cleanurl_site_slug', 's/');
@@ -141,7 +162,9 @@ if (version_compare($oldVersion, '3.15.17', '<')) {
     $t = $services->get('MvcTranslator');
     $logger = $services->get('Omeka\Logger');
     if (!is_readable($source) || !is_writeable(dirname($dest)) || !is_writeable($dest)) {
-        $message = $t->translate('Unable to copy config files "config/clean_url.config.php" and/or "config/clean_url.dynamic.php" in the config directory of Omeka.'); // @translate
+        $message = new PsrMessage(
+            'Unable to copy config files "config/clean_url.config.php" and/or "config/clean_url.dynamic.php" in the config directory of Omeka.' // @translate
+        );
         $messenger->addWarning($message);
         $logger->err('The file "clean_url.config.php" and/or "config/clean_url.dynamic.php" in the config directory of Omeka is not writeable.'); // @translate
     } else {
@@ -153,15 +176,9 @@ if (version_compare($oldVersion, '3.15.17', '<')) {
 }
 
 if (version_compare($oldVersion, '3.16.0.3', '<')) {
-    if (!$this->isConfigWriteable()) {
-        $message = new Message('The file "config/cleanurl.config.php" at the root of Omeka is not writeable.'); // @translate
-        throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
-    }
-
-    $message = new Message(
+    $message = new PsrMessage(
         'The module has been rewritten and the whole configuration has been simplified. You should check your config, because the upgrade of the configuration is not automatic.' // @translate
     );
-    $message->setEscapeHtml(false);
     $messenger->addWarning($message);
 
     if (file_exists(OMEKA_PATH . '/config/clean_url.config.php')) {
@@ -177,19 +194,14 @@ if (version_compare($oldVersion, '3.16.0.3', '<')) {
 }
 
 if (version_compare($oldVersion, '3.16.1.3', '<')) {
-    if (!$this->isConfigWriteable()) {
-        $message = new Message('The file "config/cleanurl.config.php" at the root of Omeka is not writeable.'); // @translate
-        throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
-    }
-
     $module = $services->get('Omeka\ModuleManager')->getModule('Generic');
     if ($module && version_compare($module->getIni('version') ?? '', '3.3.27', '<')) {
         $translator = $services->get('MvcTranslator');
-        $message = new \Omeka\Stdlib\Message(
-            $translator->translate('This module requires the module "%s", version %s or above.'), // @translate
-            'Generic', '3.3.27'
+        $message = new PsrMessage(
+            'This module requires the module "{module}", version {version} or above.', // @translate
+            ['module' => 'Generic', 'version' => '3.3.27']
         );
-        throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
+        throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message->setTranslator($translator));
     }
 
     // Manage upgrade from old version.
@@ -312,6 +324,21 @@ if (version_compare($oldVersion, '3.16.1.3', '<')) {
     }
 }
 
+if (version_compare($oldVersion, '3.17.11', '<')) {
+    // Dynamic route data is now stored in a setting instead of a file in the
+    // root config/ directory.
+    $filepath = OMEKA_PATH . '/config/cleanurl.config.php';
+    if (file_exists($filepath)) {
+        @unlink($filepath);
+    }
+
+    $message = new PsrMessage(
+        'The specific config file is no more needed and was removed.' // @translate
+    );
+    $messenger->addSuccess($message);
+}
+
+// TODO Use TraitModule.
 $this->getConfig();
 $this->cacheCleanData();
 $this->cacheRouteSettings();

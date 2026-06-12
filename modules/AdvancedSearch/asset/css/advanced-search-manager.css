@@ -1,4 +1,8 @@
 @media all {
+    [class*="o-icon-"].far::before {
+        font-weight: 400;
+    }
+
     .search-admin .subhead::before {
         content:"";
     }
@@ -20,6 +24,9 @@
         vertical-align: top;
         border: 0;
         box-shadow: none;
+    }
+    .search-admin .actions .system-state-icon.fa-spin {
+        margin-left: 8px;
     }
     .search-admin #sidebar-confirm .inputs label {
         margin-bottom: 0;
@@ -57,5 +64,9 @@
     }
     .field-description.no-link + a {
         display: none;
+    }
+
+    .setting-info {
+        font-size: smaller;
     }
 }

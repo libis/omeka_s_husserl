@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /*
- * Copyright Daniel Berthereau 2018-2025
+ * Copyright Daniel Berthereau 2018-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -34,11 +34,17 @@ use AdvancedSearch\View\Helper\SearchFiltersTrait;
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
 use Laminas\I18n\Translator\TranslatorAwareTrait;
+use Laminas\Log\Logger;
 
 class Advanced extends Fieldset
 {
     use SearchFiltersTrait;
     use TranslatorAwareTrait;
+
+    /**
+     * @var \Laminas\Log\Logger
+     */
+    protected $logger;
 
     public function init(): void
     {
@@ -144,7 +150,7 @@ class Advanced extends Fieldset
                 ],
                 'attributes' => [
                     // Don't use o-icon-delete.
-                    'class' => 'search-filter-action search-filter-minus fa fa-minus remove-value button',
+                    'class' => 'search-filter-action search-filter-minus remove-value button',
                     'aria-label' => 'Remove this filter', // @translate
                 ],
             ])
@@ -163,7 +169,7 @@ class Advanced extends Fieldset
                 ],
                 'attributes' => [
                     // Don't use o-icon-add.
-                    'class' => 'search-filter-action search-filter-plus fa fa-plus add-value button',
+                    'class' => 'search-filter-action search-filter-plus add-value button',
                     'aria-label' => 'Add a filter', // @translate
                 ],
             ])
@@ -180,16 +186,37 @@ class Advanced extends Fieldset
         if (!$fields) {
             return [];
         }
+
         /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
         $searchConfig = $this->getOption('search_config');
         $engineAdapter = $searchConfig ? $searchConfig->engineAdapter() : null;
         if (!$engineAdapter) {
             return [];
         }
+
         $availableFields = $engineAdapter->getAvailableFields();
         if (!$availableFields) {
             return [];
         }
-        return array_intersect_key($fields, $availableFields);
+
+        $result = array_intersect_key($fields, $availableFields);
+
+        if (!count($result)) {
+            $this->logger->err(
+                'The indexes of the advanced filters are not present in the search engine.' // @translate
+            );
+        } elseif (count($result) !== count($fields)) {
+            $this->logger->err(
+                'Some indexes of the advanced filters are not present in the search engine.' // @translate
+            );
+        }
+
+        return $result;
+    }
+
+    public function setLogger(Logger $logger): self
+    {
+        $this->logger = $logger;
+        return $this;
     }
 }

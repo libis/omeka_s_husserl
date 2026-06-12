@@ -21,7 +21,7 @@ class SearchFilters extends AbstractHelper
     /**
      * The default partial view script.
      */
-    const PARTIAL_NAME = 'common/search-filters';
+    const PARTIAL_NAME = 'common/search-filters-links';
 
     /**
      * @var string
@@ -126,6 +126,7 @@ class SearchFilters extends AbstractHelper
             $this->query['submit'],
             $this->query['__searchConfig'],
             $this->query['__searchQuery'],
+            $this->query['__partialOptions'],
             $this->query['__original_query'],
         );
 
@@ -152,8 +153,10 @@ class SearchFilters extends AbstractHelper
             switch ($key) {
                 // Fulltext
                 case 'fulltext_search':
+                    // Always shown first, before any other filter, regardless
+                    // of the order of keys in the cleaned query.
                     $filterLabel = $translate('Search full-text'); // @translate
-                    $filters[$filterLabel][$this->urlQuery($key)] = $value;
+                    $filters = [$filterLabel => [$this->urlQuery($key) => $value]] + $filters;
                     break;
 
                 // Search by class
@@ -559,8 +562,22 @@ class SearchFilters extends AbstractHelper
         );
         $filters = $result['filters'];
 
+        $partialOptions = is_array($query['__partialOptions'] ?? null) ? $query['__partialOptions'] : [];
+        $mode = $this->searchConfig
+            ? $this->searchConfig->subSetting('results', 'search_filters_mode', 'link_remove')
+            : 'link_remove';
+        // Caller-provided "show_field_label" wins; otherwise read from the
+        // search config so callers do not have to forward it on every call.
+        $showFieldLabel = array_key_exists('show_field_label', $partialOptions)
+            ? (bool) $partialOptions['show_field_label']
+            : ($this->searchConfig
+                ? (bool) $this->searchConfig->subSetting('results', 'search_filters_field_label', true)
+                : true);
+
         return $view->partial($partialName, [
             'filters' => $filters,
+            'show_field_label' => $showFieldLabel,
+            'mode' => $mode,
         ]);
     }
 
@@ -583,15 +600,34 @@ class SearchFilters extends AbstractHelper
         $availableFieldLabels = array_combine(array_keys($availableFields), array_column($availableFields ?? [], 'label'));
         $fieldLabels = array_replace($availableFieldLabels, array_filter($formFieldLabels));
 
-        // Get resources titles of all filters with one query.
-        $vrTitles = [];
+        // Get resources label or linked resource title for filter eq/neq/res/nres.
+        // It allows to manage automatic bounce links from module Advanced Resource Template
+        // and manual links with uri or resource id, while displaying a
+        // meaningful value.
+        $linkIds = [];
+        $linkUris = [];
+
+        // The same for value subjects: get resources titles of all filters with
+        // one query.
         $vrIds = [];
+
+        // Do not output labels for private data (even if most of the time, for
+        // a bounce link, the data is already seen).
+        $isAnonymous = $view->identity() === null;
+
         foreach ($filterFilters as $queryRow) {
-            if (is_array($queryRow)
-                && isset($queryRow['type'])
-                && !empty($queryRow['val'])
-                && in_array($queryRow['type'], SearchResources::FIELD_QUERY['value_subject'])
-            ) {
+            if (!is_array($queryRow) || empty($queryRow['val']) || empty($queryRow['type'])) {
+                continue;
+            }
+            if (in_array($queryRow['type'], ['eq', 'neq', 'res', 'nres'], true)) {
+                foreach (is_array($queryRow['val']) ? $queryRow['val'] : [$queryRow['val']] as $val) {
+                    if (is_numeric($val)) {
+                        $linkIds[] = (int) $val;
+                    } elseif (is_string($val) && strpos($val, 'http') === 0) {
+                        $linkUris[] = $val;
+                    }
+                }
+            } elseif (in_array($queryRow['type'], SearchResources::FIELD_QUERY['value_subject'])) {
                 is_array($queryRow['val'])
                     ? $vrIds = array_merge($vrIds, array_values($queryRow['val']))
                     : $vrIds[] = $queryRow['val'];
@@ -599,7 +635,13 @@ class SearchFilters extends AbstractHelper
         }
 
         $vrIds = array_unique(array_filter(array_map('intval', $vrIds)));
-        if ($vrIds) {
+        $linkIds = array_unique(array_filter(array_map('intval', $linkIds)));
+        $linkUris = array_unique(array_filter($linkUris));
+
+        // Consolidate resource ID queries: $linkIds and $vrIds both query the
+        // Resource table for id => title mapping. Query once and split results.
+        $allResourceIds = array_unique(array_merge($linkIds, $vrIds));
+        if ($allResourceIds) {
             // Currently, "resources" cannot be searched, so use adapter
             // directly. Rights are managed.
             /** @var \Doctrine\ORM\EntityManager $entityManager */
@@ -612,8 +654,42 @@ class SearchFilters extends AbstractHelper
                 ->select('omeka_root.id', 'omeka_root.title')
                 ->from(\Omeka\Entity\Resource::class, 'omeka_root')
                 ->where($qb->expr()->in('omeka_root.id', ':ids'))
-                ->setParameter('ids', $vrIds, \Doctrine\DBAL\Connection::PARAM_INT_ARRAY);
-            $vrTitles = array_column($qb->getQuery()->getScalarResult(), 'title', 'id');
+                ->setParameter('ids', $allResourceIds, \Doctrine\DBAL\Connection::PARAM_INT_ARRAY);
+            if ($isAnonymous) {
+                $qb
+                    ->andWhere($qb->expr()->eq('omeka_root.isPublic', ':is_public'))->setParameter('is_public', 1);
+            }
+            // Do not store unknown ids (may be removed or private).
+            $allResourceTitles = array_filter(array_column($qb->getQuery()->getScalarResult(), 'title', 'id'));
+            // Split results back into original variables.
+            $linkIds = array_intersect_key($allResourceTitles, array_flip($linkIds));
+            $vrIds = array_intersect_key($allResourceTitles, array_flip($vrIds));
+            unset($allResourceTitles);
+        } else {
+            $linkIds = [];
+            $vrIds = [];
+        }
+
+        if ($linkUris) {
+            // Currently, "resources" cannot be searched, so use adapter
+            // directly. Rights are managed.
+            /** @var \Doctrine\ORM\EntityManager $entityManager */
+            $services ??= $this->searchConfig
+                ? $this->searchConfig->getServiceLocator()
+                : $view->api()->read('vocabularies', 1)->getContent()->getServiceLocator();
+            $entityManager = $services->get('Omeka\EntityManager');
+            $qb = $entityManager->createQueryBuilder();
+            $qb
+                ->select('omeka_root.uri', 'omeka_root.value')
+                ->from(\Omeka\Entity\Value::class, 'omeka_root')
+                ->where($qb->expr()->in('omeka_root.uri', ':uris'))
+                ->setParameter('uris', $linkUris, \Doctrine\DBAL\Connection::PARAM_STR_ARRAY);
+            if ($isAnonymous) {
+                $qb
+                    ->andWhere($qb->expr()->eq('omeka_root.isPublic', ':is_public'))->setParameter('is_public', 1);
+            }
+            // Do not store uris without label (may be removed or private too).
+            $linkUris = array_filter(array_column($qb->getQuery()->getScalarResult(), 'value', 'uri'));
         }
 
         $queryTypesLabels = $this->getQueryTypesLabels();
@@ -667,7 +743,8 @@ class SearchFilters extends AbstractHelper
                         if ($propertyLabel) {
                             $fieldLabel[] = $translate($propertyLabel);
                         } else {
-                            $fieldLabel[] = $translate('Unknown field'); // @translate
+                            // Use field name as fallback instead of "Unknown field".
+                            $fieldLabel[] = $queryField;
                         }
                     }
                 }
@@ -693,12 +770,17 @@ class SearchFilters extends AbstractHelper
             }
 
             if (in_array($queryType, SearchResources::FIELD_QUERY['value_subject'])) {
-                $vals = $this->checkAndFlatArrayValueResourceIds($val, $vrTitles);
+                $vals = $this->checkAndFlatArrayValueResourceIds($val, $vrIds);
             } else {
                 $vals = $this->checkAndFlatArray($val);
-                // If this is a data type query, convert the value
-                // to the data type's label.
-                if (in_array($queryType, ['dt', 'ndt', 'dtp', 'ndtp'])) {
+                // Manage special display: uri, linked resource, data type…
+                if (in_array($queryType, ['eq', 'neq'], true)) {
+                    $vals = array_replace(array_combine($vals, $vals), $linkUris);
+                } elseif (in_array($queryType, ['res', 'nres'], true)) {
+                    $vals = array_replace(array_combine($vals, $vals), $linkIds);
+                } elseif (in_array($queryType, ['dt', 'ndt', 'dtp', 'ndtp'])) {
+                    // If this is a data type query, convert the value to the
+                    // data type's label.
                     $vals = array_map(fn ($v) => $dataTypeHelper->getLabel($v), $vals);
                 } elseif (in_array($queryType, SearchResources::FIELD_QUERY['value_single_array_or_string'])) {
                     $vals = array_map(fn ($v) => urldecode($v), $vals);
@@ -811,7 +893,7 @@ class SearchFilters extends AbstractHelper
         $newQuery = $this->queryForUrl;
         if ($isFilterShortcut) {
             unset($newQuery[$this->query['filter'][$subKey]['replaced_field']]);
-        } elseif (is_null($subKey) || !is_array($newQuery[$key]) || count($newQuery[$key]) <= 1) {
+        } elseif ($subKey === null || !is_array($newQuery[$key]) || count($newQuery[$key]) <= 1) {
             unset($newQuery[$key]);
         } else {
             unset($newQuery[$key][$subKey]);

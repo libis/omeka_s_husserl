@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2018-2025
+ * Copyright Daniel Berthereau, 2018-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software. You can use, modify and/ or
@@ -29,6 +29,7 @@
  */
 namespace AdvancedSearch;
 
+use AdvancedSearch\Querier\QuerierInterface;
 use JsonSerializable;
 
 /**
@@ -37,9 +38,19 @@ use JsonSerializable;
 class Query implements JsonSerializable
 {
     /**
+     * @var \AdvancedSearch\Querier\QuerierInterface
+     */
+    protected $querier;
+
+    /**
      * @var string
      */
     protected $query = '';
+
+    /**
+     * @var string
+     */
+    protected $queryDefaultField = '';
 
     /**
      * @var string
@@ -52,11 +63,6 @@ class Query implements JsonSerializable
     protected $resourceTypes = [];
 
     /**
-     * @var bool
-     */
-    protected $byResourceType = false;
-
-    /**
      * @var array
      */
     protected $aliases = [];
@@ -64,7 +70,12 @@ class Query implements JsonSerializable
     /**
      * @var array
      */
-    protected $fieldsQueryArgs;
+    protected $fieldBoosts = [];
+
+    /**
+     * @var array
+     */
+    protected $fieldsQueryArgs = [];
 
     /**
      * @var bool
@@ -129,6 +140,11 @@ class Query implements JsonSerializable
     /**
      * @var array
      */
+    protected $formFilters = [];
+
+    /**
+     * @var array
+     */
     protected $suggestOptions = [
         'suggester' => 0,
         'direct' => false,
@@ -158,6 +174,25 @@ class Query implements JsonSerializable
     protected $options = [];
 
     /**
+     * The querier allows to do some requests directly, lately or on demand.
+     *
+     * The querier should be the prepared one, with the prepared query stored.
+     */
+    public function setQuerier(?QuerierInterface $querier): self
+    {
+        $this->querier = $querier;
+        return $this;
+    }
+
+    /**
+     * Get the querier used to prepare this query, with prepared data stored.
+     */
+    public function getQuerier(): ?QuerierInterface
+    {
+        return $this->querier;
+    }
+
+    /**
      * The query should be stringable and is always trimmed.
      */
     public function setQuery($query): self
@@ -169,6 +204,20 @@ class Query implements JsonSerializable
     public function getQuery(): string
     {
         return $this->query;
+    }
+
+    /**
+     * The query default field should be a string and is always trimmed.
+     */
+    public function setQueryDefaultField($queryDefaultField): self
+    {
+        $this->queryDefaultField = trim((string) $queryDefaultField);
+        return $this;
+    }
+
+    public function getQueryDefaultField(): string
+    {
+        return $this->queryDefaultField;
     }
 
     /**
@@ -188,7 +237,9 @@ class Query implements JsonSerializable
     }
 
     /**
-     * @param string[] $resourceTypes The types are generally "items" and "item_sets".
+     * @param string[] $resourceTypes The types are generally "items" and
+     *   "item_sets". Empty array means no resource type, so any searchable
+     *   resources.
      */
     public function setResourceTypes(array $resourceTypes): self
     {
@@ -206,22 +257,24 @@ class Query implements JsonSerializable
     }
 
     /**
-     * @return string[]
+     * @return string[] May be empty when resource types are mixed.
      */
     public function getResourceTypes(): array
     {
         return $this->resourceTypes;
     }
 
+    /**
+     * @deprecated Determined from the list of resource types.
+     */
     public function setByResourceType(bool $byResourceType): self
     {
-        $this->byResourceType = $byResourceType;
         return $this;
     }
 
     public function getByResourceType(): bool
     {
-        return $this->byResourceType;
+        return count($this->resourceTypes) > 1;
     }
 
     /**
@@ -245,6 +298,15 @@ class Query implements JsonSerializable
         return $this;
     }
 
+    /**
+     * Set an alias, overriding the existing alias with the same name.
+     */
+    public function setAlias(string $alias, array $data): self
+    {
+        $this->aliases[$alias] = $data;
+        return $this;
+    }
+
     public function getAliases(): array
     {
         return $this->aliases;
@@ -255,7 +317,23 @@ class Query implements JsonSerializable
         return $this->aliases[$alias] ?? null;
     }
 
-/**
+    /**
+     * Increase or decrease the importance of fields
+     *
+     * @param array $fieldBoosts Boost is a positive float multiplier, by index.
+     */
+    public function setFieldBoosts(array $fieldBoosts): self
+    {
+        $this->fieldBoosts = $fieldBoosts;
+        return $this;
+    }
+
+    public function getFieldBoosts(): array
+    {
+        return $this->fieldBoosts;
+    }
+
+    /**
      * Allow to manage a list of simple query arguments with a specific query.
      *
      * For example "author[]=Bossuet&author[]=Rabelais" can be expanded to:
@@ -303,7 +381,7 @@ class Query implements JsonSerializable
     }
 
     /**
-     * @deprecated Will be removed in a future version.
+     * @deprecated Will be removed in a future version: use a standard filter or excluded fields.
      */
     public function setRecordOrFullText(?string $recordOrFullText): self
     {
@@ -312,7 +390,7 @@ class Query implements JsonSerializable
     }
 
     /**
-     * @deprecated Will be removed in a future version.
+     * @deprecated Will be removed in a future version: use a standard filter or excluded fields.
      */
     public function getRecordOrFullText(): string
     {
@@ -331,7 +409,7 @@ class Query implements JsonSerializable
 
     /**
      * @return array
-     * @deprecated Use getFilters().
+     * @deprecated Use getFiltersQuery().
      */
     public function getFilters(): array
     {
@@ -506,6 +584,37 @@ class Query implements JsonSerializable
         return $this->facets[$facetName] ?? null;
     }
 
+    /**
+     * Set the list of form filters with their configuration.
+     *
+     * Used to access filter options like "first_digits" in the querier.
+     */
+    public function setFormFilters(array $formFilters): self
+    {
+        $this->formFilters = $formFilters;
+        return $this;
+    }
+
+    /**
+     * Get configuration for a form filter.
+     *
+     * Looks up by filter key first, then falls back to a search by "field"
+     * value, since URL parameters are keyed by field name and may differ from
+     * the filter key declared in the search config.
+     */
+    public function getFormFilter(string $filterName): ?array
+    {
+        if (isset($this->formFilters[$filterName])) {
+            return $this->formFilters[$filterName];
+        }
+        foreach ($this->formFilters as $filter) {
+            if (is_array($filter) && ($filter['field'] ?? null) === $filterName) {
+                return $filter;
+            }
+        }
+        return null;
+    }
+
     public function setActiveFacets(array $activeFacets): self
     {
         $this->activeFacets = $activeFacets;
@@ -536,10 +645,10 @@ class Query implements JsonSerializable
     }
 
     /**
-     * Available options are (internal engine when direct (without index)):
-     * - suggester: id of the suggester
-     * - direct: direct query without the index (default false)
-     * - mode_index: "start" (default) or "contain"
+     * Available options for suggestions:
+     * - suggester: id of the suggester (uses indexed suggestions)
+     * - direct: direct query without index for field-specific suggestions (default false)
+     * - mode_index: "start" (default), "contain", "full", "start_full", "contain_full"
      * - mode_search: "start" (default) or "contain"
      * - length: max size of a string (default 50)
      */
@@ -642,6 +751,8 @@ class Query implements JsonSerializable
     {
         return [
             'query' => $this->getQuery(),
+            'query_refine' => $this->getQueryRefine(),
+            'query_default_field' => $this->getQueryDefaultField(),
             'resource_types' => $this->getResourceTypes(),
             'by_resource_type' => $this->getByResourceType(),
             'aliases' => $this->getAliases(),

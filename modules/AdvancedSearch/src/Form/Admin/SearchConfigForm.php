@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016-2017
- * Copyright Daniel Berthereau 2017-2025
+ * Copyright Daniel Berthereau 2017-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -51,7 +51,7 @@ class SearchConfigForm extends Form
     public function init(): void
     {
         $this
-            ->setAttribute('id', 'form-search-config-edit')
+            ->setAttribute('id', 'search-config-edit-form')
             ->add([
                 'name' => 'o:name',
                 'type' => Element\Text::class,
@@ -146,14 +146,6 @@ class SearchConfigForm extends Form
                         'enable',
                     ],
                 ],
-            ])
-        ;
-
-        $this
-            ->getInputFilter()
-            ->add([
-                'name' => 'manage_config_default',
-                'required' => false,
             ])
         ;
     }

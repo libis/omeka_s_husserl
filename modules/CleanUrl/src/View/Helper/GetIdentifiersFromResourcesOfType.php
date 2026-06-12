@@ -2,6 +2,7 @@
 
 namespace CleanUrl\View\Helper;
 
+use CleanUrl\ResourceNameTrait;
 use Doctrine\DBAL\Connection;
 use Laminas\View\Helper\AbstractHelper;
 use Omeka\Api\Representation\AbstractResourceEntityRepresentation;
@@ -9,6 +10,7 @@ use Omeka\Entity\Resource;
 
 class GetIdentifiersFromResourcesOfType extends AbstractHelper
 {
+    use ResourceNameTrait;
     // The max number of the resources to create a temporary table.
     const CHUNK_RECORDS = 10000;
 
@@ -132,7 +134,7 @@ class GetIdentifiersFromResourcesOfType extends AbstractHelper
                         'value.id'
                 )
                 ->andWhere('value.value LIKE :value_value')
-                ->setParameter('value_value', $prefix . '%');
+                ->setParameter('value_value', addcslashes($prefix, '%_') . '%');
         } else {
             $qb
                 ->select(
@@ -153,15 +155,16 @@ class GetIdentifiersFromResourcesOfType extends AbstractHelper
         // TODO Use a cache table like module Reference.
         $tempTable = count($resources) > self::CHUNK_RECORDS;
         if ($tempTable) {
-            $query = 'DROP TABLE IF EXISTS `temp_resources`;';
-            $this->connection->executeStatement($query);
-            // TODO Check if the id may be unique.
-            // $query = 'CREATE TEMPORARY TABLE `temp_resources` (`id` INT UNSIGNED NOT NULL, PRIMARY KEY(`id`));';
-            $query = 'CREATE TEMPORARY TABLE `temp_resources` (`id` INT UNSIGNED NOT NULL);';
-            $this->connection->executeStatement($query);
+            $this->connection->executeStatement('DROP TABLE IF EXISTS `temp_resources`');
+            $this->connection->executeStatement(
+                'CREATE TEMPORARY TABLE `temp_resources` (`id` INT UNSIGNED NOT NULL, PRIMARY KEY(`id`))'
+            );
             foreach (array_chunk($resources, self::CHUNK_RECORDS) as $chunk) {
-                $query = 'INSERT INTO `temp_resources` VALUES(' . implode('),(', $chunk) . ');';
-                $this->connection->executeStatement($query);
+                $placeholders = implode('),(', array_fill(0, count($chunk), '?'));
+                $this->connection->executeStatement(
+                    'INSERT INTO `temp_resources` VALUES(' . $placeholders . ')',
+                    array_values($chunk)
+                );
             }
             $qb
                 // No where condition.
@@ -175,57 +178,19 @@ class GetIdentifiersFromResourcesOfType extends AbstractHelper
         // The number of resources is reasonable.
         else {
             $qb
-                // ->andWhere('value.resource_id IN (:resource_ids)')
-                // ->setParameter('resource_ids', $resources, \Doctrine\DBAL\Connection::PARAM_INT_ARRAY);
-                ->andWhere('value.resource_id IN (' . implode(',', $resources) . ')');
+                ->andWhere('value.resource_id IN (:resource_ids)')
+                ->setParameter('resource_ids', array_values($resources), Connection::PARAM_INT_ARRAY);
         }
 
-        $result = $this->connection->executeQuery($qb, $qb->getParameters())->fetchAllKeyValue();
+        $result = $this->connection->executeQuery($qb, $qb->getParameters(), $qb->getParameterTypes())->fetchAllKeyValue();
+
+        if ($tempTable) {
+            $this->connection->executeStatement('DROP TABLE IF EXISTS `temp_resources`');
+        }
+
         return $isSingle
             ? array_shift($result)
             : $result;
     }
 
-    protected function convertNameToResourceClass(?string $resourceName): ?string
-    {
-        $resourceClasses = [
-            'items' => \Omeka\Entity\Item::class,
-            'item_sets' => \Omeka\Entity\ItemSet::class,
-            'media' => \Omeka\Entity\Media::class,
-            'resources' => '',
-            'resource' => '',
-            'resource:item' => \Omeka\Entity\Item::class,
-            'resource:itemset' => \Omeka\Entity\ItemSet::class,
-            'resource:media' => \Omeka\Entity\Media::class,
-            // Avoid a check and make the plugin more flexible.
-            \Omeka\Api\Representation\ItemRepresentation::class => \Omeka\Entity\Item::class,
-            \Omeka\Api\Representation\ItemSetRepresentation::class => \Omeka\Entity\ItemSet::class,
-            \Omeka\Api\Representation\MediaRepresentation::class => \Omeka\Entity\Media::class,
-            \Omeka\Entity\Item::class => \Omeka\Entity\Item::class,
-            \Omeka\Entity\ItemSet::class => \Omeka\Entity\ItemSet::class,
-            \Omeka\Entity\Media::class => \Omeka\Entity\Media::class,
-            \Omeka\Entity\Resource::class => '',
-            'o:item' => \Omeka\Entity\Item::class,
-            'o:item_set' => \Omeka\Entity\ItemSet::class,
-            'o:media' => \Omeka\Entity\Media::class,
-            // Other resource types.
-            'item' => \Omeka\Entity\Item::class,
-            'item_set' => \Omeka\Entity\ItemSet::class,
-            'item-set' => \Omeka\Entity\ItemSet::class,
-            'itemset' => \Omeka\Entity\ItemSet::class,
-            'resource:item_set' => \Omeka\Entity\ItemSet::class,
-            'resource:item-set' => \Omeka\Entity\ItemSet::class,
-        ];
-        return $resourceClasses[$resourceName] ?? null;
-    }
-
-    protected function convertResourceClassToResourceName(?string $resourceClass): string
-    {
-        $resourceNames = [
-            \Omeka\Entity\ItemSet::class => 'item_sets',
-            \Omeka\Entity\Item::class => 'items',
-            \Omeka\Entity\Media::class => 'media',
-        ];
-        return $resourceNames[$resourceClass] ?? 'resources';
-    }
 }

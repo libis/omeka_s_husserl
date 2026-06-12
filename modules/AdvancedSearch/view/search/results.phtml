@@ -5,8 +5,12 @@
  * @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig
  * @var \AdvancedSearch\Query $query
  * @var \AdvancedSearch\Response $response
- * @var ?string $resourceType The resource type may be "resources" or a specific one.
+ * @var string|null $resourceType The resource type may be "resources" or a specific one.
  * @var \Omeka\Api\Representation\ItemSetRepresentation|null $itemSet
+ *
+ * From themes:
+ * @var string $gridListMode
+ * @var array $properties
  */
 
 // A check is done: when page is not first, the resources may be empty even with results.
@@ -14,10 +18,13 @@ $resources = $response->getResources($resourceType);
 if (!$resources) return;
 
 $plugins = $this->getHelperPluginManager();
+$escape = $plugins->get('escapeHtml');
 $assetUrl = $plugins->get('assetUrl');
 $translate = $plugins->get('translate');
 $hyperlink = $plugins->get('hyperlink');
+$easyMeta = $plugins->get('easyMeta');
 $thumbnail = $plugins->get('thumbnail');
+$escapeAttr = $plugins->get('escapeHtmlAttr');
 $escapeValueOrGetHtml = $plugins->get('escapeValueOrGetHtml');
 
 $selectionButton = $site && $plugins->has('selectionButton') && $this->siteSetting('selection_append_items_browse_individual') ? $plugins->get('selectionButton') : null;
@@ -37,7 +44,7 @@ $untitled = $translate('[Untitled]');
 $headingTerm = $setting('browse_heading_property_term');
 $bodyTerm = $setting('browse_body_property_term');
 
-$gridListMode = $searchConfig->subSetting('results', 'grid_list_mode', 'auto');
+$gridListMode ??= $searchConfig->subSetting('results', 'grid_list_mode', 'auto');
 
 // A list does not have html-code in a consistant user interface.
 $allowHtml = (bool) $searchConfig->subSetting('results', 'allow_html');
@@ -50,25 +57,30 @@ $defaultThumbnail = $allThumbnail
     : '';
 
 $thumbnailType = $searchConfig->subSetting('results', 'thumbnail_type', 'medium');
+
+// Allow block to override properties from search config.
+$properties = !empty($properties) ? $properties : $searchConfig->subSetting('results', 'properties', []);
+$showProperties = !empty($properties);
+$showLocale = (bool) $setting('show_locale_label');
 ?>
 
-<ul class="resource-list search-results-list<?= $gridListMode === 'list_only' ? ' list' : ($gridListMode === 'grid_only' ? ' grid' : '') ?>">
+<ul class="resource-list search-result-list<?= $gridListMode === 'list_only' ? ' list only-mode' : ($gridListMode === 'grid_only' ? ' grid only-mode' : ' grid') ?>">
     <?php /** @var \Omeka\Api\Representation\AbstractResourceEntityRepresentation $resource */
     foreach ($resources as $resource):
         $resourceUrl = isset($site) ? $resource->siteUrl($siteSlug) : $resource->adminUrl();
         $resourceType = $resource->getControllerName();
         $heading = $headingTerm ? $resource->value($headingTerm, ['default' => $untitled, 'lang' => $langValue]) : $resource->displayTitle($untitled, $langValue);
         $body = $bodyTerm ? $resource->value($bodyTerm, ['lang' => $langValue, 'default' => '']) : $resource->displayDescription(null, $langValue);
+        $resourceThumbnail = $noThumbnail ? null : $thumbnail($resource, $thumbnailType);
         ?>
-    <li class="resource <?= $resourceType ?>">
+    <li class="resource <?= $resourceType ?><?= $resourceThumbnail || $allThumbnail ? '' : ' no-thumbnail' ?>" data-id="<?= $resource->id() ?>">
         <div class="resource-heading">
             <?= $hyperlink->raw($escapeValueOrGetHtml($heading), $resourceUrl, ['class' => 'resource-link']) ?>
         </div>
         <?php if (!$noThumbnail): ?>
-        <?php $resourceThumbnail = $thumbnail($resource, $thumbnailType); ?>
         <div class="resource-thumbnail<?= $resourceThumbnail ? '' : ($allThumbnail ? ' default-thumbnail' : '') ?>">
             <?php if ($resourceThumbnail || $allThumbnail): ?>
-            <?= $hyperlink->raw($resourceThumbnail ?: $defaultThumbnail, $resourceUrl, ['class' => 'resource-link']) ?>
+            <?= $hyperlink->raw('<div class="image-parent">' . ($resourceThumbnail ?: $defaultThumbnail) . '</div>', $resourceUrl, ['class' => 'resource-link']) ?>
             <?php endif; ?>
         </div>
         <?php endif; ?>
@@ -77,6 +89,39 @@ $thumbnailType = $searchConfig->subSetting('results', 'thumbnail_type', 'medium'
             <div class="description">
                 <?= $escapeValueOrGetHtml($body, $allowHtml) ?>
             </div>
+            <?php endif; ?>
+            <?php if ($showProperties): ?>
+            <dl class="properties">
+                <?php foreach ($properties as $property):
+                    $values = $resource->value($property, ['all' => true, 'lang' => $langValue]);
+                    if ($values): ?>
+                <div class="property">
+                    <dt><?= $escape($translate($easyMeta->propertyLabel($property))) ?></dt>
+                    <?php foreach ($values as $value):
+                        $valueType = $value->type();
+                        $valueLang = $value->lang();
+                        $class = ['value'];
+                        if ('resource' === $valueType || strpos($valueType, 'resource') !== false) {
+                            $class[] = 'resource';
+                            $class[] = $escape($value->valueResource()->resourceName());
+                        } elseif ('uri' === $valueType) {
+                            $class[] = 'uri';
+                        }
+                    ?>
+                    <dd class="<?= implode(' ', $class) ?>"<?= $valueLang ? ' lang="' . $escapeAttr($valueLang) . '"' : '' ?>>
+                        <?php if ($showLocale && $valueLang): ?>
+                        <span class="language"><?= $escape($valueLang) ?></span>
+                        <?php endif; ?>
+                        <span class="value-content"><?= $value->asHtml() ?></span>
+                        <?php if (!$value->isPublic()): ?>
+                        <span class="o-icon-private" role="img" title="<?= $escapeAttr($translate('Private')) ?>" aria-label="<?= $escapeAttr($translate('Private')) ?>"></span>
+                        <?php endif; ?>
+                    </dd>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+                <?php endforeach; ?>
+            </dl>
             <?php endif; ?>
         </div>
         <?php if ($selectionButton): ?>

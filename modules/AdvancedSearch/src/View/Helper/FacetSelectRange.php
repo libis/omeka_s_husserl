@@ -10,26 +10,42 @@ class FacetSelectRange extends AbstractFacet
     {
         $isFacetModeDirect = in_array($options['mode'] ?? null, ['link', 'js']);
 
+        // Get min/max from attributes (like filters).
+        $attributes = $options['attributes'] ?? [];
+
+        // Option "first_digits" (or legacy "integer") extracts year from dates.
+        // Enabled by default for SelectRange facets.
+        $formatInteger = ($options['first_digits'] ?? $options['integer'] ?? true) === true
+            || in_array($options['first_digits'] ?? $options['integer'] ?? null, [1, '1', 'true'], true);
+
+        // Convert facet values to integers (years) if first_digits is enabled.
+        if ($formatInteger) {
+            foreach ($facetValues as &$facetValue) {
+                $facetValue['value'] = (int) $facetValue['value'];
+            }
+            unset($facetValue);
+        }
+
         // It is simpler and better to get from/to from the query, because it
-        // can manage discrete range.
-        $rangeFrom = $this->queryBase['facet'][$facetField]['from'] ?? $options['min'] ?? null;
+        // can manage discrete range. Check attributes first, then legacy options.
+        $rangeFrom = $this->queryBase['facet'][$facetField]['from'] ?? $attributes['min'] ?? $options['min'] ?? null;
         $rangeFrom = $rangeFrom === '' ? null : $rangeFrom;
-        $rangeTo = $this->queryBase['facet'][$facetField]['to'] ?? $options['max'] ?? null;
+        $rangeTo = $this->queryBase['facet'][$facetField]['to'] ?? $attributes['max'] ?? $options['max'] ?? null;
         $rangeTo = $rangeTo === '' ? null : $rangeTo;
 
         $firstValue = count($facetValues) ? reset($facetValues) : null;
 
-        if (is_null($rangeFrom) && is_null($rangeTo)) {
+        if ($rangeFrom === null && $rangeTo === null) {
             $hasRangeFromOnly = false;
             $hasRangeToOnly = false;
             $hasRangeFull = false;
             $isNumericRange = is_numeric($firstValue);
-        } elseif (is_null($rangeTo)) {
+        } elseif ($rangeTo === null) {
             $hasRangeFromOnly = true;
             $hasRangeToOnly = false;
             $hasRangeFull = false;
             $isNumericRange = is_numeric($rangeFrom);
-        } elseif (is_null($rangeFrom)) {
+        } elseif ($rangeFrom === null) {
             $hasRangeFromOnly = false;
             $hasRangeToOnly = true;
             $hasRangeFull = false;
@@ -103,8 +119,8 @@ class FacetSelectRange extends AbstractFacet
                     } else {
                         $query['facet'][$facetField]['__from_or_to__'] = $facetValueValue;
                         $urls['url'] = $this->urlHelper->__invoke($this->route, $this->params, ['query' => $query]);
-                        $urls['from'] = str_replace('__from_or_to__', 'from', $urls['url']);
-                        $urls['to'] = str_replace('__from_or_to__', 'to', $urls['url']);
+                        $urls['from'] = strtr($urls['url'], ['__from_or_to__' => 'from']);
+                        $urls['to'] = strtr($urls['url'], ['__from_or_to__' => 'to']);
                     }
                 }
             }

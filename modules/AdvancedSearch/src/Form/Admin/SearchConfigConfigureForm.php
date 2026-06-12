@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016-2017
- * Copyright Daniel Berthereau, 2018-2025
+ * Copyright Daniel Berthereau, 2018-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -79,9 +79,119 @@ class SearchConfigConfigureForm extends Form
         // TODO See UserProfile and https://docs.laminas.dev/laminas-form/v3/form-creation/creation-via-factory/
 
         $this
-            ->setAttribute('id', 'form-search-config-configure');
+            ->setAttribute('id', 'search-config-configure-form');
 
-        // Settings for the search engine. Can be overwritten by a specific form.
+        // Tab 1: general settings (name, slug, engine, form adapter).
+        $this->add([
+            'type' => \AdvancedSearch\Form\Admin\SearchConfigSettingsFieldset::class,
+            'name' => 'settings',
+            'options' => [
+                'label' => 'Settings', // @translate
+            ],
+        ]);
+
+        // Tab 2: sites usage (default + availability).
+        $this->add([
+            'type' => \AdvancedSearch\Form\Admin\SearchConfigSitesFieldset::class,
+            'name' => 'sites',
+            'options' => [
+                'label' => 'Sites', // @translate
+            ],
+        ]);
+
+        // Settings for the search engine. Can be overwritten by a specific
+        // form.
+
+        $this
+            ->add([
+                'name' => 'index',
+                'type' => Fieldset::class,
+                'options' => [
+                    'label' => 'Indexes', // @translate
+                ],
+            ])
+            ->get('index')
+
+            ->add([
+                'name' => 'aliases',
+                'type' => CommonElement\DataTextarea::class,
+                'options' => [
+                    'label' => 'Aliases and aggregated fields', // @translate
+                    'info' => 'List of fields that refers to one or multiple indexes (properties with internal search engine, native indexes with Solr), formatted "name = label", then the list of properties and an empty line. The name must not be a property term or a reserved keyword. With query args below, they can be seen as simple shortcuts of filters easy to implement in forms.', // @translate
+                    'documentation' => 'https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch/-/blob/master/data/configs/search_engine.internal.php',
+                    'as_key_value' => true,
+                    'key_value_separator' => '=',
+                    'data_options' => [
+                        'name' => null,
+                        'label' => null,
+                        'fields' => ',',
+                    ],
+                    'data_text_mode' => 'last_is_list',
+                ],
+                'attributes' => [
+                    'id' => 'index_aliases',
+                    'required' => false,
+                    'rows' => 12,
+                    'placeholder' => <<<'STRING'
+                            author = Author
+                            dcterms:creator
+                            dcterms:contributor
+
+                            title = Title
+                            dcterms:title
+                            dcterms:alternative
+
+                            date = Date
+                            dcterms:date
+                            dcterms:created
+                            dcterms:issued
+                            STRING,
+                ],
+            ])
+            ->add([
+                'type' => CommonElement\IniTextarea::class,
+                'name' => 'query_args',
+                'options' => [
+                    'label' => 'Query arguments for fields', // @translate
+                    'info' => 'Define the query arguments to use with simple fields. Defaults are "type" = "eq" and "join" = "and". Type may be any of the query type of filters. Join may be "and", "or", "not".', // @translate
+                    'documentation' => 'https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch',
+                    'ini_typed_mode' => true,
+                ],
+                'attributes' => [
+                    'id' => 'index_query_args',
+                    'required' => false,
+                    'rows' => 12,
+                    'placeholder' => <<<'STRING'
+                            [title]
+                            type = in
+
+                            [author]
+                            type = res
+                            STRING,
+                ],
+            ])
+            ->add([
+                'name' => 'field_boosts',
+                'type' => OmekaElement\ArrayTextarea::class,
+                'options' => [
+                    'label' => 'Boost multipliers by index (Solr only)', // @translate
+                    'as_key_value' => true,
+                ],
+                'attributes' => [
+                    'id' => 'field_boosts',
+                    'required' => false,
+                    'rows' => 12,
+                    'placeholder' => <<<'STRING'
+                            dcterms_creator_ss = 100
+                            dcterms_creator_txt = 50
+                            dcterms_subject_ss = 10
+                            dcterms_subject_txt = 5
+                            dcterms_description_txt = 0.01
+                            bibo_content_txt = 0.001
+                            STRING,
+                ],
+            ])
+        ;
 
         $this
             ->add([
@@ -153,73 +263,15 @@ class SearchConfigConfigureForm extends Form
                     'id' => 'validate_form',
                 ],
             ])
-        ;
-
-        $this
             ->add([
-                'name' => 'index',
-                'type' => Fieldset::class,
+                'name' => 'query_default_field',
+                'type' => Element\Text::class,
                 'options' => [
-                    'label' => 'Indexes', // @translate
-                ],
-            ])
-            ->get('index')
-
-            ->add([
-                'name' => 'aliases',
-                'type' => CommonElement\DataTextarea::class,
-                'options' => [
-                    'label' => 'Aliases and aggregated fields', // @translate
-                    'info' => 'List of fields that refers to one or multiple indexes (properties with internal search engine, native indexes with Solr), formatted "name = label", then the list of properties and an empty line. The name must not be a property term or a reserved keyword. With query args below, they can be seen as simple shortcuts of filters easy to implement in forms.', // @translate
-                    'documentation' => 'https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch/-/blob/master/data/configs/search_engine.internal.php',
-                    'as_key_value' => true,
-                    'key_value_separator' => '=',
-                    'data_options' => [
-                        'name' => null,
-                        'label' => null,
-                        'fields' => ',',
-                    ],
-                    'data_text_mode' => 'last_is_list',
+                    'label' => 'Query default field', // @translate
+                    'info' => 'Optional. Specifies a default search field in case it is not made explicit in the query.', // @translated
                 ],
                 'attributes' => [
-                    'id' => 'index_aliases',
-                    'placeholder' => <<<'STRING'
-                        author = Author
-                        dcterms:creator
-                        dcterms:contributor
-                        
-                        title = Title
-                        dcterms:title
-                        dcterms:alternative
-                        
-                        date = Date
-                        dcterms:date
-                        dcterms:created
-                        dcterms:issued
-                        STRING,
-                    'rows' => 30,
-                ],
-            ])
-            ->add([
-                'type' => CommonElement\IniTextarea::class,
-                'name' => 'query_args',
-                'options' => [
-                    'label' => 'Query arguments for fields', // @translate
-                    'info' => 'Define the query arguments to use with simple fields. Defaults are "type" = "eq" and "join" = "and". Type may be any of the query type of filters. Join may be "and", "or", "not".', // @translate
-                    'documentation' => 'https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch',
-                    'ini_typed_mode' => true,
-                ],
-                'attributes' => [
-                    'id' => 'index_query_args',
-                    'required' => false,
-                    'placeholder' => <<<'STRING'
-                        [title]
-                        type = list
-                        
-                        [author]
-                        type = res
-                        STRING,
-                    'rows' => 30,
+                    'id' => 'query_default_field',
                 ],
             ])
         ;
@@ -317,7 +369,7 @@ class SearchConfigConfigureForm extends Form
                     'type' => Element\Checkbox::class,
                     'options' => [
                         'label' => 'Partial word search for main field (instead of standard full text search)', // @translate
-                        'infos' => 'Currently, this mode does not allow to exclude properties for the main search field.', // @translate
+                        'info' => 'Currently, this mode does not allow to exclude properties for the main search field.', // @translate
                     ],
                     'attributes' => [
                         'id' => 'q_default_search_partial_word',
@@ -382,6 +434,7 @@ class SearchConfigConfigureForm extends Form
                 ],
                 'attributes' => [
                     'id' => 'button_submit',
+                    'value' => true,
                 ],
             ])
             ->add([
@@ -447,6 +500,61 @@ class SearchConfigConfigureForm extends Form
                 'attributes' => [
                     'id' => 'rft',
                     'value' => '',
+                ],
+            ])
+            ->add([
+                'name' => 'quick_filter',
+                'type' => CommonElement\OptionalSelect::class,
+                'options' => [
+                    'label' => 'Quick filter next to main search field', // @translate
+                    'value_options' => $engineAdapter
+                        ? $engineAdapter->getAvailableFieldsForSelect()
+                        : [],
+                    'empty_option' => '',
+                ],
+                'attributes' => [
+                    'id' => 'form_quick_filter',
+                    'class' => 'chosen-select',
+                    'data-placeholder' => 'Set field or index…', // @translate
+                ],
+            ])
+            ->add([
+                'name' => 'quick_filter_label',
+                'type' => Element\Text::class,
+                'options' => [
+                    'label' => 'Quick filter label', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'form_quick_filter_label',
+                ],
+            ])
+            ->add([
+                'name' => 'quick_filter_values',
+                'type' => OmekaElement\ArrayTextarea::class,
+                'options' => [
+                    'label' => 'Quick filter predefined values', // @translate
+                    'info' => 'If empty, all values are fetched from the index.', // @translate
+                    'as_key_value' => true,
+                ],
+                'attributes' => [
+                    'id' => 'form_quick_filter_values',
+                    'rows' => 5,
+                    'placeholder' => <<<TXT
+                        = All
+                        Object = Objects
+                        Person = Persons
+                        Place = Places
+                        TXT,
+                ],
+            ])
+            ->add([
+                'name' => 'quick_filter_advanced',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Display quick filter on advanced form', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'form_quick_filter_advanced',
                 ],
             ])
             ->add([
@@ -583,11 +691,22 @@ class SearchConfigConfigureForm extends Form
                 ],
             ])
             ->add([
+                'name' => 'field_value_autosuggest',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Enable autocompletion on filter values', // @translate
+                    'info' => 'Requires module Reference (database values) or SearchSolr (indexed values).', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'field_value_autosuggest',
+                ],
+            ])
+            ->add([
                 'name' => 'fields',
                 'type' => CommonElement\DataTextarea::class,
                 'options' => [
                     'label' => 'Fields', // @translate
-                    'info' => 'List of filters that will be displayed in the search form. Format is "term = Label". The field should exist in all resources fields. Only properties are managed for internal search engine.', // @translate
+                    'info' => 'List of filters that will be displayed in the search form. Format is "term or field = Label".', // @translate
                     'as_key_value' => true,
                     'key_value_separator' => '=',
                     'data_options' => [
@@ -621,6 +740,42 @@ class SearchConfigConfigureForm extends Form
             ])
             ->get('results')
             ->add([
+                'name' => 'label_default',
+                'type' => Element\Text::class,
+                'options' => [
+                    'label' => 'Label without query', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'results_label_default',
+                    'value' => 'Search', // @translate
+                    'required' => false,
+                ],
+            ])
+            ->add([
+                'name' => 'label_results',
+                'type' => Element\Text::class,
+                'options' => [
+                    'label' => 'Label for results', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'results_label_results',
+                    'value' => 'Search results', // @translate
+                    'required' => false,
+                ],
+            ])
+            ->add([
+                'name' => 'label_no_results',
+                'type' => Element\Text::class,
+                'options' => [
+                    'label' => 'Label for no results', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'results_label_no_results',
+                    'value' => 'No results', // @translate
+                    'required' => false,
+                ],
+            ])
+            ->add([
                 'name' => 'by_resource_type',
                 'type' => Element\Checkbox::class,
                 'options' => [
@@ -639,6 +794,17 @@ class SearchConfigConfigureForm extends Form
                 ],
                 'attributes' => [
                     'id' => 'template',
+                ],
+            ])
+            ->add([
+                'name' => 'autoscroll',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Auto-scroll to results', // @translate
+                    'info' => 'When enabled, the page will scroll to the results section after form submission. Useful when the search form is not at the top of the page.', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'autoscroll',
                 ],
             ])
             ->add([
@@ -669,6 +835,55 @@ class SearchConfigConfigureForm extends Form
                 ],
             ])
             ->add([
+                'name' => 'search_filters_mode',
+                'type' => CommonElement\OptionalRadio::class,
+                'options' => [
+                    'label' => 'Query filters display', // @translate
+                    'label_attributes' => [
+                        'style' => 'display: inline; margin-right: 1em;',
+                    ],
+                    'value_options' => [
+                        'readonly' => 'Simple text', // @translate
+                        'link_remove' => 'Append a cross to remove the filter', // @translate
+                        'links' => 'Whole label removes the filter', // @translate
+                    ],
+                ],
+                'attributes' => [
+                    'id' => 'search_filters_mode',
+                    'value' => 'link_remove',
+                ],
+            ])
+            ->add([
+                'name' => 'active_facets_mode',
+                'type' => CommonElement\OptionalRadio::class,
+                'options' => [
+                    'label' => 'Active facets display', // @translate
+                    'label_attributes' => [
+                        'style' => 'display: inline; margin-right: 1em;',
+                    ],
+                    'value_options' => [
+                        'readonly' => 'Simple text', // @translate
+                        'link_remove' => 'Append a cross to remove the facet', // @translate
+                        'links' => 'Whole label removes the facet', // @translate
+                    ],
+                ],
+                'attributes' => [
+                    'id' => 'active_facets_mode',
+                    'value' => 'link_remove',
+                ],
+            ])
+            ->add([
+                'name' => 'search_filters_field_label',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Display the field label in active filters', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'search_filters_field_label',
+                    'value' => '1',
+                ],
+            ])
+            ->add([
                 'name' => 'active_facets',
                 'type' => CommonElement\OptionalRadio::class,
                 'options' => [
@@ -683,6 +898,17 @@ class SearchConfigConfigureForm extends Form
                 'attributes' => [
                     'id' => 'active_facets',
                     'value' => 'none',
+                ],
+            ])
+            ->add([
+                'name' => 'active_facets_field_label',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Display the field label in active facets', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'active_facets_field_label',
+                    'value' => '1',
                 ],
             ])
             ->add([
@@ -823,6 +1049,17 @@ class SearchConfigConfigureForm extends Form
                 ],
             ])
             ->add([
+                'name' => 'map_display',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Display map (module Mapping)', // @translate
+                    'info' => 'Add a map view to display search results on a map. Requires the Mapping module to be installed and active.', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'map_display',
+                ],
+            ])
+            ->add([
                 'name' => 'thumbnail_mode',
                 'type' => CommonElement\OptionalRadio::class,
                 'options' => [
@@ -858,6 +1095,23 @@ class SearchConfigConfigureForm extends Form
                 ],
                 'attributes' => [
                     'id' => 'allow_html',
+                ],
+            ])
+            ->add([
+                'name' => 'properties',
+                'type' => OmekaElement\ArrayTextarea::class,
+                'options' => [
+                    'label' => 'Properties to display for each result', // @translate
+                    'info' => 'List of property terms to display below each result, one by line.', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'properties',
+                    'rows' => 5,
+                    'placeholder' => <<<'TXT'
+                        dcterms:creator
+                        dcterms:date
+                        dcterms:subject
+                        TXT,
                 ],
             ])
             ->add([
@@ -1031,7 +1285,7 @@ class SearchConfigConfigureForm extends Form
                 'type' => CommonElement\OptionalRadio::class,
                 'options' => [
                     'label' => 'List of facets', // @translate
-                    'infos' => 'With the internal search engine, the option "all facets" may be slow when there are facets and filters for item sets or sites.', // @translate
+                    'info' => 'With the internal search engine, the option "all facets" may be slow when there are facets and filters for item sets or sites.', // @translate
                     'value_options' => [
                         'available' => 'Available facets only', // @translate
                         'all' => 'All facets, even with 0 results (see info)', // @translate
@@ -1053,6 +1307,18 @@ class SearchConfigConfigureForm extends Form
                     'id' => 'facet_display_active',
                     'required' => false,
                     'value' => true,
+                ],
+            ])
+            ->add([
+                'name' => 'display_active_field_label',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Display the field label in active facets (sidebar)', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'facet_display_active_field_label',
+                    'required' => false,
+                    'value' => false,
                 ],
             ])
             ->add([
@@ -1245,6 +1511,166 @@ class SearchConfigConfigureForm extends Form
         }
 
         return $this;
+    }
+
+    public function isValid(): bool
+    {
+        $valid = parent::isValid();
+
+        // Validate piecewise scale on RangeDouble in filters and facets. Mode
+        // "linear" needs no validation. SelectRange is a pair of selects, not a
+        // slider; Range simple uses the native HTML5 input type=range without a
+        // numeric companion, so piecewise rendering is not
+        // supported there for now (TODO).
+        $data = $this->getData();
+        $scaleTypes = ['RangeDouble'];
+
+        $checks = [
+            ['form', 'filters', $scaleTypes, ['Range', 'RangeDouble']],
+            ['facet', 'facets', $scaleTypes, ['RangeDouble']],
+        ];
+
+        foreach ($checks as [$top, $sub, $allowedTypes, $intervalTypes]) {
+            if (empty($data[$top][$sub]) || !is_array($data[$top][$sub])) {
+                continue;
+            }
+            foreach ($data[$top][$sub] as $name => $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $type = $item['type'] ?? '';
+                $fieldEnd = trim((string) ($item['field_end'] ?? ''));
+                if ($fieldEnd !== '') {
+                    if (!in_array($type, $intervalTypes, true)) {
+                        $valid = false;
+                        $this->setMessages([
+                            $top => [$sub => [$name => ['field_end' => [
+                                sprintf(
+                                    'Interval end field is only available for types %s.', // @translate
+                                    implode(', ', $intervalTypes)
+                                ),
+                            ]]]],
+                        ]);
+                    } elseif (trim((string) ($item['field'] ?? '')) === '') {
+                        $valid = false;
+                        $this->setMessages([
+                            $top => [$sub => [$name => ['field_end' => [
+                                'Interval end field requires a start field ("Field").', // @translate
+                            ]]]],
+                        ]);
+                    }
+                }
+                if (($item['scale_mode'] ?? 'linear') !== 'piecewise') {
+                    continue;
+                }
+                if (!in_array($type, $allowedTypes, true)) {
+                    $valid = false;
+                    $this->setMessages([
+                        $top => [$sub => [$name => ['scale_mode' => [
+                            sprintf(
+                                'Piecewise scale is only available for types %s.', // @translate
+                                implode(', ', $allowedTypes)
+                            ),
+                        ]]]],
+                    ]);
+                    continue;
+                }
+                $error = $this->validateScaleBreakpoints($item['scale_breakpoints'] ?? []);
+                if ($error !== null) {
+                    $valid = false;
+                    $this->setMessages([
+                        $top => [$sub => [$name => ['scale_breakpoints' => [
+                            sprintf('%s: %s', $name, $error), // @translate
+                        ]]]],
+                    ]);
+                }
+            }
+        }
+
+        return $valid;
+    }
+
+    protected function validateScaleBreakpoints(array $breakpoints): ?string
+    {
+        if (count($breakpoints) < 2) {
+            return 'At least 2 breakpoints are required.'; // @translate
+        }
+        // Keys "min" and "max" are placeholders resolved at render time from
+        // the field min/max (attributes or data). Internal values must be
+        // numeric.
+        $hasMin = false;
+        $hasMax = false;
+        $numericValues = [];
+        $numericPositions = [];
+        $minPosition = null;
+        $maxPosition = null;
+        foreach ($breakpoints as $v => $p) {
+            if (!is_numeric($p)) {
+                return 'Positions must be numeric.'; // @translate
+            }
+            $pos = (float) $p;
+            if ($pos < 0.0 || $pos > 100.0) {
+                return 'Positions must be between 0 and 100.'; // @translate
+            }
+            if ($v === 'min') {
+                if ($hasMin) {
+                    return 'Only one "min" placeholder is allowed.'; // @translate
+                }
+                $hasMin = true;
+                $minPosition = $pos;
+            } elseif ($v === 'max') {
+                if ($hasMax) {
+                    return 'Only one "max" placeholder is allowed.'; // @translate
+                }
+                $hasMax = true;
+                $maxPosition = $pos;
+            } elseif (is_numeric($v)) {
+                $numericValues[] = (float) $v;
+                $numericPositions[] = $pos;
+            } else {
+                return 'Keys must be numeric or one of "min" / "max".'; // @translate
+            }
+        }
+        if ($hasMin && $minPosition !== 0.0) {
+            return '"min" placeholder must have position 0.'; // @translate
+        }
+        if ($hasMax && $maxPosition !== 100.0) {
+            return '"max" placeholder must have position 100.'; // @translate
+        }
+        // First position must be 0 (either via "min" or first numeric). Last
+        // must be 100 (either via "max" or last numeric).
+        if (!$hasMin) {
+            // Smallest numeric position must be 0.
+            if ($numericPositions === [] || min($numericPositions) !== 0.0) {
+                return 'First position must be 0 (or use "min" placeholder).'; // @translate
+            }
+        }
+        if (!$hasMax) {
+            if ($numericPositions === [] || max($numericPositions) !== 100.0) {
+                return 'Last position must be 100 (or use "max" placeholder).'; // @translate
+            }
+        }
+        if ($numericValues) {
+            array_multisort($numericValues, $numericPositions);
+            $last = count($numericValues) - 1;
+            for ($i = 1; $i <= $last; $i++) {
+                if ($numericValues[$i] <= $numericValues[$i - 1]) {
+                    return 'Values must be strictly increasing.'; // @translate
+                }
+                if ($numericPositions[$i] <= $numericPositions[$i - 1]) {
+                    return 'Positions must be strictly increasing.'; // @translate
+                }
+            }
+            // Min/max placeholder positions must not overlap with numeric ones
+            // when both are used.
+            if ($hasMin && in_array(0.0, $numericPositions, true)) {
+                return 'A numeric breakpoint cannot share position 0 with "min".'; // @translate
+            }
+            if ($hasMax && in_array(100.0, $numericPositions, true)) {
+                return 'A numeric breakpoint cannot share position 100 with "max".'; // @translate
+            }
+        }
+        return null;
     }
 
     protected function addFormFieldset(): self

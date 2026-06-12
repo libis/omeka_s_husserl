@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2018-2025
+ * Copyright Daniel Berthereau, 2018-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -43,15 +43,13 @@ class SearchingPage implements LinkInterface
 
     public function getLabel(array $data, SiteRepresentation $site)
     {
-        return $data['label'] ? $data['label'] : 'Search'; // @translate
+        return isset($data['label']) && trim($data['label']) !== ''
+            ? $data['label']
+            : 'Search'; // @translate
     }
 
     public function isValid(array $data, ErrorStore $errorStore)
     {
-        if (!isset($data['label'])) {
-            $errorStore->addError('o:navigation', 'Invalid navigation: browse link missing label'); // @translate
-            return false;
-        }
         if (!isset($data['advancedsearch_config_id'])) {
             $errorStore->addError('o:navigation', 'Invalid navigation: browse link missing search page id'); // @translate
             return false;

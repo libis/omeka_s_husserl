@@ -36,7 +36,7 @@ trait PsrInterpolateTrait
         $replacements = [];
         foreach ($context as $key => $val) {
             try {
-                if (is_null($val)
+                if ($val === null
                     || is_scalar($val)
                     || (is_object($val) && method_exists($val, '__toString'))
                 ) {
@@ -50,7 +50,7 @@ trait PsrInterpolateTrait
                 } else {
                     $replacements['{' . $key . '}'] = '[' . gettype($val) . ']';
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // Skip.
             }
         }

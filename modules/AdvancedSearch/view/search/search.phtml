@@ -1,7 +1,7 @@
 <?php
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2017-2025
+ * Copyright Daniel Berthereau, 2017-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -37,6 +37,7 @@
  *
  * For block layout:
  * @var bool $skipFormAction Remove action of the form, so it uses current page.
+ * @var bool $formAction Specific url for form action.
  */
 
 $plugins = $this->getHelperPluginManager();
@@ -68,19 +69,54 @@ $displayParts = $searchConfig->setting('results', []);
 $displayPartsHeader = array_filter($displayParts, fn ($v) => in_array($v, ['header', 'both']));
 $displayPartsFooter = array_filter($displayParts, fn ($v) => in_array($v, ['footer', 'both']));
 $displayFacets = $displayParts ? $displayParts['facets'] ?? 'before' : 'none';
+$autoscroll = !empty($searchConfig->subSetting('results', 'autoscroll'));
 
 if ($itemSet && $site) {
-    $redirectItemSets = $this->siteSetting('advancedsearch_redirect_itemsets', ['default' => 'browse']);
-    $redirectItemSet = $redirectItemSets[$itemSet ? $itemSet->id() : null] ?? $redirectItemSets['default'] ?? 'browse';
-    $displayItemSet = $redirectItemSet === 'all' || ($redirectItemSet === 'first' && $response->getCurrentPage() === 1);
+    $redirectItemSets = $this->siteSetting('advancedsearch_item_sets_redirects', ['default' => 'browse']);
+    $redirectItemSet = $redirectItemSets[$itemSet->id()] ?? $redirectItemSets['default'] ?? 'browse';
+    $displayItemSet = $redirectItemSet !== 'first' || $response->getCurrentPage() <= 1;
+    $displayItemSets = false;
 } else {
     $displayItemSet = false;
+    $displayItemSets = $this->params()->fromRoute('redirected') === 'item-sets';
 }
 
 $this->headLink()
+    ->prependStylesheet($assetUrl('vendor/chosen-js/chosen.css', 'Omeka'))
+    ->appendStylesheet($assetUrl('css/common-autocomplete.css', 'Common'))
     ->appendStylesheet($assetUrl('css/search.css', 'AdvancedSearch'));
 $this->headScript()
+    ->appendFile($assetUrl('vendor/chosen-js/chosen.jquery.min.js', 'Omeka'), 'text/javascript', ['defer' => 'defer'])
     ->appendFile($assetUrl('js/search.js', 'AdvancedSearch'), 'text/javascript', ['defer' => 'defer']);
+
+// Check if Mapping module is active and map display is enabled.
+$mapDisplayEnabled = (bool) $searchConfig->subSetting('results', 'map_display');
+$hasMappingModule = class_exists('Mapping\Module', false);
+$showMapView = $mapDisplayEnabled && $hasMappingModule && !$isAdmin;
+
+if ($showMapView) {
+    // Include Mapping module assets for map view.
+    $this->headLink()
+        ->appendStylesheet($assetUrl('node_modules/leaflet/dist/leaflet.css', 'Mapping'))
+        ->appendStylesheet($assetUrl('node_modules/leaflet.markercluster/dist/MarkerCluster.css', 'Mapping'))
+        ->appendStylesheet($assetUrl('node_modules/leaflet.markercluster/dist/MarkerCluster.Default.css', 'Mapping'))
+        ->appendStylesheet($assetUrl('node_modules/leaflet.fullscreen/Control.FullScreen.css', 'Mapping'))
+        ->appendStylesheet($assetUrl('css/mapping.css', 'Mapping'));
+    $this->headScript()
+        ->appendFile($assetUrl('node_modules/leaflet/dist/leaflet.js', 'Mapping'))
+        ->appendFile($assetUrl('node_modules/leaflet.markercluster/dist/leaflet.markercluster-src.js', 'Mapping'))
+        ->appendFile($assetUrl('node_modules/leaflet-providers/leaflet-providers.js', 'Mapping'))
+        ->appendFile($assetUrl('node_modules/leaflet.fullscreen/Control.FullScreen.js', 'Mapping'))
+        ->appendFile($assetUrl('node_modules/Leaflet.Deflate/dist/L.Deflate.js', 'Mapping'))
+        ->appendFile($assetUrl('js/MappingModule.js', 'Mapping'))
+        ->appendFile($assetUrl('js/control.fit-bounds.js', 'Mapping'));
+
+    // Build URLs for Mapping API endpoints.
+    $mappingFeaturesUrl = $url('site/mapping', ['controller' => 'index', 'action' => 'get-features'], true);
+    $mappingPopupUrl = $url('site/mapping', ['controller' => 'index', 'action' => 'get-feature-popup-content'], true);
+    $mappingBasemapProvider = $this->siteSetting('mapping_basemap_provider') ?: 'OpenStreetMap.Mapnik';
+    $mappingDisableClustering = $this->siteSetting('mapping_disable_clustering') ? '1' : '0';
+}
 ?>
 
 <?php if (empty($isPartial)): ?>
@@ -113,11 +149,11 @@ $this->headScript()
 <div id="search-page">
 <?php endif; // End NOT partial. ?>
 
-<?php if ($displayItemSet): ?>
+<?php if ($displayItemSet): // Redirected from an item set. ?>
 
     <?php
     $vars->offsetSet('resourceType', 'item_sets'); // TODO Check if really needed.
-    $this->htmlElement('body')->appendAttribute('class', 'search-page item-set resource browse');
+    $this->htmlElement('body')->appendAttribute('class', 'search-page item-set resource browse item-set-show');
     ?>
     <?= $this->pageTitle($itemSet->displayTitle(null, $langValue), 2) ?>
     <h3><?= $translate('Item set') ?></h3>
@@ -128,14 +164,41 @@ $this->headScript()
         <h3><?= $translate('Items') ?></h3>
     </div>
 
-<?php else: ?>
+<?php elseif ($displayItemSets): // Redirected from item sets. ?>
 
-    <?php $this->htmlElement('body')->appendAttribute('class', 'search-page resource browse'); ?>
-    <?= $this->pageTitle($translate('Search'), 2) ?>
+    <?php
+    if ($query->isBrowse()) {
+        // No search query.
+        $mainTitle = $translate($searchConfig->subSetting('results', 'label_default') ?: 'Browse item sets');
+    } else {
+        $mainTitle = $response->getTotalResults()
+            ? $translate($searchConfig->subSetting('results', 'label_results') ?: 'Search results')
+            : $translate($searchConfig->subSetting('results', 'label_no_results') ?: 'No results');
+    }
+
+    $this->htmlElement('body')->appendAttribute('class', 'search-page resource item-set browse item-set-browse');
+    ?>
+    <?= $this->pageTitle($mainTitle, 2) ?>
+
+<?php else: // Normal search. ?>
+
+    <?php
+    if ($query->isBrowse()) {
+        // No search query.
+        $mainTitle = $translate($searchConfig->subSetting('results', 'label_default') ?: 'Search');
+    } else {
+        $mainTitle = $response->getTotalResults()
+            ? $translate($searchConfig->subSetting('results', 'label_results') ?: 'Search results')
+            : $translate($searchConfig->subSetting('results', 'label_no_results') ?: 'No results');
+    }
+
+    $this->htmlElement('body')->appendAttribute('class', 'search-page resource browse');
+    ?>
+    <?= $this->pageTitle($mainTitle, 2) ?>
 
 <?php endif; ?>
 
-<?= $searchConfig->renderForm(['template' => null, 'skip_form_action' => $skipFormAction]) ?>
+<?= $searchConfig->renderForm(['template' => null, 'skip_form_action' => $skipFormAction, 'form_action' => $formAction ?? null]) ?>
 
 <div class="search-results-wrapper">
 
@@ -145,7 +208,7 @@ $this->headScript()
     </aside>
     <?php endif; ?>
 
-    <div class="search-results">
+    <div id="search-results" class="search-results"<?php if ($autoscroll && !empty($query)): ?> data-autoscroll="1"<?php endif; ?>>
 
         <?php if ($displayPartsHeader): ?>
         <div class="search-results-part search-results-header">
@@ -153,14 +216,42 @@ $this->headScript()
         </div>
         <?php endif; ?>
 
+        <?php $this->trigger('view.browse.before'); ?>
+
         <?php if ($documentCount): ?>
 
         <div class="search-results-part search-results-list">
             <?php foreach (array_filter($response->getResourceTotalResults()) as $resourceType => $count): ?>
-            <h3><?= $escape(sprintf($translate('%1$d %2$s'), $count, $easyMeta->resourceLabelCount($resourceType, $count))) ?></h3>
+            <h3><?= $escape(sprintf($translate('%1$d %2$s'), $count, $translate($easyMeta->resourceLabelCount($resourceType, $count)))) ?></h3>
             <?= $partial('search/results', $variables + ['resourceType' => $resourceType]) ?>
             <?php endforeach; ?>
         </div>
+
+        <?php // Map view container (hidden by default, shown when map view is selected). ?>
+        <?php if (!empty($showMapView)): ?>
+        <?php
+        // For map view, determine if we should pass item IDs or let Mapping show all.
+        // - If browse (no query): don't pass IDs, show all features
+        // - If filtered search with reasonable count: pass IDs
+        // - If filtered search with too many results: don't pass IDs (would be excessive)
+        $isBrowse = $query->isBrowse();
+        $totalItems = $response->getResourceTotalResults('items') ?: 0;
+        $maxItemsForMap = 10000; // Reasonable limit for passing IDs
+        // Use comma-separated format (Omeka supports "id=x,y,z").
+        $itemIdsString = (!$isBrowse && $totalItems > 0 && $totalItems <= $maxItemsForMap)
+            ? implode(',', $response->getAllResourceIds('items'))
+            : '';
+        ?>
+        <div class="search-results-part search-results-map" style="display: none;">
+            <div id="search-map"
+                data-basemap-provider="<?= $escape($mappingBasemapProvider) ?>"
+                data-disable-clustering="<?= $mappingDisableClustering ?>"
+                data-features-url="<?= $escape($mappingFeaturesUrl) ?>"
+                data-feature-popup-content-url="<?= $escape($mappingPopupUrl) ?>"
+                data-item-ids="<?= $escape($itemIdsString) ?>">
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php else: ?>
 
@@ -180,6 +271,8 @@ $this->headScript()
         </div>
 
         <?php endif; ?>
+
+        <?php $this->trigger('view.browse.after'); ?>
 
         <?php if ($displayPartsFooter): ?>
         <div class="search-results-part search-results-footer">

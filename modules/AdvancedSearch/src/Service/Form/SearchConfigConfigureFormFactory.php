@@ -3,12 +3,12 @@
 namespace AdvancedSearch\Service\Form;
 
 use AdvancedSearch\Form\Admin\SearchConfigConfigureForm;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class SearchConfigConfigureFormFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         $suggesters = $services->get('Omeka\ApiManager')->search('search_suggesters', [], ['returnScalar' => 'name'])->getContent();
         $form = new SearchConfigConfigureForm(null, $options ?? []);

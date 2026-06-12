@@ -6,7 +6,7 @@
  * Improve search with new fields, auto-suggest, filters, facets, specific pages, etc.
  *
  * @copyright BibLibre, 2016-2017
- * @copyright Daniel Berthereau, 2017-2025
+ * @copyright Daniel Berthereau, 2017-2026
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
  *
  * This software is governed by the CeCILL license under French law and abiding
@@ -34,8 +34,10 @@
  */
 namespace AdvancedSearch;
 
-if (!class_exists(\Common\TraitModule::class)) {
-    require_once dirname(__DIR__) . '/Common/TraitModule.php';
+if (!class_exists('Common\TraitModule', false)) {
+    require_once file_exists(dirname(__DIR__) . '/Common/src/TraitModule.php')
+        ? dirname(__DIR__) . '/Common/src/TraitModule.php'
+        : dirname(__DIR__) . '/Common/TraitModule.php';
 }
 
 use AdvancedSearch\Api\Representation\SearchEngineRepresentation;
@@ -44,7 +46,7 @@ use Common\TraitModule;
 use Laminas\EventManager\Event;
 use Laminas\EventManager\SharedEventManagerInterface;
 use Laminas\Mvc\MvcEvent;
-use Omeka\Entity\Resource;
+use Omeka\Api\Representation\AbstractResourceRepresentation;
 use Omeka\Module\AbstractModule;
 
 class Module extends AbstractModule
@@ -53,19 +55,34 @@ class Module extends AbstractModule
 
     const NAMESPACE = __NAMESPACE__;
 
-    protected $dependencies = [
-        'Common',
-    ];
-
     /**
      * @var bool
      */
     protected $isBatchUpdate;
 
+    public function getServiceConfig(): array
+    {
+        // During upgrade of Common, the service EasyMeta is not available.
+        // So load it in any case, else the module AdvancedSearch should be
+        // disabled directly in database or filesystem to fix upgrade.
+        // It allows to finish the upgrade.
+        // Similarly, protect navigation against missing routes during upgrade.
+        $config = $this->getNavigationProtectionServiceConfig();
+
+        if (!class_exists('Common\Stdlib\EasyMeta', false)) {
+            require_once dirname(__DIR__) . '/Common/src/Stdlib/EasyMeta.php';
+            require_once dirname(__DIR__) . '/Common/src/Service/Stdlib/EasyMetaFactory.php';
+
+            $config['factories']['Common\EasyMeta'] = \Common\Service\Stdlib\EasyMetaFactory::class;
+        }
+
+        return $config;
+    }
+
     public function onBootstrap(MvcEvent $event): void
     {
-
         parent::onBootstrap($event);
+
         $this->addAclRules();
         $this->addRoutes();
     }
@@ -73,24 +90,26 @@ class Module extends AbstractModule
     protected function preInstall(): void
     {
         $services = $this->getServiceLocator();
-        $translate = $services->get('ControllerPluginManager')->get('translate');
-        $messenger = $services->get('ControllerPluginManager')->get('messenger');
+        $translator = $services->get('MvcTranslator');
 
-        if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.66')) {
-            $message = new \Omeka\Stdlib\Message(
-                $translate('The module %1$s should be upgraded to version %2$s or later.'), // @translate
-                'Common', '3.4.66'
+        $errors = [];
+
+        if (PHP_VERSION_ID < 80100) {
+            $errors[] = (string) new \Omeka\Stdlib\Message(
+                $translator->translate('The module %1$s requires PHP %2$s or later.'), // @translate
+                'AdvancedSearch', '8.1'
             );
-            throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
         }
 
-        if (!$this->isModuleActive('Reference')) {
-            $messenger->addWarning('The module Reference is required to use the facets with the default internal adapter, but not for the Solr adapter.'); // @translate
-        } elseif (!$this->isModuleVersionAtLeast('Reference', '3.4.52')) {
-            $messenger->addWarning(new PsrMessage(
-                'The module {module} should be upgraded to version {version} or later.', // @translate
-                ['module' => 'Reference', 'version' => '3.4.52']
-            ));
+        if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.84')) {
+            $errors[] = (string) new \Omeka\Stdlib\Message(
+                $translator->translate('The module %1$s should be upgraded to version %2$s or later.'), // @translate
+                'Common', '3.4.84'
+            );
+        }
+
+        if ($errors) {
+            throw new \Omeka\Module\Exception\ModuleCannotInstallException(implode("\n", $errors));
         }
     }
 
@@ -103,10 +122,10 @@ class Module extends AbstractModule
 
         if (!$this->isModuleActive('Reference')) {
             $messenger->addWarning('The module Reference is required to use the facets with the default internal adapter, but not for the Solr adapter.'); // @translate
-        } elseif (!$this->isModuleVersionAtLeast('Reference', '3.4.52')) {
+        } elseif (!$this->isModuleVersionAtLeast('Reference', '3.4.58')) {
             $messenger->addWarning(new PsrMessage(
                 'The module {module} should be upgraded to version {version} or later.', // @translate
-                ['module' => 'Reference', 'version' => '3.4.52']
+                ['module' => 'Reference', 'version' => '3.4.58']
             ));
         }
 
@@ -118,10 +137,10 @@ class Module extends AbstractModule
             \Omeka\Module\Manager::STATE_NEEDS_UPGRADE,
         ])) {
             $version = $module->getIni('version');
-            if (version_compare($version, '3.5.53', '<')) {
+            if (version_compare($version, '3.5.62', '<')) {
                 $messenger->addWarning(new PsrMessage(
                     'The module {module} should be upgraded to version {version} or later.', // @translate
-                    ['module' => 'SearchSolr', 'version' => '3.5.53']
+                    ['module' => 'SearchSolr', 'version' => '3.5.62']
                 ));
             } elseif ($module->getState() !== \Omeka\Module\Manager::STATE_ACTIVE) {
                 $messenger->addNotice(new PsrMessage(
@@ -134,82 +153,28 @@ class Module extends AbstractModule
         $this->installResources();
     }
 
-    protected function postUpgrade(?string $oldVersion, ?string $newVersion): void
-    {
-        $this->warnOverriddenSearch();
-        $this->postUpgradeAuto($oldVersion, $newVersion);
-    }
-
-    /**
-     * Adapted:
-     * @see \AdvancedSearch\Module::warnOverriddenSearch()
-     * @see \AdvancedSearch\Controller\Admin\IndexController::warnOverriddenSearch()
-     *
-     * @todo Identify modules, blocks and queries that use old features.
-     */
-    protected function warnOverriddenSearch(): bool
-    {
-        $services = $this->getServiceLocator();
-        $api = $services->get('Omeka\ApiManager');
-        $settings = $services->get('Omeka\Settings');
-        $siteSettings = $services->get('Omeka\Settings\Site');
-        $messenger = $services->get('ControllerPluginManager')->get('messenger');
-
-        /*
-        $improvedTemplates = [
-            'common/advanced-search/properties-improved'
-            'common/advanced-search/resource-class-improved',
-            'common/advanced-search/resource-template-improved',
-            'common/advanced-search/item-sets-improved',
-            'common/advanced-search/site-improved',
-            'common/advanced-search/media-type-improved',
-            'common/advanced-search/owner-improved',
-        ];
-        */
-
-        $results = [];
-        $searchFields = $settings->get('advancedsearch_search_fields') ?: [];
-        // foreach ($searchFields as $searchField) {
-        //     if (substr($searchField, -9) === '-improved') {
-        //         $results[0] = 'admin';
-        //         break;
-        //     }
-        // }
-        if (in_array('common/advanced-search/properties-improved', $searchFields)) {
-            $results[0] = 'admin';
-        }
-
-        $siteSlugs = $api->search('sites', [], ['returnScalar' => 'slug'])->getContent();
-        foreach ($siteSlugs as $siteId => $siteSlug) {
-            $siteSettings->setTargetId($siteId);
-            $searchFields = $siteSettings->get('advancedsearch_search_fields') ?: [];
-            // foreach ($searchFields as $searchField) {
-            //     if (substr($searchField, -9) === '-improved') {
-            //         $results[$siteId] = $siteSlug;
-            //         break;
-            //     }
-            // }
-            if (in_array('common/advanced-search/properties-improved', $searchFields)) {
-                $results[$siteId] = $siteSlug;
-            }
-        }
-
-        if (!count($results)) {
-            return false;
-        }
-
-        $message = new PsrMessage(
-            'The setting to override search element "property" is enabled. This feature will be removed in a future version and should be {link}replaced by the search element "filter"{link_end}. Check your pages and settings. Matching sites: {json}', // @translate
-            ['link' => '<a href="https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch#deprecated-improvements-of-the-advanced-search-elements" target="_blank" rel="noopener">', 'link_end' => '</a>', 'json' => json_encode($results, 448)]
-        );
-        $message->setEscapeHtml(false);
-        $messenger->addWarning($message);
-
-        return true;
-    }
-
     public function attachListeners(SharedEventManagerInterface $sharedEventManager): void
     {
+        // Handle cron reindexation: use EasyAdmin/Cron module if available,
+        // otherwise run independently via view.layout trigger.
+        if (class_exists('EasyAdmin\Job\CronTasks', false)
+            || class_exists('Cron\Job\CronTasks', false)
+        ) {
+            $sharedEventManager->attach(
+                \EasyAdmin\Job\CronTasks::class,
+                'easyadmin.cron.execute',
+                [$this, 'handleCronExecute']
+            );
+        } else {
+            // Handle cron reindexation independently when EasyAdmin/Cron
+            // module is not installed. Triggered on admin page load.
+            $sharedEventManager->attach(
+                '*',
+                'view.layout',
+                [$this, 'handleCron']
+            );
+        }
+
         $sharedEventManager->attach(
             '*',
             'view.layout',
@@ -251,17 +216,6 @@ class Module extends AbstractModule
                 [$this, 'endOverrideQuery'],
                 // Process before any other module in order to reset query.
                 +200
-            );
-
-            // Omeka S v4.1 does not allow to search fulltext and return scalar.
-            // And event "api.search.query.finalize" isn't available for scalar.
-            // @see https://github.com/omeka/omeka-s/pull/2224
-            $sharedEventManager->attach(
-                $adapter,
-                'api.search.query',
-                [$this, 'fixSearchFullTextScalar'],
-                // Process after Omeka\Module and last.
-                -200
             );
         }
 
@@ -312,6 +266,34 @@ class Module extends AbstractModule
             'view.search.filters',
             [$this, 'filterSearchFilters']
         );
+
+        // Append json-ld when enabled.
+        $sharedEventManager->attach(
+            \AdvancedSearch\Controller\SearchController::class,
+            'view.browse.after',
+            [$this, 'appendBrowseAfter']
+        );
+
+        // Store the last browse context in session for prev/next navigation
+        // on the item page via the resource page block "resourceNav".
+        $sharedEventManager->attach(
+            \AdvancedSearch\Controller\SearchController::class,
+            'view.browse.after',
+            [$this, 'storeResourceNavFromSearch']
+        );
+        $sharedEventManager->attach(
+            \Omeka\Controller\Site\Item::class,
+            'view.browse.after',
+            [$this, 'storeResourceNavFromBrowse']
+        );
+        if (class_exists(\Selection\Controller\Site\SelectionController::class, false)) {
+            // Require selection show template to trigger view.browse.after.
+            $sharedEventManager->attach(
+                \Selection\Controller\Site\SelectionController::class,
+                'view.browse.after',
+                [$this, 'storeResourceNavFromSelection']
+            );
+        }
 
         // Listeners for the indexing of items, item sets and media.
         // Let other modules to update data before indexing.
@@ -456,6 +438,24 @@ class Module extends AbstractModule
             [$this, 'addSearchConfigToSite']
         );
 
+        // Keep main setting "advancedsearch_all_configs" in sync with the
+        // search_config table without requiring a visit to the search manager.
+        $sharedEventManager->attach(
+            \AdvancedSearch\Api\Adapter\SearchConfigAdapter::class,
+            'api.create.post',
+            [$this, 'refreshSearchConfigsList']
+        );
+        $sharedEventManager->attach(
+            \AdvancedSearch\Api\Adapter\SearchConfigAdapter::class,
+            'api.update.post',
+            [$this, 'refreshSearchConfigsList']
+        );
+        $sharedEventManager->attach(
+            \AdvancedSearch\Api\Adapter\SearchConfigAdapter::class,
+            'api.delete.post',
+            [$this, 'refreshSearchConfigsList']
+        );
+
         // Listeners for configs.
 
         $sharedEventManager->attach(
@@ -474,6 +474,24 @@ class Module extends AbstractModule
     {
         /** @var \Omeka\Permissions\Acl $acl */
         $acl = $this->getServiceLocator()->get('Omeka\Acl');
+
+        // Since Omeka 1.4, modules are ordered, so Guest comes after Access.
+        // See \Guest\Module::onBootstrap(). Manage other roles too: contributor, etc.
+        /** @see https://github.com/omeka/omeka-s/pull/2241 */
+        if (class_exists('Guest\Module', false) || class_exists('GuestRole\Module', false)) {
+            if (!$acl->hasRole('guest')) {
+                $acl->addRole('guest');
+            }
+        }
+        if (class_exists('GuestPrivate\Module', false)) {
+            if (!$acl->hasRole('guest_private')) {
+                $acl->addRole('guest_private');
+            }
+            if (!$acl->hasRole('guest_private_site')) {
+                $acl->addRole('guest_private_site');
+            }
+        }
+
         $acl
             // All can search and suggest, only admins can admin.
             ->allow(
@@ -520,13 +538,24 @@ class Module extends AbstractModule
             return;
         }
 
+        // Avoid issue when upgrading Common.
+        if (!$services->has('Common\EasyMeta')) {
+            return;
+        }
+
         $settings = $services->get('Omeka\Settings');
         $searchConfigs = $settings->get('advancedsearch_all_configs', []);
 
         // A specific check to manage site admin or public site.
         // The site slug is required to build public routes in background job.
-        $siteSlug = $status->getRouteParam('site-slug')
-            ?: $services->get('ViewHelperManager')->get('defaultSite')('slug');
+        // The default site is not available when module Common is upgrading.
+        $siteSlug = $status->getRouteParam('site-slug');
+        if (!$siteSlug) {
+            $helpers = $services->get('ViewHelperManager');
+            $siteSlug = $helpers->has('defaultSite')
+                ? $helpers->get('defaultSite')('slug')
+                : null;
+        }
 
         // The search routes are all literal an contains all data.
         // They are all built early. Check is done in controller.
@@ -600,11 +629,68 @@ class Module extends AbstractModule
             return;
         }
 
+        /** @var \Omeka\Settings\SiteSettings $siteSettings */
         $siteSettings = $services->get('Omeka\Settings\Site');
+        // The site settings is not set yet, so set it.
         $siteSettings->setTargetId($site->getId());
         $siteSearchConfigs = $siteSettings->get('advancedsearch_configs', []);
         $siteSearchConfigs = array_intersect_key($searchConfigs, array_flip($siteSearchConfigs));
+
+        $feedModule = $services->get('Omeka\ModuleManager')
+            ->getModule('Feed');
+        $hasFeed = $feedModule
+            && $feedModule->getState() === \Omeka\Module\Manager::STATE_ACTIVE;
+
         foreach ($siteSearchConfigs as $searchConfigId => $searchConfigSlug) {
+            $childRoutes = [
+                'suggest' => [
+                    'type' => \Laminas\Router\Http\Literal::class,
+                    'options' => [
+                        'route' => '/suggest',
+                        'defaults' => [
+                            '__NAMESPACE__' => 'AdvancedSearch\Controller',
+                            '__SITE__' => true,
+                            'controller' => \AdvancedSearch\Controller\SearchController::class,
+                            'action' => 'suggest',
+                            'id' => $searchConfigId,
+                            'page-slug' => $searchConfigSlug,
+                            'search-slug' => $searchConfigSlug,
+                        ],
+                    ],
+                ],
+            ];
+
+            if ($hasFeed) {
+                $childRoutes['atom'] = [
+                    'type' => \Laminas\Router\Http\Literal::class,
+                    'options' => [
+                        'route' => '/atom',
+                        'defaults' => [
+                            '__NAMESPACE__' => 'Feed\Controller',
+                            '__SITE__' => true,
+                            'controller' => 'Feed\Controller\Feed',
+                            'action' => 'rss',
+                            'feed' => 'atom',
+                            'search_config_id' => $searchConfigId,
+                        ],
+                    ],
+                ];
+                $childRoutes['rss'] = [
+                    'type' => \Laminas\Router\Http\Literal::class,
+                    'options' => [
+                        'route' => '/rss',
+                        'defaults' => [
+                            '__NAMESPACE__' => 'Feed\Controller',
+                            '__SITE__' => true,
+                            'controller' => 'Feed\Controller\Feed',
+                            'action' => 'rss',
+                            'feed' => 'rss',
+                            'search_config_id' => $searchConfigId,
+                        ],
+                    ],
+                ];
+            }
+
             $router->addRoute(
                 'search-page-' . $searchConfigSlug,
                 [
@@ -622,55 +708,7 @@ class Module extends AbstractModule
                         ],
                     ],
                     'may_terminate' => true,
-                    'child_routes' => [
-                        'suggest' => [
-                            'type' => \Laminas\Router\Http\Literal::class,
-                            'options' => [
-                                'route' => '/suggest',
-                                'defaults' => [
-                                    '__NAMESPACE__' => 'AdvancedSearch\Controller',
-                                    '__SITE__' => true,
-                                    'controller' => \AdvancedSearch\Controller\SearchController::class,
-                                    'action' => 'suggest',
-                                    'id' => $searchConfigId,
-                                    'page-slug' => $searchConfigSlug,
-                                    'search-slug' => $searchConfigSlug,
-                                ],
-                            ],
-                        ],
-                        'atom' => [
-                            'type' => \Laminas\Router\Http\Literal::class,
-                            'options' => [
-                                'route' => '/atom',
-                                'defaults' => [
-                                    '__NAMESPACE__' => 'AdvancedSearch\Controller',
-                                    '__SITE__' => true,
-                                    'controller' => \AdvancedSearch\Controller\SearchController::class,
-                                    'action' => 'rss',
-                                    'feed' => 'atom',
-                                    'id' => $searchConfigId,
-                                    'page-slug' => $searchConfigSlug,
-                                    'search-slug' => $searchConfigSlug,
-                                ],
-                            ],
-                        ],
-                        'rss' => [
-                            'type' => \Laminas\Router\Http\Literal::class,
-                            'options' => [
-                                'route' => '/rss',
-                                'defaults' => [
-                                    '__NAMESPACE__' => 'AdvancedSearch\Controller',
-                                    '__SITE__' => true,
-                                    'controller' => \AdvancedSearch\Controller\SearchController::class,
-                                    'action' => 'rss',
-                                    'feed' => 'rss',
-                                    'id' => $searchConfigId,
-                                    'page-slug' => $searchConfigSlug,
-                                    'search-slug' => $searchConfigSlug,
-                                ],
-                            ],
-                        ],
-                    ],
+                    'child_routes' => $childRoutes,
                 ]
             );
         }
@@ -679,7 +717,11 @@ class Module extends AbstractModule
     public function handleSiteSettings(Event $event): void
     {
         $this->handleAnySettings($event, 'site_settings');
+        $this->finalizeSiteSettings();
+    }
 
+    protected function finalizeSiteSettings(): void
+    {
         // Prepare a single setting with all values to simplify next checks.
         // Most of the time, the array contains only the default value and
         // sometime a few item sets.
@@ -687,10 +729,11 @@ class Module extends AbstractModule
         $services = $this->getServiceLocator();
         $siteSettings = $services->get('Omeka\Settings\Site');
 
-        $redirectBrowse = $siteSettings->get('advancedsearch_redirect_itemset_browse', ['all']) ?: [];
-        $redirectSearch = $siteSettings->get('advancedsearch_redirect_itemset_search', []) ?: [];
-        $redirectSearchFirst = $siteSettings->get('advancedsearch_redirect_itemset_search_first', []) ?: [];
-        $redirectPageUrl = $siteSettings->get('advancedsearch_redirect_itemset_page_url', []) ?: [];
+        // Don't set default early.
+        $redirectBrowse = $siteSettings->get('advancedsearch_item_sets_redirect_browse') ?: [];
+        $redirectSearch = $siteSettings->get('advancedsearch_item_sets_redirect_search') ?: [];
+        $redirectSearchFirst = $siteSettings->get('advancedsearch_item_sets_redirect_search_first') ?: [];
+        $redirectPageUrl = $siteSettings->get('advancedsearch_item_sets_redirect_page_url') ?: [];
         $redirectBrowse = array_fill_keys($redirectBrowse, 'browse');
         $redirectSearch = array_fill_keys($redirectSearch, 'search');
         $redirectSearchFirst = array_fill_keys($redirectSearchFirst, 'first');
@@ -716,8 +759,9 @@ class Module extends AbstractModule
             + $redirectSearchFirst
             + $redirectPageUrl;
 
-        $siteSettings->set('advancedsearch_redirect_itemsets', $merged);
+        $siteSettings->set('advancedsearch_item_sets_redirects', $merged);
         // Kept for compatibility with old themes.
+        $siteSettings->set('advancedsearch_redirect_itemsets', $merged);
         $siteSettings->set('advancedsearch_redirect_itemset', $merged['default']);
     }
 
@@ -745,7 +789,10 @@ class Module extends AbstractModule
     /**
      * Reset original fields and process search after core.
      *
-     * @see \AdvancedSearch\Api\ManagerDelegator::search()
+     * This method also handles the case when `initialize=false` is passed,
+     * which skips the `api.search.pre` event where `startOverrideQuery` runs.
+     * In that case, we apply the override here before processing.
+     *
      * @see \AdvancedSearch\Stdlib\SearchResources::endOverrideQuery()
      */
     public function endOverrideQuery(Event $event): void
@@ -761,9 +808,17 @@ class Module extends AbstractModule
         $qb = $event->getParam('queryBuilder');
         $adapter = $event->getTarget();
 
-        /** @see \AdvancedSearch\Stdlib\SearchResources::startOverrideRequest() */
-        /** @see \AdvancedSearch\Stdlib\SearchResources::buildInitialQuery() */
-        $this->getServiceLocator()->get('AdvancedSearch\SearchResources')
+        $searchResources = $this->getServiceLocator()->get('AdvancedSearch\SearchResources');
+
+        // Handle case when `initialize=false` was passed, which skips the
+        // `api.search.pre` event. In that case, startOverrideRequest was not
+        // called, so we need to do it here before endOverrideRequest.
+        // @see \AdvancedSearch\Stdlib\SearchResources::startOverrideRequest()
+        if ($request->getOption('override') === null) {
+            $searchResources->startOverrideRequest($request);
+        }
+
+        $searchResources
             ->endOverrideRequest($request)
             ->setAdapter($adapter)
             // Process the query for overridden keys.
@@ -795,58 +850,6 @@ class Module extends AbstractModule
         $this->getServiceLocator()->get('AdvancedSearch\SearchResources')
             ->setAdapter($adapter)
             ->searchResourcesFullText($qb, $request->getContent());
-    }
-
-    /**
-     * Process fix when searching fulltext and returning scalar ids.
-     *
-     * The option "require_fix_2224" is set when a scalar search with full text
-     * sort is prepared in query builder.
-     *
-     * The fix is set only for the internal querier.
-     *
-     * @see https://github.com/omeka/omeka-s/pull/2224
-     */
-    public function fixSearchFullTextScalar(Event $event): void
-    {
-        /** @var \Omeka\Api\Request $request */
-        $request = $event->getParam('request');
-        if (!$request->getOption('require_fix_2224')) {
-            return;
-        }
-
-        /** @var \Doctrine\ORM\QueryBuilder $qb */
-        $qb = $event->getParam('queryBuilder');
-        $query = $request->getContent();
-
-        // A full text search cannot be "*" alone. Anyway it has no meaning.
-        $qValue = $qb->getParameter('omeka_fulltext_search');
-        if (in_array($qValue, [null, '', '*'], true)) {
-            return;
-        }
-
-        $scalarField = $request->getOption('returnScalar') ?? $query['return_scalar'] ?? 'id';
-        $matchOrder = 'MATCH(omeka_fulltext_search.title, omeka_fulltext_search.text) AGAINST (:omeka_fulltext_search)';
-
-        $fixQb = clone $qb;
-        $fixQb
-            ->select(['omeka_root.id' => 'omeka_root.' . $scalarField])
-            ->addSelect($matchOrder . ' AS HIDDEN orderMatch')
-            ->addGroupBy('orderMatch');
-        $content = array_column($fixQb->getQuery()->getScalarResult(), $scalarField, 'id');
-
-        // The response is not yet available, so store results as options of
-        // the request.
-        $request
-            ->setOption('results', $content)
-            ->setOption('total_results', count($content));
-
-        // Remove the order from main query and limit results and return a fake
-        // result that is detected early by mariadb/mysql.
-        $qb
-            ->resetDQLPart('orderBy')
-            ->setMaxResults(0)
-            ->andWhere('1 = 0');
     }
 
     public function onFormVocabMemberSelectQuery(Event $event): void
@@ -888,6 +891,16 @@ class Module extends AbstractModule
 
         $headLink
             ->appendStylesheet($assetUrl('css/advanced-search-form.css', 'AdvancedSearch'));
+
+        // Load autocomplete JS/CSS when filter autosuggest is enabled.
+        $settingHelper = $isSite ? 'siteSetting' : 'setting';
+        if ($plugins->get($settingHelper)('advancedsearch_filter_value_autosuggest_whitelist')) {
+            $headLink
+                ->appendStylesheet($assetUrl('css/common-autocomplete.css', 'Common'));
+            $headScript
+                ->appendFile($assetUrl('vendor/jquery-autocomplete/jquery.autocomplete.min.js', 'Common'), 'text/javascript', ['defer' => 'defer']);
+        }
+
         $headScript
             ->appendFile($assetUrl('js/advanced-search-form.js', 'AdvancedSearch'), 'text/javascript', ['defer' => 'defer']);
 
@@ -928,10 +941,10 @@ class Module extends AbstractModule
         $isSite = $status->isSiteRequest();
         if ($isSite) {
             $siteSettings = $services->get('Omeka\Settings\Site');
-            $selectedSearchFields = $siteSettings->get('advancedsearch_search_fields', array_filter($searchFields, fn ($v) => !isset($v['site']) || $v['site']));
+            $selectedSearchFields = $siteSettings->get('advancedsearch_search_fields', array_keys(array_filter($searchFields, fn ($v) => !isset($v['site']) || $v['site']))) ?: [];
         } else {
             $settings = $services->get('Omeka\Settings');
-            $selectedSearchFields = $settings->get('advancedsearch_search_fields', $searchFields);
+            $selectedSearchFields = $settings->get('advancedsearch_search_fields', array_keys($searchFields)) ?: [];
         }
 
         // Manage core option to restrict list of resource templates.
@@ -967,17 +980,6 @@ class Module extends AbstractModule
         $query = $event->getParam('query', []);
         if ($query) {
             if (!empty($query['property'])) {
-                // TODO Clean joiner and type for property.
-                if (in_array('common/advanced-search/properties-improved', $partials)) {
-                    foreach ($query['property'] as $propertyField) {
-                        if (array_key_exists('property', $propertyField) && !is_array($propertyField['property'])) {
-                            $propertyField['property'] = (array) $propertyField['property'];
-                        }
-                        if (array_key_exists('text', $propertyField) && is_array($propertyField['text'])) {
-                            $propertyField['text'] = count($propertyField['text']) === 1 ? reset($propertyField['text']) : '';
-                        }
-                    }
-                }
                 if (in_array('common/advanced-search/properties', $partials)) {
                     foreach ($query['property'] as $propertyField) {
                         // TODO Clean joiner and type for property.
@@ -1061,20 +1063,14 @@ class Module extends AbstractModule
             return;
         }
 
-        $settings = $this->getServiceLocator()->get('Omeka\Settings');
-        $indexBatchEdit = $settings->get('advancedsearch_index_batch_edit', 'sync');
-        if ($indexBatchEdit === 'none') {
-            return;
-        }
-
         /**
          * @var \Omeka\Api\Request $request
          * @var \Omeka\Api\Response $response
          */
         $request = $event->getParam('request');
 
-        // Unlike module Bulk Edit, "append" was used, because a
-        // hidden element was added to manage indexation at the end.
+        // Unlike module Bulk Edit, "append" was used, because a hidden element
+        // was added to manage indexation at the end.
         // Nevertheless, it makes "remove" and "append" not indexed.
         // This process avoids doctrine issue on properties, reloaded to check
         // resource templates in the core.
@@ -1083,97 +1079,420 @@ class Module extends AbstractModule
             return;
         }
 
+        /**
+         * @var \Omeka\Api\Request $request
+         * @var \Omeka\Api\Response $response
+         * @var string $resourceType
+         */
+        $request = $event->getParam('request');
         $response = $event->getParam('response');
-        $resources = $response->getContent();
+        $resourceIds = $request->getIds();
         $resourceType = $request->getResource();
 
-        // TODO Use async indexation when short batch edit and sync when background batch edit?
-        if ($indexBatchEdit === 'sync' || $indexBatchEdit === 'async') {
-            $this->runJobIndexSearch($resourceType, $request->getIds(), $indexBatchEdit === 'sync');
-            return;
-        }
-
-        // Integrated indexation.
-        // TODO A doctrine issue "new entity was found" may occur when there are multiple linked resources.
-
-        $services = $this->getServiceLocator();
-        $api = $services->get('Omeka\ApiManager');
-        $logger = $services->get('Omeka\Logger');
-
-        /** @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation[] $searchEngines */
-        $searchEngines = $api->search('search_engines')->getContent();
-        foreach ($searchEngines as $searchEngine) {
-            $indexer = $searchEngine->indexer();
-            if ($indexer->canIndex($resourceType)
-                && in_array($resourceType, $searchEngine->setting('resource_types', []))
-            ) {
-                $resourcesToIndex = $this->filterVisibility($resources);
-                try {
-                    $indexer->indexResources($resourcesToIndex);
-                } catch (\Exception $e) {
-                    $logger->err(
-                        'Unable to batch index metadata for search engine "{name}": {message}', // @translate
-                        ['name' => $searchEngine->name(), 'message' => $e->getMessage()]
-                    );
-                    $messenger = $services->get('ControllerPluginManager')->get('messenger');
-                    $messenger->addWarning(new PsrMessage(
-                        'Unable to batch update the search engine "{name}": see log.', // @translate
-                        ['name' => $searchEngine->name()]
-                    ));
-                }
-            }
+        $resourceIds = array_values(array_filter(array_map('intval', $resourceIds)));
+        if ($resourceIds) {
+            $this->runJobIndexSearch($resourceType, $resourceIds);
         }
 
         $this->isBatchUpdate = false;
     }
 
     /**
-     * Adapted:
-     * @see \AdvancedSearch\Controller\Admin\SearchEngineController::indexAction()
+     * Store bounded list of the first search ids in session.
+     *
+     * It allows the resource page block "resourceNav" to display a prev/next
+     * navigation within the last search results on the item page.
+     *
+     * Called on the AdvancedSearch search page (Solr, Internal, …).
      */
-    protected function runJobIndexSearch(string $resourceType, array $ids, bool $sync): void
+    public function storeResourceNavFromSearch(Event $event): void
     {
-        $ids = array_filter(array_map('intval', $ids));
+        $services = $this->getServiceLocator();
+        if (!$services->get('Omeka\Status')->isSiteRequest()) {
+            return;
+        }
+
+        [$siteSettings, $limit, $enabledTypes] = $this->resourceNavContext();
+        if (!$limit) {
+            return;
+        }
+
+        /**
+         * @var \AdvancedSearch\Response $response
+         * @var \AdvancedSearch\Query $query
+         * @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig
+         * @var \Omeka\Api\Representation\SiteRepresentation $site
+         */
+        $view = $event->getTarget();
+        $response = $view->response ?? null;
+        $query = $view->query ?? null;
+        $searchConfig = $view->searchConfig ?? null;
+        $site = $view->site ?? null;
+        if (!$response || !$query || !$searchConfig || !$site) {
+            return;
+        }
+
+        // Detect if the current search page is actually an item set browse
+        // redirected here by AdvancedSearch MvcListeners::redirectItemSet().
+        $mvcEvent = $services->get('Application')->getMvcEvent();
+        $routeMatch = $mvcEvent->getRouteMatch();
+        $redirectedFromItemSet = $routeMatch
+            && $routeMatch->getParam('redirected') === 'item-set';
+        $redirectedItemSetId = $redirectedFromItemSet
+            ? (int) $routeMatch->getParam('item-set-id')
+            : 0;
+
+        $targetType = $redirectedItemSetId ? 'collection' : 'search';
+        if (!in_array($targetType, $enabledTypes, true)) {
+            return;
+        }
+
+        $request = $services->get('Request');
+        $httpQuery = method_exists($request, 'getQuery') ? $request->getQuery()->toArray() : [];
+
+        try {
+            $clonedQuery = clone $query;
+            $clonedQuery->setLimitPage(1, $limit);
+            $limitedResponse = $searchConfig->searchEngine()
+                ->querier()
+                ->setQuery($clonedQuery)
+                ->query();
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        $results = $limitedResponse->getResults('items') ?: [];
+        $ids = [];
+        foreach ($results as $result) {
+            if (isset($result['id'])) {
+                $ids[] = (int) $result['id'];
+            }
+        }
+        if (!$ids) {
+            return;
+        }
+        $total = (int) ($limitedResponse->getResourceTotalResults('items') ?: count($ids));
+
+        if ($targetType === 'collection') {
+            // Fetch the item set to get its title and URL; themes remain
+            // responsible for any site-specific display rule.
+            $label = '';
+            $contextUrl = $request->getRequestUri();
+            try {
+                /** @var \Omeka\Api\Representation\ItemSetRepresentation $itemSet */
+                $itemSet = $services->get('Omeka\ApiManager')
+                    ->read('item_sets', $redirectedItemSetId)
+                    ->getContent();
+                $label = (string) $itemSet->displayTitle();
+                $contextUrl = $itemSet->siteUrl();
+            } catch (\Throwable $e) {
+            }
+            $this->saveResourceNavSession([
+                'site_id' => $site->id(),
+                'type' => 'collection',
+                'subtype' => '',
+                'label' => $label,
+                'url' => $contextUrl,
+                'ids' => $ids,
+                'total' => $total,
+                'limit' => $limit,
+                'item_set_id' => $redirectedItemSetId,
+            ]);
+            return;
+        }
+
+        $label = '';
+        foreach (['q', 'fulltext_search'] as $k) {
+            if (!empty($httpQuery[$k]) && is_scalar($httpQuery[$k])) {
+                $label = trim((string) $httpQuery[$k]);
+                break;
+            }
+        }
+
+        $this->saveResourceNavSession([
+            'site_id' => $site->id(),
+            'type' => 'search',
+            'subtype' => '',
+            'label' => $label,
+            'url' => $request->getRequestUri(),
+            'ids' => $ids,
+            'total' => $total,
+            'limit' => $limit,
+        ]);
+    }
+
+    /**
+     * Store browse context (item set or general browse) from Omeka core.
+     *
+     * The item browse controller is used for item set. Only item set contexts
+     * are stored; general browses without filter are ignored.
+     */
+    public function storeResourceNavFromBrowse(Event $event): void
+    {
+        $services = $this->getServiceLocator();
+        if (!$services->get('Omeka\Status')->isSiteRequest()) {
+            return;
+        }
+
+        [$siteSettings, $limit, $enabledTypes] = $this->resourceNavContext();
+        if (!$limit || !in_array('collection', $enabledTypes, true)) {
+            return;
+        }
+
+        $view = $event->getTarget();
+
+        /** @var \Omeka\Api\Representation\SiteRepresentation|null $site */
+        $site = $view->site ?? null;
+        if (!$site) {
+            $site = $services->get('ControllerPluginManager')->get('currentSite')();
+        }
+        if (!$site) {
+            return;
+        }
+
+        // Only store when an item set is displayed (item-set/show context).
+        /** @var \Omeka\Api\Representation\ItemSetRepresentation|null $itemSet */
+        $itemSet = $view->itemSet ?? null;
+        if (!$itemSet) {
+            return;
+        }
+
+        $request = $services->get('Request');
+        $httpQuery = method_exists($request, 'getQuery') ? $request->getQuery()->toArray() : [];
+
+        $apiQuery = $httpQuery;
+        $apiQuery['site_id'] = $site->id();
+        $apiQuery['item_set_id'] = $itemSet->id();
+        $apiQuery['limit'] = $limit;
+        $apiQuery['offset'] = 0;
+        unset($apiQuery['page'], $apiQuery['per_page']);
+
+        try {
+            /** @var \Omeka\Api\Manager $api */
+            $api = $services->get('Omeka\ApiManager');
+            $apiResponse = $api->search('items', $apiQuery, ['returnScalar' => 'id']);
+            $ids = array_values(array_map('intval', $apiResponse->getContent() ?: []));
+            $total = (int) $apiResponse->getTotalResults();
+        } catch (\Throwable $e) {
+            return;
+        }
         if (!$ids) {
             return;
         }
 
+        $this->saveResourceNavSession([
+            'site_id' => $site->id(),
+            'type' => 'collection',
+            'subtype' => '',
+            'label' => $itemSet->displayTitle(),
+            'url' => $itemSet->siteUrl(),
+            'ids' => $ids,
+            'total' => $total,
+            'limit' => $limit,
+            'item_set_id' => $itemSet->id(),
+        ]);
+    }
+
+    /**
+     * Store selection show context, triggered from selection show template.
+     */
+    public function storeResourceNavFromSelection(Event $event): void
+    {
+        $services = $this->getServiceLocator();
+        if (!$services->get('Omeka\Status')->isSiteRequest()) {
+            return;
+        }
+
+        [$siteSettings, $limit, $enabledTypes] = $this->resourceNavContext();
+        if (!$limit || !in_array('selection', $enabledTypes, true)) {
+            return;
+        }
+
+        $view = $event->getTarget();
+
+        /** @var \Selection\Api\Representation\SelectionRepresentation|null $selection */
+        $selection = $view->selection ?? null;
+        if (!$selection) {
+            return;
+        }
+
+        $selectionId = (int) $selection->id();
+
+        // Visibility: public+validated, or owned by the current user, or user
+        // with view-all permission. Match the SelectionController rules.
+        $auth = $services->get('Omeka\AuthenticationService');
+        $user = $auth->hasIdentity() ? $auth->getIdentity() : null;
+        $acl = $services->get('Omeka\Acl');
+        $canViewAll = $user && class_exists(\Selection\Entity\Selection::class)
+            && $acl->userIsAllowed(\Selection\Entity\Selection::class, 'view-all');
+        if (!$canViewAll) {
+            $isOwner = $user
+                && method_exists($selection, 'owner')
+                && $selection->owner()
+                && $selection->owner()->id() === $user->getId();
+            $isPublicAndValidated = method_exists($selection, 'isPublicAndValidated')
+                ? (bool) $selection->isPublicAndValidated()
+                : false;
+            if (!$isOwner && !$isPublicAndValidated) {
+                return;
+            }
+        }
+
+        $site = $view->site ?? null;
+        if (!$site) {
+            $site = $services->get('ControllerPluginManager')->get('currentSite')();
+        }
+        if (!$site) {
+            return;
+        }
+
+        /** @var \Omeka\Api\Manager $api */
+        $api = $services->get('Omeka\ApiManager');
+        try {
+            $srResponse = $api->search('selection_resources', [
+                'selection_id' => $selectionId,
+                'limit' => $limit,
+                'offset' => 0,
+                'sort_by' => 'id',
+                'sort_order' => 'asc',
+            ]);
+            $selectionResources = $srResponse->getContent() ?: [];
+            $total = (int) $srResponse->getTotalResults();
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        $ids = [];
+        foreach ($selectionResources as $sr) {
+            $resource = method_exists($sr, 'resource') ? $sr->resource() : null;
+            if ($resource && $resource->resourceName() === 'items') {
+                $ids[] = (int) $resource->id();
+            }
+        }
+        if (!$ids) {
+            return;
+        }
+
+        $request = $services->get('Request');
+        $url = method_exists($request, 'getRequestUri') ? $request->getRequestUri() : '';
+
+        $this->saveResourceNavSession([
+            'site_id' => $site->id(),
+            'type' => 'selection',
+            'subtype' => '',
+            'label' => method_exists($selection, 'displayTitle')
+                ? (string) $selection->displayTitle()
+                : (method_exists($selection, 'label') ? (string) $selection->label() : ''),
+            'url' => $url,
+            'ids' => $ids,
+            'total' => $total,
+            'limit' => $limit,
+            'selection_id' => $selectionId,
+        ]);
+    }
+
+    /**
+     * @return array{0: \Omeka\Settings\SiteSettings, 1: int, 2: array}
+     */
+    protected function resourceNavContext(): array
+    {
+        $services = $this->getServiceLocator();
+        $siteSettings = $services->get('Omeka\Settings\Site');
+        $limit = (int) $siteSettings->get('advancedsearch_resource_nav_limit', 25);
+        $enabledTypes = $siteSettings->get('advancedsearch_resource_nav_types', ['search', 'collection', 'selection']);
+        if (!is_array($enabledTypes)) {
+            $enabledTypes = [];
+        }
+        return [$siteSettings, $limit, $enabledTypes];
+    }
+
+    protected function saveResourceNavSession(array $data): void
+    {
+        $sessionManager = \Laminas\Session\Container::getDefaultManager();
+        if (!$sessionManager->sessionExists()) {
+            try {
+                $sessionManager->start();
+            } catch (\Throwable $e) {
+                return;
+            }
+        }
+        $session = new \Laminas\Session\Container('AdvancedSearch');
+        $session->resource_nav = $data;
+    }
+
+    public function appendBrowseAfter(Event $event): void
+    {
+        /**
+         * @var \Omeka\Mvc\Status $status
+         */
+        $services = $this->getServiceLocator();
+        $status = $services->get('Omeka\Status');
+        if (($status->isAdminRequest() && !$services->get('Omeka\Settings')->get('disable_jsonld_embed'))
+            || ($status->isSiteRequest() && !$services->get('Omeka\Settings\Site')->get('disable_jsonld_embed'))
+        ) {
+            /**
+             * @var \AdvancedSearch\Response $response
+             * @var \Omeka\Api\Representation\AbstractResourceEntityRepresentation $resource
+             */
+            $view = $event->getTarget();
+            $response = $view->response;
+            foreach ($response->getResources(null, true) as $resource) {
+                echo $resource->embeddedJsonLd();
+            }
+        }
+    }
+
+    /**
+     * Adapted:
+     * @see \AdvancedSearch\Controller\Admin\SearchEngineController::indexAction()
+     * @see \AdvancedSearch\Module::runJobIndexSearch()
+     */
+    protected function runJobIndexSearch(string $resourceType, array $ids): void
+    {
         $services = $this->getServiceLocator();
         $api = $services->get('Omeka\ApiManager');
-        $logger = $services->get('Omeka\Logger');
-        $messenger = $services->get('ControllerPluginManager')->get('messenger');
-        $jobDispatcher = $services->get('Omeka\Job\Dispatcher');
-        $strategy = $sync ? $services->get('Omeka\Job\DispatchStrategy\Synchronous') : null;
+
+        // There is a single job for all engines, so quick check if needed.
 
         /** @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation[] $searchEngines */
         $searchEngines = $api->search('search_engines')->getContent();
-        $first = true;
+        $searchEngineIds = [];
         foreach ($searchEngines as $searchEngine) {
             $indexer = $searchEngine->indexer();
             if ($indexer->canIndex($resourceType)
                 && in_array($resourceType, $searchEngine->setting('resource_types', []))
             ) {
-                $jobArgs = [];
-                $jobArgs['search_engine_id'] = $searchEngine->id();
-                $jobArgs['resource_ids'] = $ids;
-                $jobArgs['resource_types'] = [$resourceType];
-                // Most of the time, there is only one solr index.
-                // TODO Improve indexing of multiple search engines after batch process.
-                $jobArgs['force'] = !$first;
-                try {
-                    $jobDispatcher->dispatch(\AdvancedSearch\Job\IndexSearch::class, $jobArgs, $strategy);
-                    $first = false;
-                } catch (\Exception $e) {
-                    $logger->err(
-                        'Unable to launch index metadata for search engine "{name}": {message}', // @translate
-                        ['name' => $searchEngine->name(), 'message' => $e->getMessage()]
-                    );
-                    $messenger->addWarning(new PsrMessage(
-                        'Unable to launch indexing for the search engine "{name}": see log.', // @translate
-                        ['name' => $searchEngine->name()]
-                    ));
-                }
+                $searchEngineIds[] = $searchEngine->id();
             }
+        }
+
+        if (!count($searchEngineIds)) {
+            return;
+        }
+
+        $logger = $services->get('Omeka\Logger');
+        $messenger = $services->get('ControllerPluginManager')->get('messenger');
+        $jobDispatcher = $services->get('Omeka\Job\Dispatcher');
+        // For testing purpose.
+        $sync = false;
+        $strategy = empty($sync) ? null : $services->get('Omeka\Job\DispatchStrategy\Synchronous');
+
+        $jobArgs = [];
+        $jobArgs['search_engine_ids'] = array_values(array_unique($searchEngineIds));
+        $jobArgs['clear_index'] = false;
+        $jobArgs['resource_ids'] = $ids;
+        $jobArgs['resource_types'] = [$resourceType];
+        $jobArgs['force'] = true;
+        try {
+            $jobDispatcher->dispatch(\AdvancedSearch\Job\IndexSearch::class, $jobArgs, $strategy);
+        } catch (\Throwable $e) {
+            $logger->err(
+                'Unable to launch indexing metadata: {message}', // @translate
+                ['message' => $e->getMessage()]
+            );
+            $messenger->addWarning(new PsrMessage(
+                'Unable to launch indexing metadata: see log.' // @translate
+            ));
         }
     }
 
@@ -1199,23 +1518,32 @@ class Module extends AbstractModule
         $services = $this->getServiceLocator();
         $api = $services->get('Omeka\ApiManager');
 
-        /** @var \Omeka\Api\Request $request */
+        /**
+         * @var \Omeka\Api\Request $request
+         * @var \Omeka\Api\Response $response
+         * @var string $resourceType
+         */
         $request = $event->getParam('request');
         $response = $event->getParam('response');
-        $requestResource = $request->getResource();
+        $resourceType = $request->getResource();
+
+        /** @var \Omeka\Entity\Resource $resource */
+        $resource = $response->getContent();
+        $resourceId = method_exists($resource, 'id') ? (int) $resource->id() : (int) $resource->getId();
+        $resourceId = $resourceId ?: (int) $request->getId();
+        $representation = null;
 
         /** @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation[] $searchEngines */
         $searchEngines = $api->search('search_engines')->getContent();
         foreach ($searchEngines as $searchEngine) {
-            if ($searchEngine->indexer()->canIndex($requestResource)
-                && in_array($requestResource, $searchEngine->setting('resource_types', []))
+            if ($searchEngine->indexer()->canIndex($resourceType)
+                && in_array($resourceType, $searchEngine->setting('resource_types', []))
             ) {
                 if ($request->getOperation() === 'delete') {
-                    $id = $request->getId();
-                    $this->deleteIndexResource($searchEngine, $requestResource, $id);
+                    $this->deleteIndexResource($searchEngine, $resourceType, $resourceId);
                 } else {
-                    $resource = $response->getContent();
-                    $this->updateIndexResource($searchEngine, $resource);
+                    $representation ??= $api->read($resourceType, ['id' => $resourceId])->getContent();
+                    $this->updateIndexResource($searchEngine, $representation);
                 }
             }
         }
@@ -1235,10 +1563,9 @@ class Module extends AbstractModule
 
         $request = $event->getParam('request');
         $response = $event->getParam('response');
-        $itemId = $request->getValue('itemId');
-        $item = $itemId
-            ? $api->read('items', $itemId, [], ['responseContent' => 'resource'])->getContent()
-            : $response->getContent()->getItem();
+        $itemId = $request->getValue('itemId')
+            ?: $response->getContent()->getItem()->getId();
+        $item = $api->read('items', $itemId)->getContent();
 
         /** @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation[] $searchEngines */
         $searchEngines = $api->search('search_engines')->getContent();
@@ -1258,12 +1585,12 @@ class Module extends AbstractModule
      * @param string $resourceType
      * @param int $id
      */
-    protected function deleteIndexResource(SearchEngineRepresentation $searchEngine, $resourceType, $id): void
+    protected function deleteIndexResource(SearchEngineRepresentation $searchEngine, string $resourceType, int $id): void
     {
         $indexer = $searchEngine->indexer();
         try {
             $indexer->deleteResource($resourceType, $id);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $services = $this->getServiceLocator();
             $logger = $services->get('Omeka\Logger');
             $logger->err(
@@ -1282,9 +1609,9 @@ class Module extends AbstractModule
      * Update the index in search engine for a resource.
      *
      * @param SearchEngineRepresentation $searchEngine
-     * @param Resource $resource
+     * @param AbstractResourceRepresentation $resource
      */
-    protected function updateIndexResource(SearchEngineRepresentation $searchEngine, Resource $resource): void
+    protected function updateIndexResource(SearchEngineRepresentation $searchEngine, AbstractResourceRepresentation $resource): void
     {
         $resourceToIndex = $this->filterVisibility($searchEngine, [$resource]);
         if (!count($resourceToIndex)) {
@@ -1294,28 +1621,33 @@ class Module extends AbstractModule
         $indexer = $searchEngine->indexer();
         try {
             $indexer->indexResource($resource);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $services = $this->getServiceLocator();
             $logger = $services->get('Omeka\Logger');
             $logger->err(
                 'Unable to index metadata of resource #{resource_id} for search in search engine "{name}": {message}', // @translate
-                ['resource_id' => $resource->getId(), 'name' => $searchEngine->name(), 'message' => $e->getMessage()]
+                ['resource_id' => $resource->id(), 'name' => $searchEngine->name(), 'message' => $e->getMessage()]
             );
             $messenger = $services->get('ControllerPluginManager')->get('messenger');
             $messenger->addWarning(new PsrMessage(
                 'Unable to update the search index for resource #{resource_id} in search engine "{name}": see log.', // @translate
-                ['resource_id' => $resource->getId(), 'name' => $searchEngine->name()]
+                ['resource_id' => $resource->id(), 'name' => $searchEngine->name()]
             ));
         }
     }
 
+    /**
+     * @param SearchEngineRepresentation $searchEngine
+     * @param AbstractResourceRepresentation[] $resources
+     * @return array
+     */
     protected function filterVisibility(SearchEngineRepresentation $searchEngine, array $resources): array
     {
         $visibility = $searchEngine->setting('visibility');
         if (!in_array($visibility, ['public', 'private'])) {
             return $resources;
         }
-        /** @var \Omeka\Entity\Resource $resource */
+        /** @var \Omeka\Api\Representation\AbstractResourceRepresentation $resource */
         if ($visibility === 'private') {
             foreach ($resources as $key => $resource) {
                 if ($resource->isPublic()) {
@@ -1333,6 +1665,107 @@ class Module extends AbstractModule
     }
 
     /**
+     * Handle cron execute event from EasyAdmin/Cron module.
+     *
+     * Triggered by `easyadmin.cron.execute` on `EasyAdmin\Job\CronTasks`.
+     */
+    public function handleCronExecute(Event $event): void
+    {
+        $taskId = $event->getParam('task_id');
+        if ($taskId !== 'search_index') {
+            return;
+        }
+
+        $services = $this->getServiceLocator();
+        $settings = $services->get('Omeka\Settings');
+        if (!$settings->get('advancedsearch_cron_index')) {
+            return;
+        }
+
+        $this->runCronIndexSearch();
+        $event->setParam('handled', true);
+    }
+
+    /**
+     * Handle cron reindexation independently when EasyAdmin/Cron is not installed.
+     *
+     * This method is triggered on view.layout to execute scheduled
+     * reindexation without requiring the EasyAdmin or Cron module.
+     */
+    public function handleCron(Event $event): void
+    {
+        $services = $this->getServiceLocator();
+
+        /** @var \Omeka\Mvc\Status $status */
+        $status = $services->get('Omeka\Status');
+        if (!$status->isAdminRequest()) {
+            return;
+        }
+
+        /** @var \Omeka\Settings\Settings $settings */
+        $settings = $services->get('Omeka\Settings');
+
+        if (!$settings->get('advancedsearch_cron_index')) {
+            return;
+        }
+
+        // Check frequency (at most once per day = 86400 seconds).
+        $lastCron = (int) $settings->get('advancedsearch_cron_last');
+        $time = time();
+        if ($lastCron + 86400 > $time) {
+            return;
+        }
+        $settings->set('advancedsearch_cron_last', $time);
+
+        $this->runCronIndexSearch();
+    }
+
+    /**
+     * Run the reindexation of all search engines as a background job.
+     */
+    protected function runCronIndexSearch(): void
+    {
+        $services = $this->getServiceLocator();
+        $api = $services->get('Omeka\ApiManager');
+        $logger = $services->get('Omeka\Logger');
+
+        /** @var \AdvancedSearch\Api\Representation\SearchEngineRepresentation[] $searchEngines */
+        $searchEngines = $api->search('search_engines')->getContent();
+        if (!count($searchEngines)) {
+            return;
+        }
+
+        $searchEngineIds = [];
+        foreach ($searchEngines as $searchEngine) {
+            $indexer = $searchEngine->indexer();
+            if ($indexer->canIndex('items')
+                || $indexer->canIndex('item_sets')
+                || $indexer->canIndex('media')
+            ) {
+                $searchEngineIds[] = $searchEngine->id();
+            }
+        }
+        if (!count($searchEngineIds)) {
+            return;
+        }
+
+        $jobArgs = [];
+        $jobArgs['search_engine_ids'] = $searchEngineIds;
+        $jobArgs['clear_index'] = false;
+        $jobArgs['force'] = false;
+
+        $dispatcher = $services->get(\Omeka\Job\Dispatcher::class);
+        try {
+            $dispatcher->dispatch(\AdvancedSearch\Job\IndexSearch::class, $jobArgs);
+        } catch (\Throwable $e) {
+            $logger->err(
+                'AdvancedSearch cron: unable to launch reindexation: {message}', // @translate
+                ['message' => $e->getMessage()]
+            );
+        }
+    }
+
+    /**
      * Add the headers.
      *
      * @param Event $event
@@ -1341,6 +1774,12 @@ class Module extends AbstractModule
     {
         // The admin search field is added via a js hack, because the admin
         // layout doesn't use a partial or a trigger for the sidebar.
+
+        // Avoid issues when the module Common is unavailable.
+        $services = $this->getServiceLocator();
+        if (!$services->has('Common\EasyMeta')) {
+            return;
+        }
 
         $view = $event->getTarget();
 
@@ -1368,10 +1807,7 @@ class Module extends AbstractModule
         try {
             /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
             $searchConfig = $plugins->get('api')->read('search_configs', [is_numeric($searchConfig) ? 'id' : 'slug' => $searchConfig])->getContent();
-        } catch (\Exception $e) {
-            return;
-        }
-        if (!$searchConfig) {
+        } catch (\Throwable $e) {
             return;
         }
 
@@ -1404,6 +1840,7 @@ class Module extends AbstractModule
             }
 
             $plugins->get('headLink')
+                ->appendStylesheet($assetUrl('css/common-autocomplete.css', 'Common'))
                 ->appendStylesheet($assetUrl('css/advanced-search-admin.css', 'AdvancedSearch'));
             $plugins->get('headScript')
                 ->appendScript($script)
@@ -1447,13 +1884,12 @@ class Module extends AbstractModule
             if ($defaultSite) {
                 try {
                     $site = $api->read('sites', ['id' => $defaultSite])->getContent();
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                 }
             }
         }
         if ($site) {
-            $siteSettings->setTargetId($site->id());
-            $searchConfigId = (int) $siteSettings->get('advancedsearch_main_config');
+            $searchConfigId = (int) $siteSettings->get('advancedsearch_main_config', 0, $site->id());
         } else {
             $searchConfigId = (int) $settings->get('advancedsearch_main_config');
         }
@@ -1461,14 +1897,14 @@ class Module extends AbstractModule
         if ($searchConfigId) {
             try {
                 $searchConfig = $api->read('search_configs', [is_numeric($searchConfigId) ? 'id' : 'slug' => $searchConfigId])->getContent();
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
             }
         }
         if (!$searchConfig) {
             try {
                 $searchConfig = $api->search('search_configs', ['limit' => 1])->getContent();
                 $searchConfig = reset($searchConfig);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
             }
         }
         if (!$searchConfig) {
@@ -1479,15 +1915,28 @@ class Module extends AbstractModule
         /** @var \Omeka\Entity\Site $site */
         $site = $event->getParam('response')->getContent();
 
-        $siteSettings->setTargetId($site->getId());
-        $siteSettings->set('advancedsearch_main_config', $searchConfig->id());
-        $siteSettings->set('advancedsearch_configs', [$searchConfig->id()]);
-        $siteSettings->set('advancedsearch_redirect_itemset_browse', ['all']);
-        $siteSettings->set('advancedsearch_redirect_itemset_search', []);
-        $siteSettings->set('advancedsearch_redirect_itemset_search_first', []);
-        $siteSettings->set('advancedsearch_redirect_itemset_page_url', []);
-        $siteSettings->set('advancedsearch_redirect_itemsets', ['default' => 'browse']);
-        $siteSettings->set('advancedsearch_redirect_itemset', 'browse');
+        $siteId = $site->getId();
+        $siteSettings->set('advancedsearch_main_config', $searchConfig->id(), $siteId);
+        $siteSettings->set('advancedsearch_configs', [$searchConfig->id()], $siteId);
+        $siteSettings->set('advancedsearch_item_sets_redirect_browse', ['all'], $siteId);
+        $siteSettings->set('advancedsearch_item_sets_redirect_search', [], $siteId);
+        $siteSettings->set('advancedsearch_item_sets_redirect_search_first', [], $siteId);
+        $siteSettings->set('advancedsearch_item_sets_redirect_page_url', [], $siteId);
+        $siteSettings->set('advancedsearch_item_sets_redirects', ['default' => 'browse'], $siteId);
+        // Compatibility for old themes.
+        $siteSettings->set('advancedsearch_redirect_itemsets', ['default' => 'browse'], $siteId);
+        $siteSettings->set('advancedsearch_redirect_itemset', 'browse', $siteId);
+    }
+
+    public function refreshSearchConfigsList(Event $event): void
+    {
+        $services = $this->getServiceLocator();
+        $connection = $services->get('Omeka\Connection');
+        $settings = $services->get('Omeka\Settings');
+        $rows = $connection
+            ->executeQuery('SELECT `id`, `slug` FROM `search_config` ORDER BY `id` ASC')
+            ->fetchAllKeyValue();
+        $settings->set('advancedsearch_all_configs', array_map('strval', $rows));
     }
 
     protected function installResources(): void

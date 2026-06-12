@@ -2,12 +2,12 @@
 
 namespace AdvancedSearch\Service\Delegator;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\DelegatorFactoryInterface;
 
 class FormElementDelegatorFactory implements DelegatorFactoryInterface
 {
-    public function __invoke(ContainerInterface $container, $name, callable $callback, array $options = null)
+    public function __invoke(ContainerInterface $container, $name, callable $callback, ?array $options = null)
     {
         /** @var \Laminas\Form\View\Helper\FormElement $formElement */
         $formElement = $callback();

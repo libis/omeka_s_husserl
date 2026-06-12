@@ -18,13 +18,20 @@ class SearchSuggesterRepresentation extends AbstractEntityRepresentation
 
     public function getJsonLd()
     {
-        $modified = $this->resource->getModified();
+        $getDateTimeJsonLd = function (?\DateTime $dateTime): ?array {
+            return $dateTime
+                ? [
+                    '@value' => $dateTime->format('c'),
+                    '@type' => 'http://www.w3.org/2001/XMLSchema#dateTime',
+                ]
+                : null;
+        };
         return [
             'o:name' => $this->resource->getName(),
-            'o:search_engine' => $this->searchEngine()->getReference(),
+            'o:search_engine' => $this->searchEngine()->getReference()->jsonSerialize(),
             'o:settings' => $this->resource->getSettings(),
-            'o:created' => $this->getDateTime($this->resource->getCreated()),
-            'o:modified' => $modified ? $this->getDateTime($modified) : null,
+            'o:created' => $getDateTimeJsonLd($this->resource->getCreated()),
+            'o:modified' => $getDateTimeJsonLd($this->resource->getModified()),
         ];
     }
 
@@ -90,9 +97,6 @@ class SearchSuggesterRepresentation extends AbstractEntityRepresentation
     }
 
     /**
-     * @todo Remove site (but manage direct query).
-     * @todo Manage direct query here? Remove it?
-     *
      * Adapted:
      * @see \AdvancedSearch\Api\Representation\SearchConfigRepresentation::suggest()
      * @see \AdvancedSearch\Api\Representation\SearchSuggesterRepresentation::suggest()
@@ -141,7 +145,7 @@ class SearchSuggesterRepresentation extends AbstractEntityRepresentation
                     ->setFieldsQueryArgs($fieldQueryArgs)
                     ->setOption('remove_diacritics', (bool) $searchConfig->subSetting('q', 'remove_diacritics', false))
                     ->setOption('default_search_partial_word', (bool) $searchConfig->subSetting('q', 'default_search_partial_word', false));
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // No aliases.
             }
         }
@@ -150,16 +154,28 @@ class SearchSuggesterRepresentation extends AbstractEntityRepresentation
         $searchEngineSettings = $searchEngine->settings();
         $suggesterSettings = $this->settings();
 
+        // Build suggest options, including Solr-specific settings if present.
+        $suggestOptions = [
+            'suggester' => $this->resource->getId(),
+            'mode_index' => $suggesterSettings['mode_index'] ?? 'start',
+            'mode_search' => $suggesterSettings['mode_search'] ?? 'start',
+            'length' => $suggesterSettings['length'] ?? 20,
+        ];
+
+        // Add Solr-specific options if configured.
+        if (!empty($suggesterSettings['solr_suggester_name'])) {
+            $suggestOptions['solr_suggester_name'] = $suggesterSettings['solr_suggester_name'];
+        } elseif (!empty($suggesterSettings['solr_field'])) {
+            $suggestOptions['solr_suggester_name'] = 'omeka_' . preg_replace('/[^a-z0-9_]/i', '_', strtolower($this->name()));
+        }
+        if (!empty($suggesterSettings['solr_fields'])) {
+            $suggestOptions['solr_fields'] = $suggesterSettings['solr_fields'];
+        }
+
         $query
             ->setResourceTypes($searchEngineSettings['resource_types'])
             ->setLimitPage(1, empty($suggesterSettings['limit']) ? \Omeka\Stdlib\Paginator::PER_PAGE : (int) $suggesterSettings['limit'])
-            ->setSuggestOptions([
-                'suggester' => $this->resource->getId(),
-                'direct' => !empty($suggesterSettings['direct']),
-                'mode_index' => $suggesterSettings['mode_index'] ?? 'start',
-                'mode_search' => $suggesterSettings['mode_search'] ?? 'start',
-                'length' => $suggesterSettings['length'] ?? 50,
-            ])
+            ->setSuggestOptions($suggestOptions)
             ->setSuggestFields($suggesterSettings['fields'] ?? [])
             ->setExcludedFields($suggesterSettings['excluded_fields'] ?? [])
         ;

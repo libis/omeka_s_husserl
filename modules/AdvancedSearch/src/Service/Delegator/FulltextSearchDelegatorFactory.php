@@ -3,12 +3,12 @@
 namespace AdvancedSearch\Service\Delegator;
 
 use AdvancedSearch\Stdlib\FulltextSearchDelegator;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\DelegatorFactoryInterface;
 
 class FulltextSearchDelegatorFactory implements DelegatorFactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $name, callable $callback, array $options = null)
+    public function __invoke(ContainerInterface $services, $name, callable $callback, ?array $options = null)
     {
         // Skip delegator if not enabled.
         $settings = $services->get('Omeka\Settings');

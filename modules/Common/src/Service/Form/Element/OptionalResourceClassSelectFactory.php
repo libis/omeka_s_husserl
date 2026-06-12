@@ -3,12 +3,12 @@
 namespace Common\Service\Form\Element;
 
 use Common\Form\Element\OptionalResourceClassSelect;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class OptionalResourceClassSelectFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         $element = new OptionalResourceClassSelect(null, $options ?? []);
         $element->setApiManager($services->get('Omeka\ApiManager'));

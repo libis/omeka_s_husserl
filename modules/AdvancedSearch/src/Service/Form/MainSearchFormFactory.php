@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /*
- * Copyright Daniel Berthereau, 2018-2025
+ * Copyright Daniel Berthereau, 2018-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -30,12 +30,12 @@
 namespace AdvancedSearch\Service\Form;
 
 use AdvancedSearch\Form\MainSearchForm;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class MainSearchFormFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         $plugins = $services->get('ControllerPluginManager');
         $helpers = $services->get('ViewHelperManager');
@@ -46,6 +46,7 @@ class MainSearchFormFactory implements FactoryInterface
         return (new MainSearchForm(null, $options))
             ->setBasePath($helpers->get('basePath')())
             ->setSite($currentSite)
+            ->setAcl($services->get('Omeka\Acl'))
             ->setApi($services->get('Omeka\ApiManager'))
             ->setEasyMeta($services->get('Common\EasyMeta'))
             ->setEntityManager($services->get('Omeka\EntityManager'))

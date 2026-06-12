@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2018-2025
+ * Copyright Daniel Berthereau, 2018-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -78,7 +78,7 @@ class SearchEngineController extends AbstractActionController
                 'Search index "{name}" created.', // @translate
                 ['name' => $searchEngine->name()]
             ));
-            return $this->redirect()->toUrl($searchEngine->url('edit'));
+            return $this->redirect()->toUrl($searchEngine->adminUrl('edit'));
         }
         return $view;
     }
@@ -169,6 +169,7 @@ class SearchEngineController extends AbstractActionController
 
     /**
      * Adapted:
+     * @see \AdvancedSearch\Controller\Admin\SearchEngineController::indexAction()
      * @see \AdvancedSearch\Module::runJobIndexSearch()
      *
      * {@inheritDoc}
@@ -181,18 +182,43 @@ class SearchEngineController extends AbstractActionController
 
         $clearIndex = (bool) $this->params()->fromPost('clear_index');
         $startResourceId = (int) $this->params()->fromPost('start_resource_id');
-        $resourcesByStep = (int) $this->params()->fromPost('resources_by_step');
-        $resourceTypes = $this->params()->fromPost('resource_types') ?: [];
+        $resourcesByBatch = (int) $this->params()->fromPost('resources_by_batch');
+        $sleepAfterLoop = (int) $this->params()->fromPost('sleep_after_loop');
+        $resourceTypes = $this->params()->fromPost('resource_types')
+            ?: $searchEngine->setting('resource_types', []);
+        $resourcesLimit = (int) $this->params()->fromPost('resources_limit');
+        $resourcesOffset = (int) $this->params()->fromPost('resources_offset');
         $visibility = $this->params()->fromPost('visibility');
         $visibility = in_array($visibility, ['public', 'private']) ? $visibility : null;
         $force = (bool) $this->params()->fromPost('force');
 
+        // Do a quick check if the engine can index at least one resource type.
+        $canIndex = false;
+        $indexer = $searchEngine->indexer();
+        foreach ($resourceTypes as $resourceType) {
+            if ($indexer->canIndex($resourceType)) {
+                $canIndex = true;
+                break;
+            }
+        }
+        if (!$canIndex) {
+            $message = new PsrMessage(
+                'The search engine "{name}" has nothing to index.', // @translate
+                ['name' => $searchEngine->name()]
+            );
+            $this->messenger()->addWarning($message);
+            return $this->redirect()->toRoute('admin/search-manager', ['action' => 'browse'], true);
+        }
+
         $jobArgs = [];
-        $jobArgs['search_engine_id'] = $searchEngine->id();
+        $jobArgs['search_engine_ids'] = [$searchEngine->id()];
         $jobArgs['clear_index'] = $clearIndex;
         $jobArgs['start_resource_id'] = $startResourceId;
-        $jobArgs['resources_by_step'] = $resourcesByStep;
+        $jobArgs['resources_by_batch'] = $resourcesByBatch;
+        $jobArgs['sleep_after_loop'] = $sleepAfterLoop;
         $jobArgs['resource_types'] = $resourceTypes;
+        $jobArgs['resources_limit'] = $resourcesLimit;
+        $jobArgs['resources_offset'] = $resourcesOffset;
         $jobArgs['visibility'] = $visibility;
         $jobArgs['force'] = $force;
 
@@ -208,10 +234,9 @@ class SearchEngineController extends AbstractActionController
                 'link_job' => sprintf('<a href="%1$s">', $urlPlugin->fromRoute('admin/id', ['controller' => 'job', 'id' => $job->getId()])),
                 'job_id' => $job->getId(),
                 'link_end' => '</a>',
-                'link_log' => sprintf('<a href="%1$s">', class_exists('Log\Module', false)
-                    ? $urlPlugin->fromRoute('admin/default', ['controller' => 'log'], ['query' => ['job_id' => $job->getId()]])
-                    : $urlPlugin->fromRoute('admin/id', ['controller' => 'job', 'action' => 'log', 'id' => $job->getId()])
-                ),
+                'link_log' => class_exists('Log\Module', false)
+                    ? sprintf('<a href="%1$s">', $urlPlugin->fromRoute('admin/default', ['controller' => 'log'], ['query' => ['job_id' => $job->getId()]]))
+                    : sprintf('<a href="%1$s" target="_blank">', $urlPlugin->fromRoute('admin/id', ['controller' => 'job', 'action' => 'log', 'id' => $job->getId()])),
             ]
         );
         $message->setEscapeHtml(false);

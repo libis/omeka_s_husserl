@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2017-2025
+ * Copyright Daniel Berthereau, 2017-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -46,15 +46,23 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
 
     public function getJsonLd()
     {
-        $modified = $this->resource->getModified();
+        $getDateTimeJsonLd = function (?\DateTime $dateTime): ?array {
+            return $dateTime
+                ? [
+                    '@value' => $dateTime->format('c'),
+                    '@type' => 'http://www.w3.org/2001/XMLSchema#dateTime',
+                ]
+                : null;
+        };
+
         return [
             'o:name' => $this->resource->getName(),
             'o:slug' => $this->resource->getSlug(),
-            'o:search_engine' => $this->searchEngine()->getReference(),
+            'o:search_engine' => $this->searchEngine()->getReference()->jsonSerialize(),
             'o:form_adapter' => $this->resource->getFormAdapter(),
             'o:settings' => $this->resource->getSettings(),
-            'o:created' => $this->getDateTime($this->resource->getCreated()),
-            'o:modified' => $modified ? $this->getDateTime($modified) : null,
+            'o:created' => $getDateTimeJsonLd($this->resource->getCreated()),
+            'o:modified' => $getDateTimeJsonLd($this->resource->getModified()),
         ];
     }
 
@@ -133,6 +141,32 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
             }
         }
         return null;
+    }
+
+    /**
+     * @return \AdvancedSearch\Indexer\IndexerInterface|null Return null when
+     * there is no search engine, NoopIndexer when there is no indexer, or the
+     * real indexer.
+     */
+    public function indexer(): ?\AdvancedSearch\Indexer\IndexerInterface
+    {
+        $searchEngine = $this->searchEngine();
+        return $searchEngine
+            ? $searchEngine->indexer()
+            : null;
+    }
+
+    /**
+     * @return \AdvancedSearch\Querier\QuerierInterface|null Return null when
+     * there is no search engine, NoopQuerier when there is no querier, or the
+     * real querier.
+     */
+    public function querier(): ?\AdvancedSearch\Querier\QuerierInterface
+    {
+        $searchEngine = $this->searchEngine();
+        return $searchEngine
+            ? $searchEngine->querier()
+            : null;
     }
 
     public function formAdapterName(): ?string
@@ -234,7 +268,7 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
             }
             $logger->err($message->getMessage(), $message->getContext());
             return ['results', $name, $subName];
-        } elseif ($mainName === 'q' && $name ==='fulltext_search') {
+        } elseif ($mainName === 'q' && $name === 'fulltext_search') {
             $services = $this->getServiceLocator();
             $logger = $services->get('Omeka\Logger');
             $message = new PsrMessage(
@@ -288,7 +322,9 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
      *   - template (string): Use a specific template instead of the default one.
      *     This is the template of the form, not the main template of the search
      *     config.
-     *   - skip_form_action (bool): Don't set form action, so use the current page.
+     *   - skip_form_action (bool): Don't set form action, so use current page.
+     *   - form_action (string|null): Custom form action url. If set, this url
+     *     is used instead of the default.
      *   - skip_partial_headers (bool): Skip partial headers.
      *   - skip_values: Does not init form element values (quicker results).
      *   - variant: Name of a variant of the form;
@@ -316,21 +352,48 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
      */
     public function renderSearchFilters(Query $query, array $options = []): string
     {
-        $template = $options['template'] ?? null;
-
         // TODO Use the managed query to get a clean query.
 
         $params = $this->getViewHelper('params');
         $request = $params->fromQuery();
 
-        // Manage exception.
+        // Quick clean query.
+        $arrayFilterRecursiveEmpty = null;
+        $arrayFilterRecursiveEmpty = function (array &$array) use (&$arrayFilterRecursiveEmpty): array {
+            foreach ($array as $key => $value) {
+                if (is_array($value) && $value) {
+                    $array[$key] = $arrayFilterRecursiveEmpty($value);
+                }
+                if (in_array($array[$key], ['', null, []], true)) {
+                    unset($array[$key]);
+                }
+            }
+            return $array;
+        };
+        $arrayFilterRecursiveEmpty($request);
+
+        // Manage exceptions.
+
+        // Don't display the resource type if the search engine support only one
+        // resource type and if it is the one set in the query.
+        // It is used especially for the search engine for item-set/browse.
+        $resourceTypes = $query->getResourceTypes();
+        if (count($resourceTypes) === 1) {
+            $searchEngine = $this->searchEngine();
+            $searchEngineResourceTypes = $searchEngine ? $searchEngine->setting('resource_types', []) : [];
+            if (count($searchEngineResourceTypes) === 1
+                && reset($resourceTypes) === reset($searchEngineResourceTypes)
+            ) {
+                unset($request['resource_type']);
+            }
+        }
 
         // Don't display the current item set argument on item set page.
         $currentItemSet = (int) $params->fromRoute('item-set-id');
         if ($currentItemSet) {
-            foreach ($request as $key => $value) {
-                // TODO Use the form adapter to get the real arg for the item set.
-                if ($value && $key === 'item_set_id' || $key === 'item_set') {
+            foreach (['item_set_id', 'item_set'] as $key) {
+                if (!empty($request[$key])) {
+                    $value = $request[$key];
                     if (is_array($value)) {
                         // Check if this is not a sub array (item_set[id][]).
                         $first = reset($value);
@@ -348,7 +411,6 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
                     } elseif ((int) $value === $currentItemSet) {
                         unset($request[$key]);
                     }
-                    break;
                 }
             }
         }
@@ -356,15 +418,32 @@ class SearchConfigRepresentation extends AbstractEntityRepresentation
         $request['__searchConfig'] = $this;
         $request['__searchQuery'] = $query;
 
-        // The search filters trigger event "'view.search.filters", that calls
+        // Forward caller options (e.g. "show_field_label") to the partial via a
+        // sentinel key in $request. The view helper SearchFilters reads it
+        // before forwarding to the partial and removes it from the query used
+        // to build "remove this filter" urls, so it does not leak into URLs.
+        // The display mode (readonly | links | link_remove) is NOT passed here:
+        // it is read from the search config setting "search_filters_mode" by
+        // the helper itself, so themes do not need to forward it. The key
+        // "template" is also not accepted: the partial used for AdvancedSearch
+        // is fixed (SearchFilters::PARTIAL_NAME, override-able by theme) and
+        // injecting a "template" option in $request would have caused the
+        // sentinel to leak into filter-remove URLs as
+        // "?__partialOptions[template]=...".
+        $request['__partialOptions'] = $options;
+
+        // The search filters trigger event "view.search.filters", that calls
         // the method filterSearchingFilter(). This process allows to use the
         // standard filters.
-        return $this->getViewHelper('searchFilters')->__invoke($template, $request);
+        return $this->getViewHelper('searchFilters')->__invoke(null, $request);
     }
 
     /**
-     * @todo Remove site (but manage direct query).
-     * @todo Manage direct query here? Remove it?
+     * Get suggestions for autocompletion.
+     *
+     * When a suggester is configured and no specific field is requested, the
+     * indexed suggestions are used. When a specific field is requested, a
+     * direct database query is performed (slower but field-specific).
      *
      * Adapted:
      * @see \AdvancedSearch\Api\Representation\SearchConfigRepresentation::suggest()

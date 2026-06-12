@@ -3,7 +3,7 @@
 namespace Common\Service;
 
 use Common\Log\Formatter\PsrLogSimple as PsrLogSimpleFormatter;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\Log\Filter\Priority;
 use Laminas\Log\Logger;
 use Laminas\Log\Writer\Noop;
@@ -20,7 +20,7 @@ class LoggerFactory implements FactoryInterface
      *
      * @return Logger
      */
-    public function __invoke(ContainerInterface $serviceLocator, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $serviceLocator, $requestedName, ?array $options = null)
     {
         $config = $serviceLocator->get('Config');
         if (isset($config['logger']['log'])

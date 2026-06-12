@@ -11,6 +11,7 @@ use Omeka\Api\Exception\NotFoundException;
  * View helper for rendering search filters for the advanced search response.
  *
  * @deprecated Use $searchConfig->renderSearchFilters() instead.
+ * @see \AdvancedSearch\Api\Representation\SearchConfigRepresentation::renderSearchFilters()
  * @todo Once the main standard form will support any index cleanly, all this class will be moved to SearchFilters.
  */
 class SearchingFilters extends AbstractHelper
@@ -104,6 +105,7 @@ class SearchingFilters extends AbstractHelper
             '__original_query' => null,
             '__searchConfig' => null,
             '__searchQuery' => null,
+            '__partialOptions' => null,
         ];
 
         $this->query = array_diff_key($query, $skip);
@@ -138,8 +140,11 @@ class SearchingFilters extends AbstractHelper
 
             switch ($key) {
                 case 'q':
+                    // The main search query is added first so that it appears
+                    // before any other filter previously collected by the
+                    // SearchFilters helper.
                     $filterLabel = $translate('Query'); // @translate
-                    $filters[$filterLabel][$this->urlQuery($key)] = $value;
+                    $filters = [$filterLabel => [$this->urlQuery($key) => $value]] + $filters;
                     break;
 
                 // Here, resource type is the api name (items, item_sets, etc.).
@@ -199,8 +204,13 @@ class SearchingFilters extends AbstractHelper
                                 $filterValue = $translate('Unknown class'); // @translate
                             }
                         } else {
-                            $filterValue = $translate($api->searchOne('resource_classes', ['term' => $subValue])->getContent());
-                            $filterValue = $filterValue ? $filterValue->label() : $translate('Unknown class');
+                            try {
+                                $vocabularyId = $api->read('vocabularies', ['prefix' => strtok($subValue, ':')])->getContent()->id();
+                                $resourceClass = $this->read('resource_classes', ['vocabulary' => $vocabularyId, 'localName' => strtok(':')])->getContent();
+                                $filterValue = $translate($resourceClass->label());
+                            } catch (NotFoundException $e) {
+                                $filterValue = $translate('Unknown class'); // @translate
+                            }
                         }
                         $urlQuery = $isId ? $this->urlQueryId($key, $subKey) : $this->urlQuery($key, $subKey);
                         $filters[$filterLabel][$urlQuery] = $filterValue;
@@ -218,8 +228,11 @@ class SearchingFilters extends AbstractHelper
                                 $filterValue = $translate('Unknown template'); // @translate
                             }
                         } else {
-                            $filterValue = $translate($api->searchOne('resource_templates', ['label' => $subValue])->getContent());
-                            $filterValue = $filterValue ? $filterValue->label() : $translate('Unknown template');
+                            try {
+                                $filterValue = $api->read('resource_templates', ['label' => $subValue])->getContent()->label();
+                            } catch (NotFoundException $e) {
+                                $filterValue = $translate('Unknown template');
+                            }
                         }
                         $urlQuery = $isId ? $this->urlQueryId($key, $subKey) : $this->urlQuery($key, $subKey);
                         $filters[$filterLabel][$urlQuery] = $filterValue;
@@ -380,7 +393,7 @@ class SearchingFilters extends AbstractHelper
     protected function urlQuery($key, $subKey = null): string
     {
         $newQuery = $this->queryForUrl;
-        if (is_null($subKey) || !is_array($newQuery[$key]) || count($newQuery[$key]) <= 1) {
+        if ($subKey === null || !is_array($newQuery[$key]) || count($newQuery[$key]) <= 1) {
             unset($newQuery[$key]);
         } else {
             unset($newQuery[$key][$subKey]);

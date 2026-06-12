@@ -3,12 +3,12 @@
 namespace CleanUrl\Service\ViewHelper;
 
 use CleanUrl\View\Helper\GetIdentifiersFromResourcesOfType;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class GetIdentifiersFromResourcesOfTypeFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         $optionsResources = [];
         $settings = $services->get('Omeka\Settings');

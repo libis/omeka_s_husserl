@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2020-2025
+ * Copyright Daniel Berthereau, 2020-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -38,8 +38,6 @@ class IndexController extends AbstractActionController
 {
     public function browseAction()
     {
-        $this->warnOverriddenSearch();
-
         $api = $this->api();
         $searchEngines = $api->search('search_engines', ['sort_by' => 'name'])->getContent();
         $searchConfigs = $api->search('search_configs', ['sort_by' => 'name'])->getContent();
@@ -47,10 +45,13 @@ class IndexController extends AbstractActionController
 
         $this->updateListSearchSlugs($searchConfigs);
 
+        $runningJobs = $this->listRunningSearchJobs();
+
         return new ViewModel([
             'searchEngines' => $searchEngines,
             'searchConfigs' => $searchConfigs,
             'suggesters' => $suggesters,
+            'runningJobs' => $runningJobs,
         ]);
     }
 
@@ -69,69 +70,74 @@ class IndexController extends AbstractActionController
     }
 
     /**
-     * Adapted:
-     * @see \AdvancedSearch\Module::warnOverriddenSearch()
-     * @see \AdvancedSearch\Controller\Admin\IndexController::warnOverriddenSearch()
+     * List running jobs for search indexing and suggesters.
      *
-     * @todo Identify modules, blocks and queries that use old features.
+     * @return array Keys: "engines" and "suggesters", each an
+     * array of JobRepresentation keyed by engine/suggester id.
      */
-    protected function warnOverriddenSearch(): bool
+    protected function listRunningSearchJobs(): array
     {
-        $api = $this->plugins->get('api');
-        $settings = $this->plugins->get('settings')();
-        $siteSettings = $this->plugins->get('siteSettings')();
-        $messenger = $this->plugins->get('messenger');
+        $connection = $this->getEvent()
+            ->getApplication()
+            ->getServiceManager()
+            ->get('Omeka\Connection');
 
-        /*
-        $improvedTemplates = [
-            'common/advanced-search/properties-improved'
-            'common/advanced-search/resource-class-improved',
-            'common/advanced-search/resource-template-improved',
-            'common/advanced-search/item-sets-improved',
-            'common/advanced-search/site-improved',
-            'common/advanced-search/media-type-improved',
-            'common/advanced-search/owner-improved',
+        $jobClasses = [
+            \AdvancedSearch\Job\IndexSearch::class,
+            \AdvancedSearch\Job\IndexSuggestions::class,
         ];
-        */
-
-        $results = [];
-        $searchFields = $settings->get('advancedsearch_search_fields') ?: [];
-        // foreach ($searchFields as $searchField) {
-        //     if (substr($searchField, -9) === '-improved') {
-        //         $results[0] = 'admin';
-        //         break;
-        //     }
-        // }
-        if (in_array('common/advanced-search/properties-improved', $searchFields)) {
-            $results[0] = 'admin';
+        $solrClass = 'SearchSolr\Job\CreateSolrSuggesters';
+        if (class_exists($solrClass)) {
+            $jobClasses[] = $solrClass;
         }
 
-        $siteSlugs = $api->search('sites', [], ['returnScalar' => 'slug'])->getContent();
-        foreach ($siteSlugs as $siteId => $siteSlug) {
-            $siteSettings->setTargetId($siteId);
-            $searchFields = $siteSettings->get('advancedsearch_search_fields') ?: [];
-            // foreach ($searchFields as $searchField) {
-            //     if (substr($searchField, -9) === '-improved') {
-            //         $results[$siteId] = $siteSlug;
-            //         break;
-            //     }
-            // }
-            if (in_array('common/advanced-search/properties-improved', $searchFields)) {
-                $results[$siteId] = $siteSlug;
+        $sql = 'SELECT id, class, args FROM job'
+            . ' WHERE class IN (?)'
+            . ' AND status IN (?, ?)'
+            . ' ORDER BY id DESC';
+        $rows = $connection->executeQuery($sql, [
+            $jobClasses,
+            \Omeka\Entity\Job::STATUS_STARTING,
+            \Omeka\Entity\Job::STATUS_IN_PROGRESS,
+        ], [
+            \Doctrine\DBAL\Connection::PARAM_STR_ARRAY,
+            \Doctrine\DBAL\ParameterType::STRING,
+            \Doctrine\DBAL\ParameterType::STRING,
+        ])->fetchAllAssociative();
+
+        if (!$rows) {
+            return ['engines' => [], 'suggesters' => []];
+        }
+
+        $api = $this->api();
+        $jobRepresentations = [];
+        foreach (array_unique(array_column($rows, 'id')) as $jobId) {
+            try {
+                $jobRepresentations[$jobId] = $api
+                    ->read('jobs', $jobId)->getContent();
+            } catch (\Throwable $e) {
+                // Job may have completed between query and read.
             }
         }
 
-        if (!count($results)) {
-            return false;
+        $result = ['engines' => [], 'suggesters' => []];
+        foreach ($rows as $row) {
+            if (!isset($jobRepresentations[$row['id']])) {
+                continue;
+            }
+            $job = $jobRepresentations[$row['id']];
+            $args = json_decode($row['args'] ?? '{}', true) ?: [];
+            if ($row['class'] === \AdvancedSearch\Job\IndexSearch::class) {
+                foreach ($args['search_engine_ids'] ?? [] as $eid) {
+                    $result['engines'][$eid] = $job;
+                }
+            } else {
+                $sid = $args['search_suggester_id'] ?? null;
+                if ($sid) {
+                    $result['suggesters'][$sid] = $job;
+                }
+            }
         }
-
-        $message = new PsrMessage(
-            'The setting to override search element "property" is enabled. This feature will be removed in a future version and should be {link}replaced by the search element "filter"{link_end}. Check your pages and settings. Matching sites: {json}', // @translate
-            ['link' => '<a href="https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch#deprecated-improvements-of-the-advanced-search-elements" target="_blank" rel="noopener">', 'link_end' => '</a>', 'json' => json_encode($results, 448)]
-        );
-        $message->setEscapeHtml(false);
-        $messenger->addWarning($message);
-
-        return true;
+        return $result;
     }
 }

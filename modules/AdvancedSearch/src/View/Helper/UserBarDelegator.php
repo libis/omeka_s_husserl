@@ -18,7 +18,7 @@ use Omeka\View\Helper\UserBar;
  * Copy:
  * @see \AdvancedSearch\View\Helper\UserBarDelegator
  * @see \Guest\View\Helper\UserBarDelegator
- * @see \GuestPrivateRole\View\Helper\UserBarDelegator
+ * @see \GuestPrivate\View\Helper\UserBarDelegator
  */
 class UserBarDelegator extends UserBar
 {
@@ -59,8 +59,8 @@ class UserBarDelegator extends UserBar
 
         $locale = null;
 
-        $hasAdminRights = $user && $view->userIsAllowed('Omeka\Controller\Admin\Index');
-        if (!$hasAdminRights && !$view->siteSetting('guest_show_user_bar')) {
+        $hasAdminRights = $user && $view->userIsAllowed('Omeka\Controller\Admin\Index', 'index');
+        if (!$hasAdminRights && !$view->siteSetting('guest_show_user_bar_for_guest')) {
             return '';
         }
 
@@ -134,7 +134,7 @@ class UserBarDelegator extends UserBar
             'resource' => 'advanced-search-config',
             'action' => 'browse',
             'text' => $translate('Search config', null, $locale), // @translate
-            'url' => $url('admin/search-manager/config-id', ['id' => $params['id'], 'action' => 'configure']),
+            'url' => $url('admin/search-manager/config-id', ['id' => $params['id'], 'action' => 'edit']),
         ];
 
         return $links;

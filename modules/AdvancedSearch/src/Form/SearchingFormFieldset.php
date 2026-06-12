@@ -4,6 +4,7 @@ namespace AdvancedSearch\Form;
 
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
+use Omeka\Form\Element as OmekaElement;
 
 class SearchingFormFieldset extends Fieldset
 {
@@ -41,6 +42,34 @@ class SearchingFormFieldset extends Fieldset
                 ],
                 'attributes' => [
                     'id' => 'searching-form-display-results',
+                ],
+            ])
+            ->add([
+                'name' => 'o:block[__blockIndex__][o:data][properties]',
+                'type' => OmekaElement\ArrayTextarea::class,
+                'options' => [
+                    'label' => 'Properties to display for each result', // @translate
+                    'info' => 'List of property terms to display below each result, one by line.', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'searching-form-properties',
+                    'rows' => 5,
+                    'placeholder' => <<<TXT
+                        dcterms:creator
+                        dcterms:date
+                        dcterms:subject
+                        TXT,
+                ],
+            ])
+            ->add([
+                'name' => 'o:block[__blockIndex__][o:data][autoscroll]',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Auto-scroll to block', // @translate
+                    'info' => 'When enabled, the page will scroll to this block after form submission. Useful when the block is not at the top of the page.', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'searching-form-autoscroll',
                 ],
             ])
             ->add([

@@ -2,7 +2,7 @@
 
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2020-2025
+ * Copyright Daniel Berthereau, 2020-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -44,13 +44,20 @@ class SearchEngineRepresentation extends AbstractEntityRepresentation
 
     public function getJsonLd()
     {
-        $modified = $this->resource->getModified();
+        $getDateTimeJsonLd = function (?\DateTime $dateTime): ?array {
+            return $dateTime
+                ? [
+                    '@value' => $dateTime->format('c'),
+                    '@type' => 'http://www.w3.org/2001/XMLSchema#dateTime',
+                ]
+                : null;
+        };
         return [
             'o:name' => $this->resource->getName(),
             'o:engine_adapter' => $this->resource->getEngineAdapter(),
             'o:settings' => $this->resource->getSettings(),
-            'o:created' => $this->getDateTime($this->resource->getCreated()),
-            'o:modified' => $modified ? $this->getDateTime($modified) : null,
+            'o:created' => $getDateTimeJsonLd($this->resource->getCreated()),
+            'o:modified' => $getDateTimeJsonLd($this->resource->getModified()),
         ];
     }
 
@@ -73,10 +80,14 @@ class SearchEngineRepresentation extends AbstractEntityRepresentation
         return $this->resource->getName();
     }
 
+    /**
+     * Slugify and lower case the search engine name.
+     */
     public function cleanName(): string
     {
-        return strtolower(str_replace('__', '_',
-            preg_replace('/[^a-zA-Z0-9]/', '_', $this->resource->getName())
+        return strtolower(strtr(
+            preg_replace('/[^a-zA-Z0-9]/', '_', $this->resource->getName()),
+            ['__' => '_']
         ));
     }
 

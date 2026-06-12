@@ -11,6 +11,8 @@
 $translate = $this->plugin('translate');
 
 $resourceTypes = $resource->searchEngine()->setting('resource_types', []);
+$engineAdapter = $resource->engineAdapter();
+$isInternal = $engineAdapter && $engineAdapter instanceof \AdvancedSearch\EngineAdapter\Internal;
 
 $this->form->setAttribute('action', $resource->url('index'));
 $this->form->setButtonLabel($translate('Confirm reindex'));
@@ -24,18 +26,16 @@ $this->form->setButtonLabel($translate('Confirm reindex'));
     <div id="sidebar-confirm">
         <h3><?= sprintf($translate('Reindex "%s"'), $resource->name()) ?></h3>
         <p><?= $translate('Are you sure you would like to reindex this suggester?') ?></p>
+        <?php if ($isInternal): ?>
         <p>
-        <?= $translate('All the suggestions will be cleared first, so the search will be unavailable for a while (instant for mode "full" by sql, some minutes or some hours else).') ?>
-        <?= $translate('You may redirect the users to a clone of the current suggester temporary.') ?>
+        <?= $translate('All the suggestions will be cleared first, so the search will be unavailable for a while.') ?>
+        <?= $translate('You may redirect the users to a clone of the current suggester temporarily.') ?>
         </p>
+        <?php else: ?>
         <p>
-            <?= $translate('Process of indexation') ?>
-            <br/>
-            <br/>
-            <input form="<?= $form->getName() ?>" type="radio" name="process_mode" id="process_mode" value="sql"/><?= $translate('Direct sql (in particular mode "full")') ?>
-            <br/>
-            <input form="<?= $form->getName() ?>" type="radio" name="process_mode" id="process_mode" value="orm" checked="checked"/><?= $translate('Orm (slower but more precise index, required for old database, or small memory)') ?>
+        <?= $translate('Reindexing is unnecessary if the search engine has just been reindexed, unless the suggester has option to skip reindex.') ?>
         </p>
+        <?php endif; ?>
         <p>
         <?php if ($listJobStatusesByIds): ?>
 	        <?= sprintf($translate('%1$d running indexings: #%2$s.'), count($listJobStatusesByIds), implode(', #', array_keys($listJobStatusesByIds))) ?><br />
@@ -43,9 +43,6 @@ $this->form->setButtonLabel($translate('Confirm reindex'));
         <?php else: ?>
             <?= $translate('No running indexing: process can be launched.') ?>
         <?php endif; ?>
-        </p>
-        <p>
-            <input form="<?= $form->getName() ?>" name="foreground" type="checkbox" /><?= $translate('Index in foreground') ?><br />
         </p>
         <?= $this->form($form) ?>
     </div>

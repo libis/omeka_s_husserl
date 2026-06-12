@@ -2,6 +2,55 @@
 
 namespace AdvancedSearch;
 
+// The constant is not available during upgrade.
+/** @see \AdvancedSearch\Stdlib\SearchResources::FIELD_QUERY['labels'] */
+$allFilterTypes = [
+    'eq', 'neq', 'in', 'nin',
+    'sw', 'nsw', 'ew', 'new',
+    'near', 'nnear', 'ma', 'nma',
+    'lt', 'lte', 'gte', 'gt',
+    '<', '≤', '≥', '>',
+    'yreq', 'nyreq', 'yrgte', 'yrlte', 'yrgt', 'yrlt',
+    'res', 'nres', 'resq', 'nresq',
+    'lex', 'nlex', 'lres', 'nlres', 'lkq', 'nlkq',
+    'ex', 'nex', 'exs', 'nexs', 'exm', 'nexm',
+    'dtp', 'ndtp', 'tp', 'ntp',
+    'tpl', 'ntpl', 'tpr', 'ntpr', 'tpu', 'ntpu',
+    'dup', 'ndup', 'dupt', 'ndupt', 'dupl', 'ndupl',
+    'duptl', 'nduptl',
+    'dupv', 'ndupv', 'dupvt', 'ndupvt', 'dupvl', 'ndupvl',
+    'dupvtl', 'ndupvtl',
+    'dupr', 'ndupr', 'duprt', 'nduprt', 'duprl', 'nduprl',
+    'duprtl', 'nduprtl',
+    'dupu', 'ndupu', 'duput', 'nduput', 'dupul', 'ndupul',
+    'duputl', 'nduputl',
+];
+
+/** @see \AdvancedSearch\Stdlib\SearchResources::FIELD_QUERY['default'] */
+$defaultFilterTypes = [
+    'eq', 'neq', 'in', 'nin',
+    'sw', 'nsw', 'ew', 'new',
+    'lt', 'lte', 'gte', 'gt',
+    'yreq', 'nyreq', 'yrgte', 'yrlte',
+    'res', 'nres',
+    'lex', 'nlex',
+    'ex', 'nex', 'exs', 'nexs', 'exm', 'nexm',
+    'dtp', 'ndtp', 'tp', 'ntp',
+];
+
+$defaultAutosuggestBlacklist = [
+    'dcterms:abstract',
+    'dcterms:bibliographicCitation',
+    'dcterms:description',
+    'dcterms:extent',
+    'dcterms:tableOfContents',
+    'bibo:abstract',
+    'bibo:content',
+    'curation:data',
+    'curation:note',
+    'extracttext:extracted_text',
+];
+
 return [
     'api_adapters' => [
         'invokables' => [
@@ -55,6 +104,7 @@ return [
         'invokables' => [
             'facetActives' => View\Helper\FacetActives::class,
             'facetCheckboxes' => View\Helper\FacetCheckboxes::class,
+            'facetCheckboxesFilter' => View\Helper\FacetCheckboxesFilter::class,
             'facetCheckboxesTree' => View\Helper\FacetCheckboxesTree::class,
             'facetElements' => View\Helper\FacetElements::class,
             'facetLinks' => View\Helper\FacetLinks::class,
@@ -73,6 +123,7 @@ return [
             'searchingValue' => View\Helper\SearchingValue::class,
             'searchPaginationPerPageSelector' => View\Helper\SearchPaginationPerPageSelector::class,
             'searchSortSelector' => View\Helper\SearchSortSelector::class,
+            'storeResourceNav' => View\Helper\StoreResourceNav::class,
         ],
         'factories' => [
             'apiSearch' => Service\ViewHelper\ApiSearchFactory::class,
@@ -106,6 +157,17 @@ return [
             'searchingForm' => Site\BlockLayout\SearchingForm::class,
         ],
     ],
+    'resource_page_block_layouts' => [
+        'invokables' => [
+            'searchingForm' => Site\ResourcePageBlockLayout\SearchingForm::class,
+            'resourceNav' => Site\ResourcePageBlockLayout\ResourceNav::class,
+        ],
+    ],
+    'block_templates' => [
+        'browsePreview' => [
+            'browse-preview-resource-nav' => 'Advanced Search: Browse preview with resource navigation', // @translate
+        ],
+    ],
     'form_elements' => [
         'invokables' => [
             Form\Element\MultiText::class => Form\Element\MultiText::class,
@@ -116,6 +178,8 @@ return [
             Form\Admin\SearchConfigConfigureForm::class => Service\Form\SearchConfigConfigureFormFactory::class,
             Form\Admin\SearchConfigFacetFieldset::class => \Common\Service\Form\GenericFormFactory::class,
             Form\Admin\SearchConfigFilterFieldset::class => \Common\Service\Form\GenericFormFactory::class,
+            Form\Admin\SearchConfigSettingsFieldset::class => Service\Form\SearchConfigSettingsFieldsetFactory::class,
+            Form\Admin\SearchConfigSitesFieldset::class => Service\Form\SearchConfigSitesFieldsetFactory::class,
             Form\Admin\SearchConfigSortFieldset::class => \Common\Service\Form\GenericFormFactory::class,
             Form\Admin\SearchConfigForm::class => Service\Form\SearchConfigFormFactory::class,
             Form\Admin\SearchEngineConfigureForm::class => \Common\Service\Form\GenericFormFactory::class,
@@ -322,24 +386,6 @@ return [
                 ],
             ],
         ],
-        'AdvancedSearch\Config' => [
-            [
-                'label' => 'Settings', // @translate
-                'route' => 'admin/search-manager/config-id',
-                'resource' => Controller\Admin\SearchConfigController::class,
-                'action' => 'edit',
-                'privilege' => 'edit',
-                'useRouteMatch' => true,
-            ],
-            [
-                'label' => 'Configure', // @translate
-                'route' => 'admin/search-manager/config-id',
-                'resource' => Controller\Admin\SearchConfigController::class,
-                'action' => 'configure',
-                'privilege' => 'edit',
-                'useRouteMatch' => true,
-            ],
-        ],
     ],
     'assets' => [
         // Override internals assets. Only for Omeka assets: modules can use another filename.
@@ -398,13 +444,18 @@ return [
                 'common/advanced-search/data-type-geography',
                 'common/numeric-data-types-advanced-search',
             ],
+            'advancedsearch_filter_types' => $allFilterTypes,
+            'advancedsearch_filter_value_autosuggest_whitelist' => ['all'],
+            'advancedsearch_filter_value_autosuggest_blacklist' => $defaultAutosuggestBlacklist,
+            'advancedsearch_filter_joiner_not' => true,
             'advancedsearch_fulltextsearch_alto' => false,
             'advancedsearch_main_config' => 1,
             'advancedsearch_api_config' => '',
-            // TODO Remove this option if there is no issue with sync or async (except multiple search engines).
-            'advancedsearch_index_batch_edit' => 'sync',
             // Hidden value.
             'advancedsearch_all_configs' => [1 => 'find'],
+            'advancedsearch_cron_index' => false,
+            // Hidden value, storing last processed cron time.
+            'advancedsearch_cron_last' => null,
         ],
         'site_settings' => [
             // See the full list below.
@@ -429,22 +480,51 @@ return [
                 'common/advanced-search/data-type-geography',
                 'common/numeric-data-types-advanced-search',
             ],
-            'advancedsearch_main_config' => 1,
+            'advancedsearch_filter_types' => $defaultFilterTypes,
+            'advancedsearch_filter_value_autosuggest_whitelist' => ['all'],
+            'advancedsearch_filter_value_autosuggest_blacklist' => $defaultAutosuggestBlacklist,
+            'advancedsearch_filter_joiner_not' => true,
             'advancedsearch_configs' => [1],
-            'advancedsearch_redirect_itemset_browse' => ['all'],
-            'advancedsearch_redirect_itemset_search' => [],
-            'advancedsearch_redirect_itemset_search_first' => [],
-            'advancedsearch_redirect_itemset_page_url' => [],
+            'advancedsearch_main_config' => 1,
+            'advancedsearch_items_config' => 1,
+            'advancedsearch_items_template_form' => null,
+            'advancedsearch_media_config' => 1,
+            'advancedsearch_media_template_form' => null,
+            'advancedsearch_item_sets_config' => 1,
+            'advancedsearch_item_sets_template_form' => null,
+            'advancedsearch_item_sets_scope' => 0,
+            'advancedsearch_item_sets_redirect_browse' => ['all'],
+            'advancedsearch_item_sets_redirect_search' => [],
+            'advancedsearch_item_sets_redirect_search_first' => [],
+            'advancedsearch_item_sets_redirect_page_url' => [],
+            'advancedsearch_item_sets_browse_config' => 0,
+            'advancedsearch_item_sets_browse_page' => '',
+            'advancedsearch_items_browse_config' => 0,
+            'advancedsearch_resource_nav_types' => [
+                'search',
+                'collection',
+                'selection',
+            ],
+            'advancedsearch_resource_nav_limit' => 25,
+            'advancedsearch_resource_nav_fallback_item_set' => '',
+            'advancedsearch_resource_nav_display' => [
+                'type_label',
+                'context_label',
+                'position',
+            ],
             // Hidden options.
             // This option is a merge of the previous ones for simplicity.
+            'advancedsearch_item_sets_redirects' => [],
+            // The old options are not removed for now for compatibility with old themes (search, links).
             'advancedsearch_redirect_itemsets' => [],
-            // The old option is not removed for now for compatibility with old themes (search, links).
             'advancedsearch_redirect_itemset' => 'browse',
         ],
         'block_settings' => [
             'searchingForm' => [
                 'search_config' => null,
                 'display_results' => true,
+                'properties' => [],
+                'autoscroll' => false,
                 'query' => [],
                 'query_filter' => [],
                 'link' => '',
@@ -466,6 +546,7 @@ return [
             'common/advanced-search/properties' => [
                 'label' => 'Properties', // @translate
             ],
+            /*
             'common/advanced-search/properties-improved' => [
                 'module' => 'AdvancedSearch',
                 'label' => 'Properties *', // @translate
@@ -473,6 +554,7 @@ return [
                 'default_site' => false,
                 'improve' => 'common/advanced-search/properties',
             ],
+            */
             'common/advanced-search/filters' => [
                 'module' => 'AdvancedSearch',
                 'label' => 'Filters', // @translate
@@ -616,13 +698,22 @@ return [
                 'default_site' => false,
             ],
 
-            // From module data type geometry.
+            // From module Access.
+            'common/advanced-search/access' => [
+                'module' => 'Access',
+                'label' => 'Access', // @translate
+                'resource_type' => ['item_sets', 'items', 'media'],
+                'default_admin' => true,
+                'default_site' => false,
+            ],
+
+            // From module Data Type Geometry.
             'common/advanced-search/data-type-geography' => [
                 'module' => 'DataTypeGeometry',
                 'label' => 'Geography', // @translate
             ],
 
-            // From module dynamic item sets.
+            // From module Dynamic Item Sets.
             'common/advanced-search/item-set-is-dynamic' => [
                 'module' => 'Dynamic Item Sets',
                 'label' => 'Is dynamic item set', // @translate
@@ -630,7 +721,7 @@ return [
                 'resource_type' => ['item_sets'],
             ],
 
-            // From module numeric data type.
+            // From module Numeric Data Type.
             // The partial is used only in search items, but data are available
             // anywhere.
             'common/numeric-data-types-advanced-search' => [
@@ -638,6 +729,43 @@ return [
                 'label' => 'Numeric', // @translate
                 'resource_type' => ['items'],
             ],
+
+            // From module Oai-Pmh Harvester.
+            'common/advanced-search/harvests' => [
+                'module' => 'OaiPmhHarvester',
+                'label' => 'OAI-PMH harvests', // @translate
+                'resource_type' => ['items'],
+                'default_admin' => true,
+                'default_site' => false,
+            ],
+
+            // From module Selection.
+            'common/advanced-search/selections' => [
+                'module' => 'Selection',
+                'label' => 'Selections', // @translate
+                'resource_type' => ['item_sets', 'items', 'media'],
+                'default_admin' => true,
+                'default_site' => false,
+            ],
+
+            // From module 🖒.
+            'common/advanced-search/🖒' => [
+                'module' => '🖒',
+                'label' => '🖒', // @translate
+                'resource_type' => ['item_sets', 'items', 'media'],
+                'default_admin' => true,
+                'default_site' => true,
+            ],
+        ],
+    ],
+    // Cron tasks registered with the EasyAdmin/Cron module.
+    'cron_tasks' => [
+        'search_index' => [
+            'label' => 'Reindex search engines', // @translate
+            'module' => 'AdvancedSearch',
+            'task_type' => 'job',
+            'frequencies' => ['hourly', 'daily', 'weekly'],
+            'default_frequency' => 'daily',
         ],
     ],
 ];

@@ -3,12 +3,12 @@
 namespace AdvancedSearch\Service\ViewHelper;
 
 use AdvancedSearch\View\Helper\EscapeValueOrGetHtml;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class EscapeValueOrGetHtmlFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         return new EscapeValueOrGetHtml(
             $services->get('ViewHelperManager')->get('escapeHtml')

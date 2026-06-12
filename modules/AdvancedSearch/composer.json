@@ -1,75 +1,45 @@
 {
     "name": "daniel-km/omeka-s-module-advanced-search",
-    "description": "Module for Omeka S to add improved search capabilities: auto-suggest, filters, facets, etc.",
-    "type": "library",
-    "license": "CECILL-2.1",
-    "authors": [
-        {
-            "name": "Daniel Berthereau",
-            "email": "Daniel.git@Berthereau.net"
-        }
-    ],
-    "homepage": "https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch",
-    "support": {
-        "issues": "https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch/-/issues",
-        "forum": "https://forum.omeka.org/"
-    },
+    "type": "omeka-s-module",
+    "description": "Module for Omeka S: Improve search with new fields, aggregated properties, auto-suggest, filters, facets, specific pages, etc.",
     "keywords": [
         "Omeka S",
         "Omeka S module",
         "search",
-        "auto-suggestion",
+        "advanced search",
+        "auto-suggest",
         "filter",
         "facet",
-        "solr"
+        "admin",
+        "curation"
     ],
-    "repositories": [
+    "license": "CECILL-2.1",
+    "homepage": "https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch",
+    "authors": [
         {
-            "type": "package",
-            "package": {
-                "name": "devbridge/jquery-autocomplete",
-                "version": "1.4.11",
-                "type": "omeka-addon-asset",
-                "dist": {
-                    "type": "file",
-                    "url": "https://github.com/Daniel-KM/Omeka-S-module-AdvancedSearch/releases/download/3.4.30/jquery.autocomplete.min.js",
-                    "reference": ""
-                }
-            }
+            "name": "Daniel Berthereau",
+            "email": "Daniel.packagist@Berthereau.net"
         }
     ],
-    "require": {
-        "devbridge/jquery-autocomplete": "^1.4.11",
-        "laminas/laminas-feed": "^2.18",
-        "oomphinc/composer-installers-extender": "^2.0"
+    "support": {
+        "issues": "https://gitlab.com/Daniel-KM/Omeka-S-module-AdvancedSearch/-/issues",
+        "forum": "https://forum.omeka.org/"
     },
-    "replace": {
-        "laminas/laminas-escaper": "*",
-        "laminas/laminas-servicemanager": "3.14",
-        "laminas/laminas-stdlib": "*"
+    "_require (not set until Omeka S merges PR #2412)": {
+        "omeka/omeka-s": "^4.1",
+        "daniel-km/omeka-s-module-common": "*"
     },
-    "require-dev": {
-        "biblibre/omeka-s-test-helper": "dev-master"
+    "autoload": {
+        "psr-4": {
+            "AdvancedSearch\\": "src/"
+        }
     },
     "autoload-dev": {
         "psr-4": {
-            "AdvancedSearchTest\\": "test/AdvancedSearchTest/"
+            "AdvancedSearchTest\\": "tests/AdvancedSearchTest/"
         }
     },
     "extra": {
-        "installer-types": ["omeka-addon-asset"],
-        "installer-paths": {
-            "asset/vendor/{$name}/": [
-                "type:omeka-addon-asset"
-            ]
-        },
-        "installer-name" : "AdvancedSearch"
-    },
-    "config": {
-        "platform": {"php": "7.4"},
-        "allow-plugins": {
-            "composer/installers": true,
-            "oomphinc/composer-installers-extender": true
-        }
+        "installer-name": "AdvancedSearch"
     }
 }

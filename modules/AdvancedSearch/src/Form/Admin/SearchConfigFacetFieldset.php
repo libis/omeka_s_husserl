@@ -3,7 +3,6 @@
 namespace AdvancedSearch\Form\Admin;
 
 use Common\Form\Element as CommonElement;
-use Omeka\Form\Element as OmekaElement;
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
 use Laminas\InputFilter\InputFilterProviderInterface;
@@ -13,9 +12,7 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
     public function init(): void
     {
         // These fields may be overridden by the available fields.
-        $availableFacetFields = $this->getAvailableFacetFields();
-
-        // Field order is aligned with SearchConfigFilterFieldset:
+        $availableFields = $this->getAvailableFacetFields();
 
         $this
             ->setAttribute('id', 'search-config-facet-form')
@@ -28,32 +25,86 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
                 'options' => [
                     'label' => 'Field', // @translate
                     'info' => 'The field is an index available in the search engine. The internal search engine supports property terms and aggregated fields (date, author, etc).', // @translate
-                    'value_options' => $availableFacetFields,
+                    'value_options' => $availableFields,
                     'empty_option' => '',
                 ],
                 'attributes' => [
                     'id' => 'form_facet_field',
-                    'required' => false,
+                    'required' => true,
                     'class' => 'chosen-select',
                     'data-placeholder' => 'Set field or index…', // @translate
                 ],
             ])
+
             ->add([
-                'name' => 'field_end',
-                'type' => Element\Select::class,
+                'name' => 'language_site',
+                'type' => CommonElement\OptionalRadio::class,
                 'options' => [
-                    'label' => 'Field (interval end)', // @translate
-                    'info' => 'For RangeDouble facets on uncertain dates: when set, "Field" is used as the interval start and this field as the interval end. Search matches resources whose [start, end] overlaps the queried [from, to].', // @translate
-                    'value_options' => $availableFacetFields,
+                    'label' => 'Limit languages of facets', // @ŧranslate
+                    'value_options' => [
+                        '' => 'No limit', // @translate
+                        'site' => 'Limit facets to site language or empty language', // @ŧranslate
+                        'site_setting' => 'Use site setting "Filter values based on site locale"', // @translate
+                    ],
+                ],
+                'attributes' => [
+                    'id' => 'facet_language_site',
+                    'required' => false,
+                    'value' => '',
+                ],
+            ])
+            ->add([
+                'name' => 'languages',
+                'type' => CommonElement\ArrayText::class,
+                'options' => [
+                    'label' => 'Limit facets to specific languages', // @translate
+                    'info' => <<<'TXT'
+                        Generally, facets are translated in the view, but in some cases, facet values may be translated directly in a multivalued property. Use "|" to separate multiple languages. Use a trailing "|" for values without language. When fields with languages (like subjects) and fields without language (like date) are facets, the empty language must be set to get results.
+                        TXT, // @translate
+                    'value_separator' => '|',
+                ],
+                'attributes' => [
+                    'id' => 'facet_languages',
+                    'placeholder' => 'fra|way|apy|',
+                ],
+            ])
+
+            ->add([
+                'name' => 'order',
+                'type' => CommonElement\OptionalSelect::class,
+                'options' => [
+                    'label' => 'Order', // @translate
+                    'value_options' => [
+                        'alphabetic asc' => 'Alphabetic (default)', // @ŧranslate
+                        'alphabetic desc' => 'Alphabetic descendant', // @ŧranslate
+                        'total desc' => 'Total', // @ŧranslate
+                        'total asc' => 'Total ascendant', // @ŧranslate
+                        'total_alpha desc ' => 'Total then alphabetic for hidden values', // @ŧranslate
+                        'values asc' => 'Values (listed below)', // @ŧranslate
+                        'values desc' => 'Values descendant', // @ŧranslate
+                    ],
                     'empty_option' => '',
                 ],
                 'attributes' => [
-                    'id' => 'form_facet_field_end',
-                    'required' => false,
+                    'id' => 'facet_order',
+                    'multiple' => false,
                     'class' => 'chosen-select',
-                    'data-placeholder' => 'Set interval end field…', // @translate
+                    'data-placeholder' => 'Select order…', // @translate
                 ],
             ])
+            ->add([
+                'name' => 'limit',
+                'type' => Element\Number::class,
+                'options' => [
+                    'label' => 'Maximum number of facets', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'facet_limit',
+                    'required' => false,
+                    'value' => '100',
+                ],
+            ])
+
             ->add([
                 'name' => 'label',
                 'type' => Element\Text::class,
@@ -75,7 +126,7 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
                     'documentation' => nl2br(<<<'MARKDOWN'
                         #"></a><div class="field-description no-link">
                         - Input types may be Checkbox (default), RangeDouble, Select, SelectRange, Thesaurus, Tree and specific templates for mode "direct" if wanted.
-                        - For "RangeDouble" and "SelectRange", the minimum and maximum should be set as "min" and "max" in "Html attributes", and "step" too. The option "first_digits" is enabled by default to extract the year from dates. Set "first_digits = false" in "Options" to disable it. Set "first_digits = 3" to group by decade (first 3 digits), "first_digits = 2" for century, "first_digits = 1" for millennium.
+                        - For "RangeDouble" and "SelectRange", the minimum and maximum may be set as "min" and "max", and "step" too. Use "integer = 1" to keep only the first part, for example the year for dates.
                         - With type "Thesaurus", the option "thesaurus" should be set with the id. It requires the module Thesaurus.
                         - "Tree" can be used for item sets when module Item Sets Tree is enabled and data indexed recursively.
                         </div><a href="#
@@ -83,8 +134,6 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
                     /** @see \AdvancedSearch\Form\MainSearchForm::init() */
                     'value_options' => [
                         'Checkbox' => 'Checkbox (default)', // @translate
-                        'CheckboxFilter' => 'Checkbox with filter input', // @translate
-                        'HasValue' => 'Boolean (has a value / has no value)', // @translate
                         'Link' => 'Link (fake checkbox for mode "direct")', // @translate
                         'RangeDouble' => 'Slider for a range of values', // @translate
                         // A space is added to avoid an issue with translation.
@@ -111,85 +160,15 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
             ])
 
             ->add([
-                'name' => 'language_site',
-                'type' => CommonElement\OptionalRadio::class,
-                'options' => [
-                    'label' => 'Limit languages of facets (internal querier)', // @translate
-                    'value_options' => [
-                        '' => 'No limit', // @translate
-                        'site' => 'Limit facets to site language or empty language', // @translate
-                        'site_setting' => 'Use site setting "Filter values based on site locale"', // @translate
-                    ],
-                ],
-                'attributes' => [
-                    'id' => 'facet_language_site',
-                    'required' => false,
-                    'value' => '',
-                ],
-            ])
-            ->add([
-                'name' => 'languages',
-                'type' => CommonElement\ArrayText::class,
-                'options' => [
-                    'label' => 'Limit facets to specific languages (internal querier)', // @translate
-                    'info' => <<<'TXT'
-                        Use "|" to separate multiple languages. Use a trailing "|" for values without language. When fields with languages (like subjects) and fields without language (like date) are facets, the empty language must be set to get results.
-                        TXT, // @translate
-                    'value_separator' => '|',
-                ],
-                'attributes' => [
-                    'id' => 'facet_languages',
-                    'placeholder' => 'fra|way|apy|',
-                ],
-            ])
-            ->add([
-                'name' => 'order',
-                'type' => CommonElement\OptionalSelect::class,
-                'options' => [
-                    'label' => 'Order', // @translate
-                    'value_options' => [
-                        'alphabetic asc' => 'Alphabetic (default)', // @translate
-                        'alphabetic desc' => 'Alphabetic descendant', // @translate
-                        'total desc' => 'Total', // @translate
-                        'total asc' => 'Total ascendant', // @translate
-                        'total_alpha desc' => 'Total then alphabetic for hidden values', // @translate
-                        'values asc' => 'Values (listed below)', // @translate
-                        'values desc' => 'Values descendant', // @translate
-                    ],
-                    'empty_option' => '',
-                ],
-                'attributes' => [
-                    'id' => 'facet_order',
-                    'multiple' => false,
-                    'class' => 'chosen-select',
-                    'data-placeholder' => 'Select order…', // @translate
-                ],
-            ])
-            ->add([
-                'name' => 'limit',
-                'type' => Element\Number::class,
-                'options' => [
-                    'label' => 'Maximum number of facets', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'facet_limit',
-                    'required' => false,
-                    'value' => '100',
-                ],
-            ])
-
-            // Facet-specific fields.
-
-            ->add([
                 'name' => 'state',
                 'type' => CommonElement\OptionalRadio::class,
                 'options' => [
                     'label' => 'Display of facets', // @translate
                     'value_options' => [
-                        'static' => 'Static', // @translate
-                        'expand' => 'Expanded', // @translate
-                        'collapse' => 'Collapsed', // @translate
-                        'collapse_unless_set' => 'Collapsed unless a facet is set', // @translate
+                        'static' => 'Static', // @ŧranslate
+                        'expand' => 'Expanded', // @ŧranslate
+                        'collapse' => 'Collapsed', // @ŧranslate
+                        'collapse_unless_set' => 'Collapsed unless a facet is set', // @ŧranslate
                     ],
                 ],
                 'attributes' => [
@@ -211,19 +190,6 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
                 ],
             ])
             ->add([
-                'name' => 'per_page',
-                'type' => Element\Number::class,
-                'options' => [
-                    'label' => 'Number of facets per page on "see more"', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'facet_per_page',
-                    'required' => false,
-                    'value' => '0',
-                    'min' => 0,
-                ],
-            ])
-            ->add([
                 'name' => 'display_count',
                 'type' => Element\Checkbox::class,
                 'options' => [
@@ -234,94 +200,19 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
                     'required' => false,
                 ],
             ])
-
-            ->add([
-                'name' => 'boolean_filter',
-                'type' => CommonElement\OptionalRadio::class,
-                'options' => [
-                    'label' => 'Boolean buckets (fields ending with "_b")', // @translate
-                    'info' => 'Filter Solr facet buckets for boolean fields. Default shows all returned buckets (typically Yes and No).', // @translate
-                    'value_options' => [
-                        '' => 'Show all buckets', // @translate
-                        'truthy_only' => 'Show only "Yes" bucket', // @translate
-                        'falsy_only' => 'Show only "No" bucket', // @translate
-                    ],
-                ],
-                'attributes' => [
-                    'id' => 'facet_boolean_filter',
-                    'required' => false,
-                    'value' => '',
-                ],
-            ])
-
-            // Slider scale (RangeDouble and SelectRange only). Mode "linear" is
-            // the default and ignores breakpoints. Mode "piecewise" requires at
-            // least two breakpoints with values and positions strictly
-            // increasing from 0 to 100.
-            ->add([
-                'name' => 'scale_mode',
-                'type' => CommonElement\OptionalRadio::class,
-                'options' => [
-                    'label' => 'Slider scale (RangeDouble)', // @translate
-                    'value_options' => [
-                        'linear' => 'Linear', // @translate
-                        'log' => 'Logarithmic', // @translate
-                        'piecewise' => 'Piecewise (with breakpoints)', // @translate
-                        'auto' => 'Auto (quartiles from data)', // @translate
-                    ],
-                ],
-                'attributes' => [
-                    'id' => 'form_facet_scale_mode',
-                    'value' => 'linear',
-                ],
-            ])
-            ->add([
-                'name' => 'scale_breakpoints',
-                'type' => OmekaElement\ArrayTextarea::class,
-                'options' => [
-                    'label' => 'Scale breakpoints', // @translate
-                    'info' => 'One pair per line: value = position. Position is a percentage between 0 and 100.', // @translate
-                    'as_key_value' => true,
-                ],
-                'attributes' => [
-                    'id' => 'form_facet_scale_breakpoints',
-                    'required' => false,
-                    'rows' => 5,
-                    'placeholder' => <<<TXT
-                        min = 0
-                        1 = 20
-                        1789 = 50
-                        max = 100
-                        TXT,
-                ],
-            ])
-            ->add([
-                'name' => 'scale_show_ticks',
-                'type' => Element\Checkbox::class,
-                'options' => [
-                    'label' => 'Display ticks at breakpoints', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'form_facet_scale_show_ticks',
-                ],
-            ])
-
-            // Common fields continued (same order as filters).
-
             ->add([
                 'type' => CommonElement\IniTextarea::class,
                 'name' => 'options',
                 'options' => [
-                    'label' => 'Options', // @translate
+                    'label' => 'Specific options', // @translate
                     'info' => <<<'HTML'
                         List of specific options, in ini format, for example:
-                        `thesaurus = 151`,
+                        `min = 1454`,
+                        `thesaurus =  151`,
                         `languages = "fra|way|apa|"`,
                         `data_types[] = "valuesuggest:idref:person"`,
-                        `main_types = "resource"`,
-                        `values[] = "Alpha"`,
-                        `first_digits = false`.
-                        Note: "min", "max", "step" should be set in "Html attributes".
+                        `main_types = "resource",
+                        `values[] = "Alpha"`.
                         HTML, // @translate
                     'ini_typed_mode' => true,
                 ],
@@ -334,9 +225,9 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
             ->add([
                 'type' => CommonElement\IniTextarea::class,
                 'name' => 'attributes',
+                'info' => 'List of specific attributes, in ini format.', // @translate
                 'options' => [
                     'label' => 'Html attributes', // @translate
-                    'info' => 'Attributes to add to the input field, for example `class = "my-specific-class"`, or `min = 1454` for RangeDouble/SelectRange, or max, step, placeholder, data, etc.', // @translate
                     'ini_typed_mode' => true,
                 ],
                 'attributes' => [
@@ -345,8 +236,6 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
                     'placeholder' => '',
                 ],
             ])
-
-            // Action buttons.
 
             ->add([
                 'name' => 'minus',
@@ -363,7 +252,7 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
                 'attributes' => [
                     // Don't use o-icon-delete.
                     'class' => 'config-fieldset-action config-fieldset-minus fa fa-minus remove-value button',
-                    'aria-label' => 'Remove this facet', // @translate
+                    'aria-label' => 'Remove this filter', // @translate
                 ],
             ])
             ->add([
@@ -416,9 +305,6 @@ class SearchConfigFacetFieldset extends Fieldset implements InputFilterProviderI
     {
         return [
             'field' => [
-                'required' => false,
-            ],
-            'field_end' => [
                 'required' => false,
             ],
             'language_site' => [

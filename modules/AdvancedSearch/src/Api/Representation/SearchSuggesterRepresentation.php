@@ -97,6 +97,9 @@ class SearchSuggesterRepresentation extends AbstractEntityRepresentation
     }
 
     /**
+     * @todo Remove site (but manage direct query).
+     * @todo Manage direct query here? Remove it?
+     *
      * Adapted:
      * @see \AdvancedSearch\Api\Representation\SearchConfigRepresentation::suggest()
      * @see \AdvancedSearch\Api\Representation\SearchSuggesterRepresentation::suggest()
@@ -145,7 +148,7 @@ class SearchSuggesterRepresentation extends AbstractEntityRepresentation
                     ->setFieldsQueryArgs($fieldQueryArgs)
                     ->setOption('remove_diacritics', (bool) $searchConfig->subSetting('q', 'remove_diacritics', false))
                     ->setOption('default_search_partial_word', (bool) $searchConfig->subSetting('q', 'default_search_partial_word', false));
-            } catch (\Throwable $e) {
+            } catch (\Exception $e) {
                 // No aliases.
             }
         }
@@ -154,28 +157,16 @@ class SearchSuggesterRepresentation extends AbstractEntityRepresentation
         $searchEngineSettings = $searchEngine->settings();
         $suggesterSettings = $this->settings();
 
-        // Build suggest options, including Solr-specific settings if present.
-        $suggestOptions = [
-            'suggester' => $this->resource->getId(),
-            'mode_index' => $suggesterSettings['mode_index'] ?? 'start',
-            'mode_search' => $suggesterSettings['mode_search'] ?? 'start',
-            'length' => $suggesterSettings['length'] ?? 20,
-        ];
-
-        // Add Solr-specific options if configured.
-        if (!empty($suggesterSettings['solr_suggester_name'])) {
-            $suggestOptions['solr_suggester_name'] = $suggesterSettings['solr_suggester_name'];
-        } elseif (!empty($suggesterSettings['solr_field'])) {
-            $suggestOptions['solr_suggester_name'] = 'omeka_' . preg_replace('/[^a-z0-9_]/i', '_', strtolower($this->name()));
-        }
-        if (!empty($suggesterSettings['solr_fields'])) {
-            $suggestOptions['solr_fields'] = $suggesterSettings['solr_fields'];
-        }
-
         $query
             ->setResourceTypes($searchEngineSettings['resource_types'])
             ->setLimitPage(1, empty($suggesterSettings['limit']) ? \Omeka\Stdlib\Paginator::PER_PAGE : (int) $suggesterSettings['limit'])
-            ->setSuggestOptions($suggestOptions)
+            ->setSuggestOptions([
+                'suggester' => $this->resource->getId(),
+                'direct' => !empty($suggesterSettings['direct']),
+                'mode_index' => $suggesterSettings['mode_index'] ?? 'start',
+                'mode_search' => $suggesterSettings['mode_search'] ?? 'start',
+                'length' => $suggesterSettings['length'] ?? 50,
+            ])
             ->setSuggestFields($suggesterSettings['fields'] ?? [])
             ->setExcludedFields($suggesterSettings['excluded_fields'] ?? [])
         ;

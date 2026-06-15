@@ -298,10 +298,6 @@ class IndexSearch extends AbstractJob
             'End of indexing. Execution time: {duration} seconds. Max memory: {memory}. Failed indexed resources should be checked manually.', // @translate
             ['duration' => $timeTotal, 'memory' => $maxMemory]
         );
-
-        if (!$this->shouldStop()) {
-            $this->reindexSuggesters($searchEngines);
-        }
     }
 
     protected function indexSearchEngine(SearchEngineRepresentation $searchEngine): void
@@ -347,15 +343,28 @@ class IndexSearch extends AbstractJob
             ['search_engine_id' => $searchEngine->id(), 'name' => $searchEngine->name()]
         );
 
-        if ($clearIndex) {
-            $indexer->clearIndex();
+        if ($clearIndex && empty($resourceTypes)) {
             $this->logger->info(
                 'Search index is fully cleared.' // @translate
             );
+            $indexer->clearIndex();
         }
 
         $totals = [];
         foreach ($resourceTypes as $resourceType) {
+            if ($clearIndex) {
+                $query = new Query();
+                // Here, no need to init the aliases and aggregated fields
+                // because there is no site or admin and aliases are managed
+                // earlier or later.
+                $query
+                    // By default the query process public resources only.
+                    // TODO Check the purpose of the check of isPublic here.
+                    ->setIsPublic(false)
+                    ->setResourceTypes([$resourceType]);
+                $indexer->clearIndex($query);
+            }
+
             $totals[$resourceType] = 0;
 
             $args = [
@@ -421,7 +430,7 @@ class IndexSearch extends AbstractJob
                             ->getRepresentation($entity),
                         $entities
                     );
-                } catch (\Throwable $e) {
+                } catch (\Exception $e) {
                     $this->logger->err(
                         'Error loading batch #{number} of {resource_type}: {message}. Skipping.', // @translate
                         [
@@ -435,8 +444,8 @@ class IndexSearch extends AbstractJob
                 }
 
                 if (count($resources) && count($resources) !== count($resourceIdsSlice)) {
-                    $this->logger->info(
-                        'Batch #{number} of {resource_type}: {count} resources skipped (private, deleted, or filtered by module).', // @translate
+                    $this->logger->warn(
+                        'Batch #{number} of {resource_type}: {count} resources missing.', // @translate
                         [
                             'number' => $loop,
                             'resource_type' => $resourceType,
@@ -445,31 +454,20 @@ class IndexSearch extends AbstractJob
                     );
                 }
 
-                // Index entire batch at once. On failure, retry
-                // each resource individually to skip only the
-                // faulty one(s).
+                // Index entire batch at once.
                 if (count($resources)) {
                     try {
                         $indexer->indexResources($resources);
                         $totals[$resourceType] += count($resources);
-                    } catch (\Throwable $e) {
-                        // Retry one by one to identify and skip
-                        // the faulty resource(s).
-                        foreach ($resources as $resource) {
-                            try {
-                                $indexer->indexResources([$resource]);
-                                ++$totals[$resourceType];
-                            } catch (\Throwable $e2) {
-                                $this->logger->err(
-                                    'Indexing of {resource_type} #{resource_id} failed: {message}', // @translate
-                                    [
-                                        'resource_type' => $resourceType,
-                                        'resource_id' => $resource->id(),
-                                        'message' => $e2->getMessage(),
-                                    ]
-                                );
-                            }
-                        }
+                    } catch (\Exception $e) {
+                        $this->logger->err(
+                            'Error indexing batch #{number} of {resource_type}: {message}', // @translate
+                            [
+                                'number' => $loop,
+                                'resource_type' => $resourceType,
+                                'message' => $e->getMessage(),
+                            ]
+                        );
                     }
 
                     // Log progress periodically.
@@ -508,7 +506,7 @@ class IndexSearch extends AbstractJob
             if (method_exists($indexer, 'commit')) {
                 try {
                     $indexer->commit();
-                } catch (\Throwable $e) {
+                } catch (\Exception $e) {
                     $this->logger->warn(
                         'Final commit failed for {resource_type}: {message}', // @translate
                         ['resource_type' => $resourceType, 'message' => $e->getMessage()]
@@ -668,15 +666,11 @@ class IndexSearch extends AbstractJob
 
         $sql .= " ORDER BY r.id ASC";
 
-        // MySQL/MariaDB requires LIMIT when using OFFSET.
         if ($limit > 0) {
             $sql .= " LIMIT " . (int) $limit;
-            if ($offset > 0) {
-                $sql .= " OFFSET " . (int) $offset;
-            }
-        } elseif ($offset > 0) {
-            // Use a very large limit when only offset is specified.
-            $sql .= " LIMIT 18446744073709551615 OFFSET " . (int) $offset;
+        }
+        if ($offset > 0) {
+            $sql .= " OFFSET " . (int) $offset;
         }
 
         $result = $this->connection->executeQuery($sql, $params, $types);
@@ -712,72 +706,5 @@ class IndexSearch extends AbstractJob
                 'memory' => $memory,
             ]
         );
-    }
-
-    /**
-     * Dispatch reindexing of suggesters linked to the indexed
-     * search engines.
-     *
-     * @param SearchEngineRepresentation[] $searchEngines
-     */
-    protected function reindexSuggesters(array $searchEngines): void
-    {
-        $services = $this->getServiceLocator();
-        $dispatcher = $services->get(\Omeka\Job\Dispatcher::class);
-
-        foreach ($searchEngines as $searchEngine) {
-            $suggesters = $this->api
-                ->search('search_suggesters', [
-                    'engine_id' => $searchEngine->id(),
-                ])
-                ->getContent();
-
-            if (!$suggesters) {
-                continue;
-            }
-
-            $engineAdapter = $searchEngine->engineAdapter();
-            $isInternal = $engineAdapter
-                && $engineAdapter instanceof \AdvancedSearch\EngineAdapter\Internal;
-
-            foreach ($suggesters as $suggester) {
-                if ($isInternal) {
-                    $dispatcher->dispatch(
-                        IndexSuggestions::class,
-                        ['search_suggester_id' => $suggester->id()]
-                    );
-                    $this->logger->info(
-                        'Dispatched reindex of internal suggester "{name}".', // @translate
-                        ['name' => $suggester->name()]
-                    );
-                } else {
-                    // Solr suggesters: skip if build on
-                    // commit is disabled.
-                    $skip = $suggester->setting(
-                        'solr_skip_build_on_commit', false
-                    );
-                    if ($skip) {
-                        $this->logger->info(
-                            'Skipped suggester "{name}": build on commit is disabled.', // @translate
-                            ['name' => $suggester->name()]
-                        );
-                        continue;
-                    }
-                    // Dispatch via class name string to
-                    // avoid coupling with SearchSolr.
-                    $class = 'SearchSolr\Job\CreateSolrSuggesters';
-                    if (class_exists($class)) {
-                        $dispatcher->dispatch(
-                            $class,
-                            ['search_suggester_id' => $suggester->id()]
-                        );
-                        $this->logger->info(
-                            'Dispatched reindex of Solr suggester "{name}".', // @translate
-                            ['name' => $suggester->name()]
-                        );
-                    }
-                }
-            }
-        }
     }
 }

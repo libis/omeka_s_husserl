@@ -3,12 +3,12 @@
 namespace AdvancedSearch\Service\Form;
 
 use AdvancedSearch\Form\SearchFilter\Advanced;
-use Psr\Container\ContainerInterface;
+use Interop\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class SearchFilterAdvancedFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
     {
         return (new Advanced(null, $options ?? []))
             ->setLogger($services->get('Omeka\Logger'))

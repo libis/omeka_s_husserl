@@ -263,9 +263,6 @@ class MainSearchForm extends Form
                 case 'Checkbox':
                     $element = $this->searchCheckbox($filter);
                     break;
-                case 'Hasvalue':
-                    $element = $this->searchHasValue($filter);
-                    break;
                 case 'Csrf':
                 case 'Hidden':
                     $element = $this->searchHidden($filter);
@@ -548,31 +545,25 @@ class MainSearchForm extends Form
                 ->setLabelOption('disable_html_escape', true);
         }
 
-        $attributes = [
-            'id' => 'search-filters',
-            'class' => 'search-filters-advanced'
-                . (!empty($filter['field_joiner_not']) ? ' has-joiner-not' : ''),
-            'required' => false,
-            'data-count-default' => $defaultNumber,
-            'data-count-max' => $maxNumber,
-        ];
-
-        if (!empty($filter['field_value_autosuggest']) && $this->searchConfig) {
-            $attributes['data-autosuggest-url'] = $this->basePath
-                . ($this->site ? '/s/' . $this->site->slug() : '/admin')
-                . '/' . $this->searchConfig->slug()
-                . '/suggest?mode=values';
-        }
-
         $element
             ->setOptions([
+                // When there are more filters in the query used to fill form
+                // than the default number, new filters will be added
+                // automatically (allow_add).
                 'count' => $defaultNumber,
                 'should_create_template' => true,
                 'allow_add' => true,
                 'allow_remove' => true,
                 'target_element' => $advanced,
             ] + $filter['options'])
-            ->setAttributes($attributes + $filter['attributes'])
+            ->setAttributes([
+                'id' => 'search-filters',
+                'class' => 'search-filters-advanced',
+                'required' => false,
+                // TODO Remove this attribute data and use only search config?
+                'data-count-default' => $defaultNumber,
+                'data-count-max' => $maxNumber,
+            ] + $filter['attributes'])
         ;
 
         return $element;
@@ -593,67 +584,6 @@ class MainSearchForm extends Form
                 ->setOption('checked_value', $filter['options']['checked_value']);
         }
         return $this->appendOptionsAndAttributes($element, $filter);
-    }
-
-    /**
-     * Build a fieldset that injects a "filter[key][field/type/val]"
-     * triple into the query when its checkbox is checked.
-     *
-     * Supported options:
-     * - query_type: one of the Omeka filter types. Defaults to "ex"
-     *   ("has value"). Other useful values: "eq", "res", "in", "sw",
-     *   "ew". Their negative forms (nex, neq, nres…) give "has no value".
-     * - checked_value: the value submitted when checked. Required for
-     *   types that need a value (eq, res, in…). Defaults to "1".
-     * - The key used in "filter[key]" is the filter's slug in the
-     *   search form config.
-     */
-    protected function searchHasValue(array $filter): ?ElementInterface
-    {
-        $key = $filter['name'] ?? preg_replace(
-            '/[^a-z0-9_]/i', '_',
-            (string) ($filter['field'] ?? '')
-        );
-        if ($key === '') {
-            return null;
-        }
-
-        $queryType = $filter['options']['query_type']
-            ?? $filter['query_type']
-            ?? 'ex';
-        $checkedValue = $filter['options']['checked_value']
-            ?? $filter['checked_value']
-            ?? '1';
-
-        $fieldset = new \Laminas\Form\Fieldset('filter');
-        $sub = new \Laminas\Form\Fieldset($key);
-        $sub
-            ->add([
-                'name' => 'field',
-                'type' => Element\Hidden::class,
-                'attributes' => ['value' => $filter['field']],
-            ])
-            ->add([
-                'name' => 'type',
-                'type' => Element\Hidden::class,
-                'attributes' => ['value' => $queryType],
-            ])
-            ->add([
-                'name' => 'val',
-                'type' => Element\Checkbox::class,
-                'options' => [
-                    'label' => $filter['options']['value_label']
-                        ?? $filter['label'],
-                    'checked_value' => $checkedValue,
-                    'unchecked_value' => '',
-                    // Hide from HTTP submit when unchecked so the
-                    // filter triple is not sent.
-                    'use_hidden_element' => false,
-                ],
-            ])
-        ;
-        $fieldset->add($sub);
-        return $this->appendOptionsAndAttributes($fieldset, $filter);
     }
 
     protected function searchHidden(array $filter): ?ElementInterface
@@ -755,24 +685,14 @@ class MainSearchForm extends Form
         $filter['attributes']['min'] = $valueOptions['min'];
         $filter['attributes']['max'] = $valueOptions['max'];
         $element = new AdvancedSearchElement\RangeDouble($filter['field']);
-        $options = [
-            'label_from' => 'From', // @translate
-            'label_to' => 'To', // @translate
-        ] + $filter['options'];
-        // Forward scale options stored at the top of the filter config to the
-        // element so the form helper can render the piecewise slider.
-        if (isset($filter['scale_mode'])) {
-            $options['scale_mode'] = $filter['scale_mode'];
-        }
-        if (isset($filter['scale_breakpoints'])) {
-            $options['scale_breakpoints'] = $filter['scale_breakpoints'];
-        }
-        if (isset($filter['scale_show_ticks'])) {
-            $options['scale_show_ticks'] = $filter['scale_show_ticks'];
-        }
         $element
             ->setLabel($filter['label'])
-            ->setOptions($options)
+            ->setOptions([
+                'options' => [
+                    'label_from' => $this->translator->translate('From'), // @translate
+                    'label_to' => $this->translator->translate('To'), // @translate
+                ] + $filter['options'],
+            ])
             ->setAttributes([
                 'placeholder' => $filter['attributes']['placeholder'] ?? 'YYYY', // @translate
             ] + $filter['attributes'])
@@ -1328,15 +1248,13 @@ class MainSearchForm extends Form
         $values = $this->listValues($filter);
 
         // Negative numbers are accepted in all cases (int parsing).
-        // Option "first_digits" extracts year from dates. Enabled by default.
-        $firstDigits = ($filter['options']['first_digits'] ?? true) === true
-            || in_array($filter['options']['first_digits'] ?? null, [1, '1', 'true'], true);
-        // Filter values that start with a digit or minus sign (dates, years, numbers).
-        // This keeps "2023-05-15", "-500", "0", "123" but removes "texte", "".
+        $firstDigits = isset($filter['options']['first_digits'])
+            && in_array($filter['options']['first_digits'], [1, true, '1', 'true'], true);
         $values = $firstDigits
-            ? array_filter($values, fn ($v) => is_numeric($v) || preg_match('/^-?\d/', (string) $v))
-            : array_filter($values, 'is_numeric');
-        $values = array_map('intval', $values);
+            // There is no year "0", so extract first digits except 0.
+            ? array_filter(array_map('intval', $values))
+            // Keep all numeric values.
+            : array_map('intval', array_filter($values, 'is_numeric'));
         if (!count($values)) {
             return [
                 'min' => is_numeric($min) ? $min : null,

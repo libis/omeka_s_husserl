@@ -84,7 +84,7 @@ class SearchConfigSortFieldset extends Fieldset implements InputFilterProviderIn
                 ],
                 'attributes' => [
                     'id' => 'form_sort_name',
-                    'required' => false,
+                    'required' => true,
                     'class' => 'chosen-select',
                     'data-placeholder' => 'Set order…', // @translate
                 ],

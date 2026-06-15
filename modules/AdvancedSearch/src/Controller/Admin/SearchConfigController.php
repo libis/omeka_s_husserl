@@ -98,7 +98,7 @@ class SearchConfigController extends AbstractActionController
             );
         }
 
-        return $this->redirect()->toUrl($searchConfig->adminUrl('edit'));
+        return $this->redirect()->toUrl($searchConfig->url('configure'));
     }
 
     public function editAction()
@@ -107,6 +107,53 @@ class SearchConfigController extends AbstractActionController
 
         /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
         $searchConfig = $this->api()->read('search_configs', ['id' => $id])->getContent();
+
+        // $data = $searchConfig->jsonSerialize();
+        // TODO Don't use json_decode(json_encode()).
+        $data = json_decode(json_encode($searchConfig), true);
+        $data['manage_config_default'] = $this->sitesWithSearchConfigAsDefault($searchConfig);
+        $data['manage_config_availability'] = $this->sitesWithSearchConfigAsAvailable($searchConfig);
+        $data['o:search_engine'] = empty($data['o:search_engine']['o:id']) ? null : $data['o:search_engine']['o:id'];
+
+        $form = $this->getForm(SearchConfigForm::class);
+        $form->setData($data);
+
+        $view = new ViewModel([
+            'form' => $form,
+        ]);
+
+        if (!$this->checkPostAndValidForm($form)) {
+            return $view;
+        }
+
+        $formData = $form->getData();
+        $searchConfig = $this->api()
+            ->update('search_configs', $id, $formData, [], ['isPartial' => true])
+            ->getContent();
+
+        $this->messenger()->addSuccess((new PsrMessage(
+            'Search page {name} saved.', // @translate
+            ['name' => $searchConfig->link($searchConfig->name(), 'edit')]
+        ))->setEscapeHtml(false));
+
+        $this->manageSearchConfigSettings(
+            $searchConfig,
+            $formData['manage_config_availability'] ?: [],
+            $formData['manage_config_default'] ?: []
+        );
+
+        return $this->redirect()->toRoute('admin/search-manager');
+    }
+
+    /**
+     * @fixme Simplify to use a normal search config form with integrated elements checks.
+     */
+    public function configureAction()
+    {
+        $id = $this->params('id');
+
+        /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
+        $searchConfig = $this->api()->read('search_configs', $id)->getContent();
 
         $view = new ViewModel([
             'searchConfig' => $searchConfig,
@@ -117,40 +164,28 @@ class SearchConfigController extends AbstractActionController
         if (empty($engineAdapter)) {
             $message = new PsrMessage(
                 'The engine adapter "{label}" is unavailable.', // @translate
-                ['label' => $searchEngine ? $searchEngine->engineAdapterLabel() : '']
+                ['label' => $searchEngine->engineAdapterLabel()]
             );
-            $this->messenger()->addError($message);
+            $this->messenger()->addError($message); // @translate
             return $view;
         }
 
         $form = $this->getConfigureForm($searchConfig);
+        $form->setFormElementManager($this->formElementManager);
         if (empty($form)) {
             $message = new PsrMessage(
                 'This engine adapter "{label}" has no config form.', // @translate
                 ['label' => $searchEngine->engineAdapterLabel()]
             );
-            $this->messenger()->addWarning($message);
+            $this->messenger()->addWarning($message); // @translate
             return $view;
         }
-        $form->setFormElementManager($this->formElementManager);
 
-        $scalar = json_decode(json_encode($searchConfig), true);
-        $data = $this->prepareDataForForm($searchConfig->settings() ?: []);
-        $data['settings'] = [
-            'o:name' => $scalar['o:name'] ?? '',
-            'o:slug' => $scalar['o:slug'] ?? '',
-            'o:search_engine' => empty($scalar['o:search_engine']['o:id']) ? null : $scalar['o:search_engine']['o:id'],
-            'o:form_adapter' => $scalar['o:form_adapter'] ?? null,
-        ];
-        $defaults = $this->sitesWithSearchConfigAsDefault($searchConfig);
-        $adminDefault = in_array('admin', $defaults, true);
-        $data['sites'] = [
-            'manage_config_default' => array_values(array_diff($defaults, ['admin'])),
-            'manage_config_availability' => $this->sitesWithSearchConfigAsAvailable($searchConfig),
-            'manage_config_default_admin' => $adminDefault ? '1' : '0',
-        ];
+        $searchConfigSettings = $searchConfig->settings() ?: [];
 
-        $form->setData($data);
+        $formSettings = $this->prepareDataForForm($searchConfigSettings);
+
+        $form->setData($formSettings);
         $view->setVariable('form', $form);
 
         if (!$this->getRequest()->isPost()) {
@@ -160,81 +195,41 @@ class SearchConfigController extends AbstractActionController
         $params = $this->getRequest()->getPost()->toArray();
         $params = $this->removeUselessFields($params);
 
-        if (!$this->checkPostAndValidForm($form, $params)) {
+        // TODO Check simple fields with normal way.
+        $form->setData($params);
+        if (!$form->isValid()) {
+            $messages = $form->getMessages();
+            if (isset($messages['csrf'])) {
+                $this->messenger()->addError('Invalid or missing CSRF token'); // @translate
+            } else {
+                $this->messenger()->addError('There was an error during validation'); // @translate
+            }
             return $view;
         }
 
         $params = $form->getData();
 
-        $settingsPart = $params['settings'] ?? [];
-        $sitesPart = $params['sites'] ?? [];
-        unset($params['settings'], $params['sites']);
+        $params = $this->prepareDataToSave($params);
 
-        $settings = $this->prepareDataToSave($params);
-
-        $this->validateFilters($searchConfig, $settings);
+        $this->validateFilters($searchConfig, $params);
 
         // Validate facets.
-        if (($settings['facet']['mode'] ?? 'button') === 'button'
-            && ($settings['facet']['display_submit'] ?? 'none') === 'none'
+        if (($params['facet']['mode'] ?? 'button') === 'button'
+            && ($params['facet']['display_submit'] ?? 'none') === 'none'
         ) {
             $this->messenger()->addWarning(new PsrMessage(
                 'The mode for facets is "Button", but the button "Apply facets" is hidden, so it should be added in the theme.' // @translate
             ));
         }
 
-        $scalarData = [
-            'o:name' => $settingsPart['o:name'] ?? $searchConfig->name(),
-            'o:slug' => $settingsPart['o:slug'] ?? $searchConfig->slug(),
-            'o:search_engine' => $settingsPart['o:search_engine'] ?? null,
-            'o:form_adapter' => $settingsPart['o:form_adapter'] ?? null,
-        ];
-        $searchConfig = $this->api()
-            ->update('search_configs', $id, $scalarData, [], ['isPartial' => true])
-            ->getContent();
-
         $searchConfigEntity = $searchConfig->getEntity();
-        $searchConfigEntity->setSettings($settings);
+        $searchConfigEntity->setSettings($params);
         $this->entityManager->flush();
-
-        $defaults = $sitesPart['manage_config_default'] ?? [];
-        if (!empty($sitesPart['manage_config_default_admin'])) {
-            $defaults[] = 'admin';
-        }
-        $this->manageSearchConfigSettings(
-            $searchConfig,
-            $sitesPart['manage_config_availability'] ?? [],
-            $defaults
-        );
 
         $this->messenger()->addSuccess((new PsrMessage(
             'Search page {name} saved.', // @translate
-            ['name' => $searchConfig->link($searchConfig->name(), 'edit')]
+            ['name' => $searchConfig->link($searchConfig->name(), 'configure')]
         ))->setEscapeHtml(false));
-
-        // For Solr engines, warn about new maps to sync.
-        if ($searchEngine
-            && $searchEngine->engineAdapter() instanceof \SearchSolr\EngineAdapter\Solarium
-        ) {
-            $solrCoreId = $searchEngine->settingEngineAdapter('solr_core_id');
-            if ($solrCoreId) {
-                $message = new PsrMessage(
-                    'If new fields were added, run {link}Sync maps{link_end} on the Solr core page, then reindex.', // @translate
-                    [
-                        'link' => sprintf(
-                            '<a href="%s">',
-                            htmlspecialchars($this->url()->fromRoute(
-                                'admin/search/solr/core-id',
-                                ['id' => $solrCoreId, 'action' => 'sync-maps']
-                            ))
-                        ),
-                        'link_end' => '</a>',
-                    ]
-                );
-                $message->setEscapeHtml(false);
-                $this->messenger()->addWarning($message);
-            }
-        }
 
         return $this->redirect()->toRoute('admin/search-manager');
     }
@@ -276,83 +271,16 @@ class SearchConfigController extends AbstractActionController
         return $this->redirect()->toRoute('admin/search-manager');
     }
 
-    public function copyAction()
-    {
-        $id = $this->params('id');
-
-        /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $searchConfig */
-        $searchConfig = $this->api()->read('search_configs', ['id' => $id])->getContent();
-
-        // Find a unique name and slug.
-        $baseName = $searchConfig->name();
-        $baseSlug = $searchConfig->slug();
-
-        // Get all existing slugs.
-        $slugs = $this->api()
-            ->search('search_configs', [], ['returnScalar' => 'slug'])
-            ->getContent();
-
-        // Generate unique name and slug with increment.
-        $newName = sprintf($this->translate('%s (copy)'), $baseName);
-        $newSlug = $this->generateUniqueSlug($baseSlug, $slugs);
-
-        // Prepare data for the new search config.
-        $data = [
-            'o:name' => $newName,
-            'o:slug' => $newSlug,
-            'o:search_engine' => $searchConfig->searchEngine() ? $searchConfig->searchEngine()->id() : null,
-            'o:form_adapter' => $searchConfig->formAdapterName(),
-            'o:settings' => $searchConfig->settings(),
-        ];
-
-        /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation $newSearchConfig */
-        $response = $this->api()->create('search_configs', $data);
-        $newSearchConfig = $response->getContent();
-
-        $this->messenger()->addSuccess((new PsrMessage(
-            'Search page "{name}" successfully copied as "{new_name}".', // @translate
-            ['name' => $searchConfig->name(), 'new_name' => $newSearchConfig->name()]
-        )));
-
-        return $this->redirect()->toUrl($newSearchConfig->adminUrl('edit'));
-    }
-
-    /**
-     * Generate a unique slug based on existing slugs.
-     *
-     * @param string $baseSlug The base slug to use.
-     * @param array $existingSlugs List of existing slugs.
-     * @return string A unique slug.
-     */
-    protected function generateUniqueSlug(string $baseSlug, array $existingSlugs): string
-    {
-        // Remove any existing numeric suffix like "_2", "_3", etc.
-        $cleanSlug = preg_replace('/_\d+$/', '', $baseSlug);
-
-        $counter = 2;
-        $newSlug = $cleanSlug . '_' . $counter;
-
-        while (in_array($newSlug, $existingSlugs)) {
-            $counter++;
-            $newSlug = $cleanSlug . '_' . $counter;
-        }
-
-        return $newSlug;
-    }
-
-    protected function checkPostAndValidForm($form, ?array $params = null): bool
+    protected function checkPostAndValidForm($form): bool
     {
         if (!$this->getRequest()->isPost()) {
             return false;
         }
 
-        if ($params === null) {
-            $params = $this->params()->fromPost();
-        }
+        // Check if the name of the slug is single in the database.
+        $params = $this->params()->fromPost();
         $id = (int) $this->params('id');
-        // Slug may be at root (add form) or nested under "settings" (edit
-        // form).
-        $slug = $params['settings']['o:slug'] ?? $params['o:slug'] ?? '';
+        $slug = $params['o:slug'];
 
         $slugs = $this->api()
             ->search('search_configs', [], ['returnScalar' => 'slug'])
@@ -364,7 +292,7 @@ class SearchConfigController extends AbstractActionController
             }
             try {
                 $searchConfigId = (int) $this->api()->read('search_configs', ['slug' => $slug])->getContent()->id();
-            } catch (\Throwable $e) {
+            } catch (\Exception $e) {
                 $searchConfigId = null;
             }
             if ($id !== $searchConfigId) {
@@ -574,15 +502,7 @@ class SearchConfigController extends AbstractActionController
             'limit',
             'state',
             'more',
-            'per_page',
             'display_count',
-            // Slider scale settings: dedicated form fields, must not be moved
-            // into "options" (which is the free-form IniTextarea).
-            'scale_mode',
-            'scale_breakpoints',
-            'scale_show_ticks',
-            // Boolean buckets filter: dedicated form field.
-            'boolean_filter',
         ];
         $settings['facet']['mode'] = in_array($settings['facet']['mode'] ?? null, ['button', 'link', 'js']) ? $settings['facet']['mode'] : 'button';
         foreach ($settings['facet']['facets'] ?? [] as $key => $facet) {
@@ -593,7 +513,7 @@ class SearchConfigController extends AbstractActionController
             if (isset($facet['display_count'])) {
                 $facet['display_count'] = (bool) $facet['display_count'];
             }
-            foreach (['limit', 'more', 'per_page', 'min', 'max'] as $k) {
+            foreach (['limit', 'more', 'min', 'max'] as $k) {
                 if (isset($facet[$k])) {
                     if ($facet[$k] === '') {
                         unset($facet[$k]);
@@ -745,20 +665,8 @@ class SearchConfigController extends AbstractActionController
             // There can be only one mode for all facets, so add the mode to
             // each facet to simplify theme.
             $facet['mode'] = $facetMode;
-            // Move specific settings to the root of the array. Keys with
-            // dedicated form fields must not be overridden by stale entries
-            // coming from the "options" IniTextarea.
-            $reservedKeys = [
-                'boolean_filter',
-                'field_end',
-                'scale_mode',
-                'scale_breakpoints',
-                'scale_show_ticks',
-            ];
+            // Move specific settings to the root of the array.
             foreach ($facet['options'] as $k => $v) {
-                if (in_array($k, $reservedKeys, true) && array_key_exists($k, $facet)) {
-                    continue;
-                }
                 $facet[$k] = $v;
             }
             unset($facet['options']);
@@ -766,7 +674,7 @@ class SearchConfigController extends AbstractActionController
             if (isset($facet['display_count'])) {
                 $facet['display_count'] = (bool) $facet['display_count'];
             }
-            foreach (['limit', 'more', 'per_page', 'min', 'max'] as $k) {
+            foreach (['limit', 'more', 'min', 'max'] as $k) {
                 if (isset($facet[$k])) {
                     if ($facet[$k] === '') {
                         unset($facet[$k]);
@@ -970,8 +878,7 @@ class SearchConfigController extends AbstractActionController
     protected function slugify($input): string
     {
         if (extension_loaded('intl')) {
-            static $transliterator;
-            $transliterator ??= \Transliterator::createFromRules(':: NFD; :: [:Nonspacing Mark:] Remove; :: NFC;');
+            $transliterator = \Transliterator::createFromRules(':: NFD; :: [:Nonspacing Mark:] Remove; :: NFC;');
             $slug = (string) $transliterator->transliterate((string) $input);
         } elseif (extension_loaded('iconv')) {
             $slug = (string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $input);

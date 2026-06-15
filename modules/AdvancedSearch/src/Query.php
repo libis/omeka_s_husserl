@@ -140,11 +140,6 @@ class Query implements JsonSerializable
     /**
      * @var array
      */
-    protected $formFilters = [];
-
-    /**
-     * @var array
-     */
     protected $suggestOptions = [
         'suggester' => 0,
         'direct' => false,
@@ -584,37 +579,6 @@ class Query implements JsonSerializable
         return $this->facets[$facetName] ?? null;
     }
 
-    /**
-     * Set the list of form filters with their configuration.
-     *
-     * Used to access filter options like "first_digits" in the querier.
-     */
-    public function setFormFilters(array $formFilters): self
-    {
-        $this->formFilters = $formFilters;
-        return $this;
-    }
-
-    /**
-     * Get configuration for a form filter.
-     *
-     * Looks up by filter key first, then falls back to a search by "field"
-     * value, since URL parameters are keyed by field name and may differ from
-     * the filter key declared in the search config.
-     */
-    public function getFormFilter(string $filterName): ?array
-    {
-        if (isset($this->formFilters[$filterName])) {
-            return $this->formFilters[$filterName];
-        }
-        foreach ($this->formFilters as $filter) {
-            if (is_array($filter) && ($filter['field'] ?? null) === $filterName) {
-                return $filter;
-            }
-        }
-        return null;
-    }
-
     public function setActiveFacets(array $activeFacets): self
     {
         $this->activeFacets = $activeFacets;
@@ -645,10 +609,10 @@ class Query implements JsonSerializable
     }
 
     /**
-     * Available options for suggestions:
-     * - suggester: id of the suggester (uses indexed suggestions)
-     * - direct: direct query without index for field-specific suggestions (default false)
-     * - mode_index: "start" (default), "contain", "full", "start_full", "contain_full"
+     * Available options are (internal engine when direct (without index)):
+     * - suggester: id of the suggester
+     * - direct: direct query without the index (default false)
+     * - mode_index: "start" (default) or "contain"
      * - mode_search: "start" (default) or "contain"
      * - length: max size of a string (default 50)
      */

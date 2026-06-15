@@ -3,18 +3,13 @@
 namespace AdvancedSearch\Form\Admin;
 
 use Common\Form\Element as CommonElement;
-use Laminas\EventManager\Event;
-use Laminas\EventManager\EventManagerAwareTrait;
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
 use Laminas\Form\Form;
 use Omeka\Api\Manager as ApiManager;
-use Omeka\Form\Element as OmekaElement;
 
 class SearchSuggesterForm extends Form
 {
-    use EventManagerAwareTrait;
-
     /**
      * @var ApiManager
      */
@@ -64,13 +59,13 @@ class SearchSuggesterForm extends Form
                 'options' => [
                     'label' => 'Search engine', // @translate
                     'value_options' => $this->getSearchEngineOptions(),
-                    'empty_option' => '',
-                    'info' => 'The search engine cannot be changed after creation.', // @translate
+                    'empty_option' => 'Select a search engine below…', // @translate
                 ],
                 'attributes' => [
                     'id' => 'search_engine',
                     'readonly' => true,
                     'disabled' => true,
+                    'info' => 'For Solr, the suggester can be set in the config.', // @translate
                 ],
             ]);
 
@@ -87,53 +82,24 @@ class SearchSuggesterForm extends Form
             ->get('o:settings');
 
         $isInternal = (bool) $this->getOption('is_internal');
-
-        // Allow other modules to add their own fields to the settings fieldset.
-        // Event params: form, fieldset, search_engine, engine_adapter
-        $searchEngine = $this->getOption('search_engine');
-        $engineAdapter = $searchEngine ? $searchEngine->engineAdapter() : null;
-
-        $event = new Event('form.add_elements', $this, [
-            'fieldset' => $fieldset,
-            'search_engine' => $searchEngine,
-            'engine_adapter' => $engineAdapter,
-        ]);
-        $this->getEventManager()->triggerEvent($event);
-
-        // Check if external module handled the form (added elements).
-        $externalHandled = $event->getParam('handled', false);
-        if ($externalHandled) {
-            return;
-        }
-
         if (!$isInternal) {
             return;
         }
 
         // TODO Add a default query to manage any suggestion on any field and suggestions on item set page.
+        // TODO Add site (or add the list of sites in the index).
 
         $fieldset
             ->add([
-                'name' => 'sites',
-                'type' => CommonElement\OptionalSiteSelect::class,
+                'name' => 'direct',
+                'type' => Element\Checkbox::class,
                 'options' => [
-                    'label' => 'Sites to index', // @translate
-                    'empty_option' => '',
-                    'prepend_value_options' => [
-                        'admin' => 'Admin', // @translate
-                        'all' => '[All sites]', // @translate
-                    ],
+                    'label' => 'Direct query in database (without index, but site specific)', // @translate
                 ],
                 'attributes' => [
-                    'id' => 'sites',
-                    'class' => 'chosen-select',
-                    'multiple' => true,
-                    'data-placeholder' => 'Select sites…', // @translate
-                    'value' => ['admin', 'all'],
+                    'id' => 'direct',
                 ],
-            ]);
-
-        $fieldset
+            ])
             ->add([
                 'name' => 'mode_index',
                 'type' => CommonElement\OptionalRadio::class,
@@ -191,7 +157,7 @@ class SearchSuggesterForm extends Form
                 'attributes' => [
                     'id' => 'length',
                     'required' => false,
-                    'value' => '20',
+                    'value' => '50',
                     'min' => '1',
                     'max' => '190',
                 ],
@@ -226,41 +192,6 @@ class SearchSuggesterForm extends Form
                     'multiple' => true,
                     'class' => 'chosen-select',
                     'data-placeholder' => 'Select fields…', // @translate
-                ],
-            ])
-            ->add([
-                'name' => 'stopwords',
-                'type' => OmekaElement\ArrayTextarea::class,
-                'options' => [
-                    'label' => 'Stopwords', // @translate
-                    'info' => 'Suggestions starting or ending with these words will be excluded. One word per line.', // @translate
-                    'documentation' => 'https://github.com/stopwords-iso/stopwords-iso',
-                ],
-                'attributes' => [
-                    'id' => 'stopwords',
-                    'rows' => 5,
-                    'value' => [
-                        // English
-                        'a', 'an', 'and', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with',
-                        // French
-                        'a', 'au', 'aux', 'd', 'de', 'des', 'du', 'en', 'et', 'l', 'la', 'le', 'les', 'un', 'une',
-                    ],
-                ],
-            ])
-            ->add([
-                'name' => 'stopwords_mode',
-                'type' => CommonElement\OptionalRadio::class,
-                'options' => [
-                    'label' => 'Stopwords position', // @translate
-                    'value_options' => [
-                        'start_end' => 'Start and end (recommended)', // @translate
-                        'start' => 'Start only', // @translate
-                        'end' => 'End only', // @translate
-                    ],
-                ],
-                'attributes' => [
-                    'id' => 'stopwords_mode',
-                    'value' => 'start_end',
                 ],
             ])
         ;

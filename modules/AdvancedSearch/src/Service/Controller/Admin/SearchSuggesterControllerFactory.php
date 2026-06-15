@@ -3,12 +3,12 @@
 namespace AdvancedSearch\Service\Controller\Admin;
 
 use AdvancedSearch\Controller\Admin\SearchSuggesterController;
-use Psr\Container\ContainerInterface;
+use Interop\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class SearchSuggesterControllerFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
     {
         return new SearchSuggesterController(
             $services->get('Omeka\EntityManager')

@@ -95,9 +95,6 @@
     #search-filters .filter:first-of-type {
         padding-top: 0.4em;
     }
-    #search-filters:not(.has-joiner-not) .filter:first-of-type select[name$="[join]"] {
-        display: none;
-    }
     #search-filters .filter select,
     #search-filters .filter input {
         margin-top: 0;
@@ -436,16 +433,6 @@
         word-break: break-word;
     }
 
-    .facet-search-input {
-        width: 100%;
-        padding: 4px 8px;
-        margin-bottom: 0.5em;
-        box-sizing: border-box;
-    }
-    .facet-item.facet-search-hidden {
-        display: none !important;
-    }
-
     .facet-see-more {
         /* text-align: right; */
         margin: 0.5em 0
@@ -468,55 +455,6 @@
     }
     .facet-see-more-or-less.collapse::after {
         content: "🞁";
-    }
-
-    .facet-pagination {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.2em;
-        margin: 0.5em 0;
-    }
-    .facet-pagination button {
-        background: none;
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        cursor: pointer;
-        padding: 2px 6px;
-        font-size: 1em;
-        line-height: 1;
-        min-width: 1.8em;
-        text-align: center;
-        box-shadow: none;
-    }
-    .facet-pagination button:hover:not(:disabled) {
-        background-color: #f0f0f0;
-    }
-    .facet-pagination button:disabled {
-        opacity: 0.3;
-        cursor: default;
-    }
-    .facet-page-indicator {
-        font-size: 0.9em;
-        padding: 0 0.3em;
-        white-space: nowrap;
-    }
-    .facet-page-input {
-        width: 3.5em;
-        height: auto;
-        text-align: center;
-        font-size: inherit;
-        line-height: 1;
-        padding: 2px 4px;
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        box-sizing: border-box;
-        -moz-appearance: textfield;
-    }
-    .facet-page-input::-webkit-outer-spin-button,
-    .facet-page-input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
     }
 
     /* Search range */
@@ -615,34 +553,6 @@
         background: linear-gradient(90deg, #3b82f6, #3b82f6);
     }
 
-    .range-double[data-scale-ticks="1"] .range-sliders {
-        padding-bottom: 2em;
-    }
-    .range-double .range-ticks {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 1.4em;
-        height: 1em;
-        pointer-events: none;
-        font-size: 0.75em;
-        color: #666;
-    }
-    .range-double .range-tick {
-        position: absolute;
-        transform: translateX(-50%);
-        white-space: nowrap;
-    }
-    .range-double .range-tick::before {
-        content: '';
-        position: absolute;
-        left: 50%;
-        top: -0.4em;
-        width: 1px;
-        height: 0.4em;
-        background: #999;
-    }
-
     .range-double .range-numerics {
         display: flex;
         justify-content: space-between;
@@ -662,7 +572,34 @@
         width:  100%;
     }
 
-    /* Autocomplete: see common-autocomplete.css (module Common). */
+    /* Autocomplete */
+
+    .autocomplete-suggestions {
+        border: 1px solid #999999;
+        background: #ffffff;
+        overflow: auto;
+    }
+    .autocomplete-suggestion {
+        padding: 2px 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        /* Fix safari */
+        cursor: pointer;
+    }
+    .autocomplete-selected {
+        background: #f0f0f0;
+    }
+    .autocomplete-suggestions strong {
+        font-weight: normal;
+        color: #3399FF;
+    }
+    .autocomplete-group {
+        padding: 2px 5px;
+    }
+    .autocomplete-group strong {
+        display: block;
+        border-bottom: 1px solid #000;
+    }
 
     /* Breadcrumbs */
 
@@ -674,56 +611,4 @@
     nav.breadcrumbs > ol > li {
         display: inline;
     }
-}
-
-/* Search results map view */
-
-.search-results-map {
-    width: 100%;
-    margin: 1em 0;
-}
-
-#search-map {
-    width: 100%;
-    min-height: 500px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.search-view-type-map {
-    cursor: pointer;
-}
-
-/* Map popup styling */
-.search-map-popup .popup-title {
-    font-weight: bold;
-    margin-bottom: 0.5em;
-}
-
-.search-map-popup .popup-thumbnail {
-    max-width: 150px;
-    margin-bottom: 0.5em;
-}
-
-.search-map-popup .popup-metadata {
-    font-size: 0.9em;
-    color: #666;
-}
-
-.search-map-popup .popup-metadata .metadata-label {
-    font-weight: 600;
-}
-
-.search-map-popup .popup-link {
-    margin-top: 0.5em;
-}
-
-/* Resource navigation (prev/next on item page). */
-.block-resource-nav .resource-nav {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-}
-.block-resource-nav .resource-nav-context {
-    margin-right: 0.5em;
 }

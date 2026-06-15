@@ -12,7 +12,7 @@ class GetSearchConfig extends AbstractHelper
      *
      * The search config should be available in the current site or in admin.
      */
-    public function __invoke($searchConfigIdOrSlug = null, ?string $resourceName = null): ?SearchConfigRepresentation
+    public function __invoke($searchConfigIdOrSlug = null, string $resourceName = null): ?SearchConfigRepresentation
     {
         // Most of the time, only the current main search config is stored.
         static $searchConfigs = [];
@@ -50,7 +50,7 @@ class GetSearchConfig extends AbstractHelper
                 $configKey = $configKeys[$resourceName] ?? 'advancedsearch_main_config';
                 try {
                     $searchConfigIdOrSlug = $siteSetting($configKey);
-                } catch (\Throwable $e) {
+                } catch (\Exception $e) {
                     $defaultSiteId = $plugins->get('defaultSite')('id');
                     $searchConfigIdOrSlug = $siteSetting($configKey, null, $defaultSiteId);
                 }
@@ -77,7 +77,7 @@ class GetSearchConfig extends AbstractHelper
         if ($isSiteRequest) {
             try {
                 $availables = $siteSetting('advancedsearch_configs', []);
-            } catch (\Throwable $e) {
+            } catch (\Exception $e) {
                 // When Common is upgrading, DefaultSite is not available, and
                 // many features of the module anyway.
                 if (!$plugins->has('defaultSite')) {
@@ -88,7 +88,7 @@ class GetSearchConfig extends AbstractHelper
                     return null;
                 }
                 $availables = $siteSetting('advancedsearch_configs', [], $defaultSiteId);
-            } catch (\Throwable $e) {
+            } catch (\Exception $e) {
                 return null;
             }
             $allConfigs = array_intersect_key($allConfigs, array_flip($availables));

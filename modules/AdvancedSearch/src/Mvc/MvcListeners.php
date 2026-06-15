@@ -41,68 +41,21 @@ class MvcListeners extends AbstractListenerAggregate
         $matchedRouteName = $routeMatch->getMatchedRouteName();
 
         if ($matchedRouteName === 'site/resource') {
-            if ($routeMatch->getParam('action') !== 'browse') {
+            if ($routeMatch->getParam('action') !== 'browse'
+                // The name of the controller may be in __CONTROLLER__ or
+                // controller and can change randomly.
+                || !in_array($routeMatch->getParam('controller') ?: $routeMatch->getParam('__CONTROLLER__'), ['Omeka\Controller\Site\ItemSet', 'item-set'])
+            ) {
                 return;
             }
-            // The name of the controller may be in __CONTROLLER__ or controller
-            // and can change randomly.
-            $controller = $routeMatch->getParam('controller') ?: $routeMatch->getParam('__CONTROLLER__');
-            $isItemSet = in_array($controller, ['Omeka\Controller\Site\ItemSet', 'item-set']);
-            $isItem = in_array($controller, ['Omeka\Controller\Site\Item', 'item']);
-            if (!$isItemSet && !$isItem) {
-                return;
-            }
+
+            // Browse item sets.
 
             $services = $event->getApplication()->getServiceManager();
             $api = $services->get('Omeka\ApiManager');
             $siteSettings = $services->get('Omeka\Settings\Site');
 
             $siteSlug = $routeMatch->getParam('site-slug');
-
-            // Browse items is redirected to a search.
-            if ($isItem) {
-                $redirectTo = $siteSettings->get('advancedsearch_items_browse_config');
-                if (!$redirectTo) {
-                    return;
-                }
-                if ($redirectTo === 'default') {
-                    $redirectTo = (int) $siteSettings->get('advancedsearch_main_config');
-                } else {
-                    $redirectTo = (int) $redirectTo;
-                }
-                if (!$redirectTo) {
-                    return;
-                }
-                $searchConfigId = &$redirectTo;
-                try {
-                    $searchConfig = $api->read('search_configs', ['id' => $searchConfigId], [], ['responseContent' => 'resource'])->getContent();
-                    $searchConfigSlug = $searchConfig->getSlug();
-                } catch (\Throwable $e) {
-                    return;
-                }
-
-                $params = [
-                    '__NAMESPACE__' => 'AdvancedSearch\Controller',
-                    '__SITE__' => true,
-                    'controller' => \AdvancedSearch\Controller\SearchController::class,
-                    'action' => 'search',
-                    'site-slug' => $siteSlug,
-                    'id' => $searchConfigId,
-                    'page-slug' => $searchConfigSlug,
-                    'search-slug' => $searchConfigSlug,
-                    'redirected' => 'items',
-                ];
-                $routeMatch = new RouteMatch($params);
-                $routeMatch->setMatchedRouteName('search-page-' . $searchConfigSlug);
-                $event->setRouteMatch($routeMatch);
-
-                /** @var \Laminas\Stdlib\Parameters $query */
-                $query = $event->getRequest()->getQuery();
-                $query->set('resource_type', 'items');
-                return;
-            }
-
-            // Browse item sets.
 
             // Browse item sets is redirected to a page.
 
@@ -135,7 +88,7 @@ class MvcListeners extends AbstractListenerAggregate
                 try {
                     $site = $api->read('sites', ['slug' => $siteSlug], [], ['responseContent' => 'resource', 'initialize' => false, 'finalize' => false])->getContent();
                     $api->read('site_pages', ['site' => $site->getId(), 'slug' => $redirectTo], [], ['responseContent' => 'resource', 'initialize' => false, 'finalize' => false]);
-                } catch (\Throwable $e) {
+                } catch (\Exception $e) {
                     return;
                 }
 
@@ -157,12 +110,7 @@ class MvcListeners extends AbstractListenerAggregate
 
             // Browse item sets is redirected to a search.
 
-            $redirectTo = $siteSettings->get('advancedsearch_item_sets_browse_config');
-            if ($redirectTo === 'default') {
-                $redirectTo = (int) $siteSettings->get('advancedsearch_main_config');
-            } else {
-                $redirectTo = (int) $redirectTo;
-            }
+            $redirectTo = (int) $siteSettings->get('advancedsearch_item_sets_browse_config');
             if ($redirectTo) {
                 // The search config may have been removed, so check and get the slug.
                 // It should be cached by doctrine.
@@ -170,7 +118,7 @@ class MvcListeners extends AbstractListenerAggregate
                 try {
                     $searchConfig = $api->read('search_configs', ['id' => $searchConfigId], [], ['responseContent' => 'resource'])->getContent();
                     $searchConfigSlug = $searchConfig->getSlug();
-                } catch (\Throwable $e) {
+                } catch (\Exception $e) {
                     return;
                 }
 
@@ -248,7 +196,7 @@ class MvcListeners extends AbstractListenerAggregate
             try {
                 $site = $api->read('sites', ['slug' => $siteSlug], [], ['responseContent' => 'resource', 'initialize' => false, 'finalize' => false])->getContent();
                 $api->read('site_pages', ['site' => $site->getId(), 'slug' => $redirectTo], [], ['responseContent' => 'resource', 'initialize' => false, 'finalize' => false]);
-            } catch (\Throwable $e) {
+            } catch (\Exception $e) {
                 return;
             }
             $params = [
@@ -283,7 +231,7 @@ class MvcListeners extends AbstractListenerAggregate
         try {
             $searchConfig = $api->read('search_configs', ['id' => $searchConfigId], [], ['responseContent' => 'resource'])->getContent();
             $searchConfigSlug = $searchConfig->getSlug();
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
             return;
         }
 

@@ -26,38 +26,11 @@ $escapeAttr = $plugins->get('escapeHtmlAttr');
 $formSelect = $plugins->get('formSelect');
 $queryInput = $plugins->get('queryInput');
 $fieldSelect = $plugins->get('fieldSelect');
+$dataTypeHelper = $plugins->get('dataType');
+
 $isSiteRequest = $status->isSiteRequest();
 $applyTemplates = $isSiteRequest ? $siteSetting('search_apply_templates') : false;
 $usedTerms = !$isSiteRequest;
-
-$setting = $isSiteRequest ? $siteSetting : $plugins->get('setting');
-$allowedFilterTypes = $setting('advancedsearch_filter_types') ?: [];
-if (!$allowedFilterTypes) {
-    // Empty: only "in" as hidden input, no select.
-    $allowedFilterTypes = ['in'];
-}
-$filterTypeIsHidden = count($allowedFilterTypes) === 1;
-$allowedFilterTypes = array_flip($allowedFilterTypes);
-
-// Autosuggest on filter values (enabled by default via whitelist).
-$filterAutosuggestUrl = '';
-$autosuggestWhitelist = $setting('advancedsearch_filter_value_autosuggest_whitelist') ?: [];
-if ($autosuggestWhitelist && $plugins->has('references')) {
-    $basePath = $plugins->get('basePath');
-    $filterAutosuggestUrl = $basePath() . '/api/references';
-}
-$autosuggestBlacklist = $filterAutosuggestUrl
-    ? ($setting('advancedsearch_filter_value_autosuggest_blacklist') ?: [])
-    : [];
-$autosuggestAll = in_array('all', $autosuggestWhitelist);
-
-// Joiner "not": when enabled, negative types are removed and the
-// joiner gets a third option.
-$joinerNot = (bool) $setting('advancedsearch_filter_joiner_not');
-if ($joinerNot) {
-    $negativeTypes = array_flip(\AdvancedSearch\Stdlib\SearchResources::FIELD_QUERY['negative']);
-    $allowedFilterTypes = array_diff_key($allowedFilterTypes, $negativeTypes);
-}
 
 $resourceTypesToNames = ['item' => 'items', 'item-set' => 'item_sets', 'media' => 'media', 'annotation' => 'annotations'];
 $resourceName = $resourceTypesToNames[$this->resourceType ?? null] ?? 'items';
@@ -77,8 +50,6 @@ $selectMainDataType
         'aria-label' => $translate('Filters'), // @translate
         'data-placeholder' => 'Select main data type…', // @translate
     ]);
-
-$dataTypeHelper = $plugins->get('dataType');
 
 $queryInput = $queryInput();
 $queryInput->setOption('query_resource_type', $resourceName);
@@ -102,21 +73,12 @@ if (isset($query['search'])) {
     ]);
 }
 
-$htmlOption = function ($value, array $search, $key, $text) use($escapeAttr, $escape) {
+$queryOption = function ($value, array $search, $key, $text) use($escapeAttr, $escape) {
     $selected = null;
     if (isset($search[$key]) && $value === $search[$key]) {
         $selected = ' selected="selected"';
     }
     return sprintf('<option value="%s"%s>%s</option>' . "\n", $escapeAttr($value), $selected, $escape($text));
-};
-$queryOption = function ($value, array $search, $key, $text) use($htmlOption, $allowedFilterTypes) {
-    if (!isset($allowedFilterTypes[$value])) {
-        return '';
-    }
-    return $htmlOption($value, $search, $key, $text);
-};
-$hasGroupType = function (array $types) use ($allowedFilterTypes) {
-    return (bool) array_intersect_key($allowedFilterTypes, array_flip($types));
 };
 $queryText = function (array $search, $index) use ($escapeAttr, $translate) {
     $val = $search['val'] ?? null;
@@ -136,7 +98,7 @@ if ($isSiteRequest) {
 }
 ?>
 
-<div id="filter-queries" class="field removable multi-value<?= $joinerNot ? ' has-joiner-not' : '' ?>" role="group" aria-labelledby="by-value-label"<?php if ($filterAutosuggestUrl): ?> data-autosuggest-url="<?= $escapeAttr($filterAutosuggestUrl) ?>" data-autosuggest-all="<?= $autosuggestAll ? '1' : '0' ?>"<?php if (!$autosuggestAll && $autosuggestWhitelist): ?> data-autosuggest-whitelist="<?= $escapeAttr(json_encode($autosuggestWhitelist)) ?>"<?php endif; ?><?php if ($autosuggestBlacklist): ?> data-autosuggest-blacklist="<?= $escapeAttr(json_encode($autosuggestBlacklist)) ?>"<?php endif; ?><?php endif; ?>>
+<div id="filter-queries" class="field removable multi-value" role="group" aria-labelledby="by-value-label">
     <div class="field-meta">
         <span id="by-value-label" class="label"><?= $translate('Filters') ?></span>
         <button type="button" class="button add-value o-icon-add" aria-label="<?= $translate('Add new value') ?>" title="<?= $translate('Add new value') ?>"></button>
@@ -156,12 +118,9 @@ if ($isSiteRequest) {
         ?>
         <div class="value">
             <div class="value-common value-fields">
-                <select class="joiner" name="<?= $escape($stem . '[join]') ?>" aria-label="<?= $translate('Joiner') ?>">
-                    <?= $htmlOption('and', $filter, 'join', $translate('and')) ?>
-                    <?= $htmlOption('or', $filter, 'join', $translate('or')) ?>
-                    <?php if ($joinerNot): ?>
-                    <?= $htmlOption('not', $filter, 'join', $translate('not')) ?>
-                    <?php endif; ?>
+                <select class="joiner chosen-select" name="<?= $escape($stem . '[join]') ?>" aria-label="<?= $translate('Joiner') ?>">
+                    <?= $queryOption('and', $filter, 'join', $translate('AND')) ?>
+                    <?= $queryOption('or', $filter, 'join', $translate('OR')) ?>
                 </select>
                 <?= $fieldSelect([
                     'name' => $stem . '[field]',
@@ -181,11 +140,7 @@ if ($isSiteRequest) {
                         'data-placeholder' => '[any metadata]', // @translate
                     ],
                 ]) ?>
-                <?php if ($filterTypeIsHidden): ?>
-                <input type="hidden" name="<?= $escape($stem . '[type]') ?>" value="<?= $escapeAttr(array_key_first($allowedFilterTypes)) ?>">
-                <?php else: ?>
                 <select class="query-type chosen-select" name="<?= $escape($stem . '[type]') ?>" aria-label="<?= $translate('Query type') ?>">
-                    <?php if ($hasGroupType(['eq', 'neq', 'in', 'nin', 'sw', 'nsw', 'ew', 'new', 'near', 'nnear', 'ma', 'nma', 'lt', 'lte', 'gte', 'gt', '<', '≤', '≥', '>', 'yreq', 'nyreq', 'yrgte', 'yrlte', 'yrgt', 'yrlt'])): ?>
                     <optgroup label="<?= $translate('Value') ?>">
                         <?= $queryOption('eq', $filter, 'type', $translate('is exactly')) ?>
                         <?= $queryOption('neq', $filter, 'type', $translate('is not exactly')) ?>
@@ -214,16 +169,12 @@ if ($isSiteRequest) {
                         <?= $queryOption('yrgt', $filter, 'type', $translate('since year (excluded)')) ?>
                         <?= $queryOption('yrlt', $filter, 'type', $translate('until year (excluded)')) ?>
                     </optgroup>
-                    <?php endif; ?>
-                    <?php if ($hasGroupType(['res', 'nres', 'resq', 'nresq'])): ?>
                     <optgroup label="<?= $translate('Resource') ?>">
                         <?= $queryOption('res', $filter, 'type', $translate('is resource with ID')) ?>
                         <?= $queryOption('nres', $filter, 'type', $translate('is not resource with ID')) ?>
                         <?= $queryOption('resq', $filter, 'type', $translate('is resource matching query')) ?>
                         <?= $queryOption('nresq', $filter, 'type', $translate('is not resource matching query')) ?>
                     </optgroup>
-                    <?php endif; ?>
-                    <?php if ($hasGroupType(['lex', 'nlex', 'lres', 'nlres', 'lkq', 'nlkq'])): ?>
                     <optgroup label="<?= $translate('Linked resource') ?>">
                         <?= $queryOption('lex', $filter, 'type', $translate('is a linked resource')) ?>
                         <?= $queryOption('nlex', $filter, 'type', $translate('is not a linked resource')) ?>
@@ -232,8 +183,6 @@ if ($isSiteRequest) {
                         <?= $queryOption('lkq', $filter, 'type', $translate('is linked with resources matching query (expert)')) ?>
                         <?= $queryOption('nlkq', $filter, 'type', $translate('is not linked with resources matching query (expert)')) ?>
                     </optgroup>
-                    <?php endif; ?>
-                    <?php if ($hasGroupType(['ex', 'nex', 'exs', 'nexs', 'exm', 'nexm'])): ?>
                     <optgroup label="<?= $translate('Count') ?>">
                         <?= $queryOption('ex', $filter, 'type', $translate('has any value')) ?>
                         <?= $queryOption('nex', $filter, 'type', $translate('has no values')) ?>
@@ -242,8 +191,6 @@ if ($isSiteRequest) {
                         <?= $queryOption('exm', $filter, 'type', $translate('has multiple values')) ?>
                         <?= $queryOption('nexm', $filter, 'type', $translate('does not have multiple values')) ?>
                     </optgroup>
-                    <?php endif; ?>
-                    <?php if ($hasGroupType(['dtp', 'ndtp', 'tp', 'ntp', 'tpl', 'ntpl', 'tpr', 'ntpr', 'tpu', 'ntpu'])): ?>
                     <optgroup label="<?= $translate('Data type') ?>">
                         <?= $queryOption('dtp', $filter, 'type', $translate('has data type')) ?>
                         <?= $queryOption('ndtp', $filter, 'type', $translate('does not have data type')) ?>
@@ -256,8 +203,6 @@ if ($isSiteRequest) {
                         <?= $queryOption('tpu', $filter, 'type', $translate('has type uri-like')) ?>
                         <?= $queryOption('ntpu', $filter, 'type', $translate('does not have type uri-like')) ?>
                     </optgroup>
-                    <?php endif; ?>
-                    <?php if ($hasGroupType(['dup', 'ndup', 'dupt', 'ndupt', 'dupl', 'ndupl', 'duptl', 'nduptl', 'dupv', 'ndupv', 'dupvt', 'ndupvt', 'dupvl', 'ndupvl', 'dupvtl', 'ndupvtl', 'dupr', 'ndupr', 'duprt', 'nduprt', 'duprl', 'nduprl', 'duprtl', 'nduprtl', 'dupu', 'ndupu', 'duput', 'nduput', 'dupul', 'ndupul', 'duputl', 'nduputl'])): ?>
                     <optgroup label="<?= $translate('Curation') ?>">
                         <?= $queryOption('dup', $filter, 'type', $translate('has duplicate values')) ?>
                         <?= $queryOption('ndup', $filter, 'type', $translate('does not have duplicate values')) ?>
@@ -292,11 +237,9 @@ if ($isSiteRequest) {
                         <?= $queryOption('duputl', $filter, 'type', $translate('has duplicate uris, type and language')) ?>
                         <?= $queryOption('nduputl', $filter, 'type', $translate('does not have duplicate uris, type and language')) ?>
                     </optgroup>
-                    <?php endif; ?>
                 </select>
-                <?php endif; ?>
                 <?= $queryText($isSubQuery ? [] : $filter, $index) ?>
-                <?= $dataTypeHelper->getSelect($stem . '[val]', $query['filter'][$index]['val'] ?? null, ['multiple' => false, 'class' => 'query-text query-data-type chosen-select', 'aria-label' => $translate('Data types'), 'data-placeholder' => $translate('Select data type…')], ['used' => true]) ?>
+                <?= $dataTypeHelper->getSelect($stem . '[val]', $query['filter'][$index]['val'] ?? null, ['multiple' => false, 'class' => 'query-text query-data-type chosen-select', 'aria-label' => 'Data types', 'data-placeholder' => $translate('Select data type…')]) // TODO Manage search on property for multiple data types. ?>
                 <?= $formSelect($selectMainDataType->setName($stem . '[val]')->setValue($query['filter'][$index]['val'] ?? null)) ?>
                 <button type="button" class="button o-icon-delete remove-value" aria-label="<?= $translate('Remove value') ?>" title="<?= $translate('Remove value') ?>"></button>
             </div>

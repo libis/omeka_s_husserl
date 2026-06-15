@@ -38,7 +38,7 @@ class SearchConfigControllerTest extends \AdvancedSearchTest\Controller\SearchCo
 
     public function testConfigureGetAction(): void
     {
-        $this->dispatch($this->searchConfig->adminUrl('edit'));
+        $this->dispatch($this->searchConfig->adminUrl('configure'));
         $this->assertResponseStatusCode(200);
 
         // Check form exists.

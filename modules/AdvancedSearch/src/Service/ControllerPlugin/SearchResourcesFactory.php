@@ -3,12 +3,12 @@
 namespace AdvancedSearch\Service\ControllerPlugin;
 
 use AdvancedSearch\Mvc\Controller\Plugin\SearchResources;
-use Psr\Container\ContainerInterface;
+use Interop\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class SearchResourcesFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
     {
         return new SearchResources(
             $services->get('AdvancedSearch\SearchResources')

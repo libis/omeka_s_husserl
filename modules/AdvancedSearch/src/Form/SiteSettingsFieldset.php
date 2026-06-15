@@ -63,6 +63,100 @@ class SiteSettingsFieldset extends Fieldset
                 ],
             ])
 
+            ->add([
+                'name' => 'advancedsearch_items_config',
+                'type' => CommonElement\OptionalSelect::class,
+                'options' => [
+                    'element_group' => 'advanced_search',
+                    'label' => 'Search config for the item resource block', // @translate
+                    'value_options' => $this->searchConfigs,
+                    'empty_option' => 'Select the search engine for items…', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'advancedsearch_items_config',
+                ],
+            ])
+            ->add([
+                'name' => 'advancedsearch_items_template_form',
+                'type' => Element\Text::class,
+                'options' => [
+                    'element_group' => 'advanced_search',
+                    'label' => 'Template used for the form of the item resource block', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'advancedsearch_items_template_form',
+                    'placeholder' => 'search/search-form',
+                ],
+            ])
+
+            ->add([
+                'name' => 'advancedsearch_media_config',
+                'type' => CommonElement\OptionalSelect::class,
+                'options' => [
+                    'element_group' => 'advanced_search',
+                    'label' => 'Search config for the media resource block', // @translate
+                    'value_options' => $this->searchConfigs,
+                    'empty_option' => 'Select the search engine for medias…', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'advancedsearch_media_config',
+                ],
+            ])
+            ->add([
+                'name' => 'advancedsearch_media_template_form',
+                'type' => Element\Text::class,
+                'options' => [
+                    'element_group' => 'advanced_search',
+                    'label' => 'Template used for the form of the media resource block', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'advancedsearch_media_template_form',
+                    'placeholder' => 'search/search-form',
+                ],
+            ])
+
+            // This config is used for item set/show too.
+            ->add([
+                'name' => 'advancedsearch_item_sets_config',
+                'type' => CommonElement\OptionalSelect::class,
+                'options' => [
+                    'element_group' => 'advanced_search',
+                    'label' => 'Search config for the item set resource block', // @translate
+                    'value_options' => $this->searchConfigs,
+                    'empty_option' => 'Select the search engine for item sets…', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'advancedsearch_item_sets_config',
+                ],
+            ])
+            ->add([
+                'name' => 'advancedsearch_item_sets_template_form',
+                'type' => Element\Text::class,
+                'options' => [
+                    'element_group' => 'advanced_search',
+                    'label' => 'Template used for the form of the item set resource block', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'advancedsearch_item_sets_template_form',
+                    'placeholder' => 'search/search-form',
+                ],
+            ])
+            ->add([
+                'name' => 'advancedsearch_item_sets_scope',
+                'type' => CommonElement\OptionalRadio::class,
+                'options' => [
+                    'element_group' => 'advanced_search',
+                    'label' => 'Scope of the search for the item set resource block', // @translate
+                    'value_options' => [
+                        '0' => 'Search in current item set', // @translate
+                        '1' => 'Search in all resources', // @translate
+                    ],
+                ],
+                'attributes' => [
+                    'id' => 'advancedsearch_item_sets_scope',
+                ],
+            ])
+
             // TODO Move these options to redirect item set to search page or a search page setting?
             ->add([
                 'name' => 'advancedsearch_item_sets_redirect_browse',
@@ -71,7 +165,6 @@ class SiteSettingsFieldset extends Fieldset
                     'element_group' => 'advanced_search',
                     'label' => 'Item sets to redirect to item/browse', // @translate
                     'empty_option' => '',
-                    'disable_inarray_validator' => true,
                     'prepend_value_options' => [
                         'all' => 'All item sets', // @translate
                     ],
@@ -90,7 +183,6 @@ class SiteSettingsFieldset extends Fieldset
                     'element_group' => 'advanced_search',
                     'label' => 'Item sets to redirect to search', // @translate
                     'empty_option' => '',
-                    'disable_inarray_validator' => true,
                     'prepend_value_options' => [
                         'all' => 'All item sets', // @translate
                     ],
@@ -109,7 +201,6 @@ class SiteSettingsFieldset extends Fieldset
                     'element_group' => 'advanced_search',
                     'label' => 'Item sets to redirect to search (display record only on first page, old default Omeka)', // @translate
                     'empty_option' => '',
-                    'disable_inarray_validator' => true,
                     'prepend_value_options' => [
                         'all' => 'All item sets', // @translate
                     ],
@@ -143,10 +234,8 @@ class SiteSettingsFieldset extends Fieldset
                 'options' => [
                     'element_group' => 'advanced_search',
                     'label' => 'Redirect page "browse item sets" to a search page', // @translate
-                    'value_options' => [
-                        '' => 'No redirect', // @translate
-                        'default' => 'Default search page', // @translate
-                    ] + $this->searchConfigs,
+                    'value_options' => $this->searchConfigs,
+                    'empty_option' => '',
                 ],
                 'attributes' => [
                     'id' => 'advancedsearch_item_sets_browse_config',
@@ -161,185 +250,6 @@ class SiteSettingsFieldset extends Fieldset
                 ],
                 'attributes' => [
                     'id' => 'advancedsearch_item_sets_browse_page',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_items_browse_config',
-                'type' => CommonElement\OptionalSelect::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Redirect page "browse items" to a search page', // @translate
-                    'value_options' => [
-                        '' => 'No redirect', // @translate
-                        'default' => 'Default search page', // @translate
-                    ] + $this->searchConfigs,
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_items_browse_config',
-                ],
-            ])
-
-            // Resource blocks.
-
-            ->add([
-                'name' => 'advancedsearch_items_config',
-                'type' => CommonElement\OptionalSelect::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Search (item): Config', // @translate
-                    'value_options' => $this->searchConfigs,
-                    'empty_option' => 'Select the search engine for items…', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_items_config',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_items_template_form',
-                'type' => Element\Text::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Search (item): Form template', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_items_template_form',
-                    'placeholder' => 'search/search-form',
-                ],
-            ])
-
-            ->add([
-                'name' => 'advancedsearch_media_config',
-                'type' => CommonElement\OptionalSelect::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Search (media): Config', // @translate
-                    'value_options' => $this->searchConfigs,
-                    'empty_option' => 'Select the search engine for medias…', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_media_config',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_media_template_form',
-                'type' => Element\Text::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Search (media): Form template', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_media_template_form',
-                    'placeholder' => 'search/search-form',
-                ],
-            ])
-
-            // This config is used for item set/show too.
-            ->add([
-                'name' => 'advancedsearch_item_sets_config',
-                'type' => CommonElement\OptionalSelect::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Search (item set): Config', // @translate
-                    'value_options' => $this->searchConfigs,
-                    'empty_option' => 'Select the search engine for item sets…', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_item_sets_config',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_item_sets_template_form',
-                'type' => Element\Text::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Search (item set): Form template', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_item_sets_template_form',
-                    'placeholder' => 'search/search-form',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_item_sets_scope',
-                'type' => CommonElement\OptionalRadio::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Search (item set): Scope of the search', // @translate
-                    'value_options' => [
-                        '0' => 'Search in current item set', // @translate
-                        '1' => 'Search in all resources', // @translate
-                    ],
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_item_sets_scope',
-                ],
-            ])
-
-            ->add([
-                'name' => 'advancedsearch_resource_nav_types',
-                'type' => CommonElement\OptionalMultiCheckbox::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Resource navigation: active contexts', // @translate
-                    'value_options' => [
-                        'search' => 'Search results', // @translate
-                        'collection' => 'Item set', // @translate
-                        'selection' => 'User selection', // @translate
-                        'series' => 'Series in page blocks', // @translate
-                    ],
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_resource_nav_types',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_resource_nav_limit',
-                'type' => Element\Number::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Resource navigation: max results', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_resource_nav_limit',
-                    'min' => '0',
-                    'step' => '1',
-                    'value' => '25',
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_resource_nav_display',
-                'type' => CommonElement\OptionalMultiCheckbox::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Resource navigation: parts to display', // @translate
-                    'value_options' => [
-                        'type_label' => 'Type label (Search, Item set, Selection…)', // @translate
-                        'context_label' => 'Context name (item set title, selection title, query)', // @translate
-                        'position' => 'Position (n / total)', // @translate
-                    ],
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_resource_nav_display',
-                    'value' => ['type_label', 'context_label', 'position'],
-                ],
-            ])
-            ->add([
-                'name' => 'advancedsearch_resource_nav_fallback_item_set',
-                'type' => CommonElement\OptionalPropertySelect::class,
-                'options' => [
-                    'element_group' => 'advanced_search',
-                    'label' => 'Block Resource navigation: fall back to an item set on direct access', // @translate
-                    'info' => 'When no browse context exists (no URL param, no session), show a navigation within an item set of the item. "First" picks the first item set; a property sorts the item sets by that property value and picks the first with a non-empty value.', // @translate
-                    'empty_option' => 'Disabled', // @translate
-                    'prepend_value_options' => [
-                        'first' => 'First item set', // @translate
-                    ],
-                    'term_as_value' => true,
-                ],
-                'attributes' => [
-                    'id' => 'advancedsearch_resource_nav_fallback_item_set',
-                    'class' => 'chosen-select',
-                    'data-placeholder' => 'Select a fallback…', // @translate
                 ],
             ])
         ;

@@ -3,12 +3,12 @@
 namespace AdvancedSearch\Service\Form;
 
 use AdvancedSearch\Form\SearchingFormFieldset;
-use Psr\Container\ContainerInterface;
+use Interop\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class SearchingFormFieldsetFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
     {
         /**
          * @see \AdvancedSearch\Service\Form\SearchingFormFieldsetFactory

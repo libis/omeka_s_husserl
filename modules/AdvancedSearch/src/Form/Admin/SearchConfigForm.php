@@ -148,6 +148,14 @@ class SearchConfigForm extends Form
                 ],
             ])
         ;
+
+        $this
+            ->getInputFilter()
+            ->add([
+                'name' => 'manage_config_default',
+                'required' => false,
+            ])
+        ;
     }
 
     public function setApiManager(ApiManager $apiManager): self

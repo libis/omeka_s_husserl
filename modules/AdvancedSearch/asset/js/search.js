@@ -229,7 +229,6 @@ var Search = (function() {
             serviceUrl: serviceUrl,
             dataType: 'json',
             paramName: paramName,
-            triggerSelectOnValidInput: false,
             transformResult: transformResult,
             onSearchError: function(query, jqXHR, textStatus, errorThrown) {
                 if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
@@ -343,8 +342,6 @@ var Search = (function() {
         // In some themes, the mode for resource list is set with a different class.
         // Or different search engines are used, some with grid, some with list.
         var resourceLists = document.querySelectorAll('.search-results .resource-list, .search-results .resources-list-content');
-        var searchResultsList = document.querySelector('.search-results-list');
-        var searchResultsMap = document.querySelector('.search-results-map');
 
         var hasOnlyMode = Array.prototype.some.call(resourceLists, function(el) {
             return el.classList.contains('only-mode');
@@ -353,121 +350,12 @@ var Search = (function() {
             return;
         }
 
-        // Handle map view type.
-        if (viewType === 'map') {
-            // Hide results list, show map.
-            if (searchResultsList) {
-                searchResultsList.style.display = 'none';
-            }
-            if (searchResultsMap) {
-                searchResultsMap.style.display = 'block';
-                // Initialize map if not already done.
-                self.initSearchMap();
-            }
-        } else {
-            // Show results list, hide map.
-            if (searchResultsList) {
-                searchResultsList.style.display = '';
-            }
-            if (searchResultsMap) {
-                searchResultsMap.style.display = 'none';
-            }
-            // Apply grid/list class to resource lists.
-            for (var i = 0; i < resourceLists.length; i++) {
-                var resourceItem = resourceLists[i];
-                resourceItem.className = resourceItem.className.replace(' grid', '').replace(' list', '')
-                    + ' ' + viewType;
-            }
+        for (var i = 0; i < resourceLists.length; i++) {
+            var resourceItem = resourceLists[i];
+            resourceItem.className = resourceItem.className.replace(' grid', '').replace(' list', '')
+                + ' ' + viewType;
         }
         localStorage.setItem('search_view_type', viewType);
-    };
-
-    /**
-     * Map state tracking.
-     */
-    self.mapInitialized = false;
-    self.map = null;
-    self.features = null;
-    self.featuresPoint = null;
-    self.featuresPoly = null;
-
-    /**
-     * Initialize the search results map.
-     * Uses the Mapping module's API to load features.
-     */
-    self.initSearchMap = function() {
-        if (self.mapInitialized) {
-            // Map already initialized, just invalidate size in case container was hidden.
-            if (self.map) {
-                self.map.invalidateSize();
-            }
-            return;
-        }
-
-        var searchMapDiv = document.getElementById('search-map');
-        if (!searchMapDiv) {
-            return;
-        }
-
-        // Check if MappingModule is available.
-        if (typeof MappingModule === 'undefined') {
-            console.warn('MappingModule not loaded. Map view requires the Mapping module.');
-            return;
-        }
-
-        var featuresUrl = searchMapDiv.dataset.featuresUrl;
-        var popupUrl = searchMapDiv.dataset.featurePopupContentUrl;
-        var basemapProvider = searchMapDiv.dataset.basemapProvider || 'OpenStreetMap.Mapnik';
-        var disableClustering = searchMapDiv.dataset.disableClustering === '1';
-
-        // Get item ids from the search results (passed from PHP as comma-separated string).
-        // Empty string means: show all features (browse mode or too many results).
-        var itemIdsString = searchMapDiv.dataset.itemIds || '';
-        var itemsQuery = {};
-
-        if (itemIdsString) {
-            // Filtered search with reasonable number of results: pass ids.
-            // Omeka API supports "id=x,y,z" format.
-            itemsQuery.id = itemIdsString;
-        }
-        // If empty, itemsQuery stays empty and Mapping will show all features.
-
-        // Set map height.
-        searchMapDiv.style.height = '600px';
-
-        // Initialize map using MappingModule.
-        var mapResult = MappingModule.initializeMap(searchMapDiv, {}, {
-            disableClustering: disableClustering,
-            basemapProvider: basemapProvider
-        });
-
-        self.map = mapResult[0];
-        self.features = mapResult[1];
-        self.featuresPoint = mapResult[2];
-        self.featuresPoly = mapResult[3];
-
-        // Load features.
-        var onFeaturesLoad = function() {
-            if (!self.map.mapping_map_interaction) {
-                var bounds = self.features.getBounds();
-                if (bounds.isValid()) {
-                    self.map.fitBounds(bounds);
-                }
-            }
-        };
-
-        MappingModule.loadFeaturesAsync(
-            self.map,
-            self.featuresPoint,
-            self.featuresPoly,
-            featuresUrl,
-            popupUrl,
-            JSON.stringify(itemsQuery),
-            JSON.stringify({}),
-            onFeaturesLoad
-        );
-
-        self.mapInitialized = true;
     };
 
     /* Facets. */
@@ -497,169 +385,14 @@ var Search = (function() {
         self.seeMoreOrLess = function(button) {
             button = $(button);
             if (button.hasClass('expand')) {
-                // Collapsing: remove pagination and show only default items.
-                self.removePagination(button);
                 button.text(button.attr('data-label-see-more') ? button.attr('data-label-see-more') : (hasOmekaTranslate ? Omeka.jsTranslate('See more') : 'See more'));
                 const defaultCount = Number(button.attr('data-default-count')) + 1;
-                button.closest('.facet').find('.facet-items .facet-item:nth-child(n+' + defaultCount + ')').css('display', '').attr('hidden', 'hidden');
+                button.closest('.facet').find('.facet-items .facet-item:nth-child(n+' + defaultCount + ')').attr('hidden', 'hidden');
             } else {
-                // Expanding: check if pagination is enabled.
-                const perPage = Number(button.attr('data-per-page')) || 0;
-                if (perPage > 0) {
-                    button.text(button.attr('data-label-see-less') ? button.attr('data-label-see-less') : (hasOmekaTranslate ? Omeka.jsTranslate('See less') : 'See less'));
-                    self.initPagination(button, perPage);
-                } else {
-                    button.text(button.attr('data-label-see-less') ? button.attr('data-label-see-less') : (hasOmekaTranslate ? Omeka.jsTranslate('See less') : 'See less'));
-                    button.closest('.facet').find('.facet-items .facet-item').removeAttr('hidden');
-                }
+                button.text(button.attr('data-label-see-less') ? button.attr('data-label-see-less') : (hasOmekaTranslate ? Omeka.jsTranslate('See less') : 'See less'));
+                button.closest('.facet').find('.facet-items .facet-item').removeAttr('hidden');
             }
             $searchFacets.trigger('o:advanced-search.facet.see-more-or-less');
-            return self;
-        };
-
-        /**
-         * Initialize pagination for a facet.
-         *
-         * @param {jQuery} button The "see more/less" button.
-         * @param {number} perPage Number of items per page.
-         */
-        self.initPagination = function(button, perPage) {
-            button = $(button);
-            var facet = button.closest('.facet');
-            var items = facet.find('.facet-items .facet-item');
-
-            // Count all non-active (unchecked) items for pagination.
-            var paginableItems = items.filter(function() {
-                var input = $(this).find('input[type=checkbox]');
-                return !input.length || !input.prop('checked');
-            });
-            var totalPages = Math.ceil(paginableItems.length / perPage);
-            if (totalPages <= 0) totalPages = 1;
-
-            // Remove any existing pagination.
-            facet.find('.facet-pagination').remove();
-
-            // Don't show pagination when there is only one page.
-            if (totalPages <= 1) {
-                facet.find('.facet-items li').css('display', '').removeAttr('hidden');
-                return self;
-            }
-
-            var labelPage = button.attr('data-label-page') || 'Page';
-            var indicatorHtml = totalPages > 4
-                ? '<span class="facet-page-indicator"><input type="number" class="facet-page-input" value="1" min="1" max="' + totalPages + '" title="' + labelPage + '"> / ' + totalPages + '</span>'
-                : '<span class="facet-page-indicator">1 / ' + totalPages + '</span>';
-            var paginationHtml = '<div class="facet-pagination">'
-                + '<button type="button" class="facet-page-first" title="' + labelPage + ' 1">&laquo;</button>'
-                + '<button type="button" class="facet-page-prev" title="' + (button.attr('data-label-page-prev') || 'Previous page') + '">&lsaquo;</button>'
-                + indicatorHtml
-                + '<button type="button" class="facet-page-next" title="' + (button.attr('data-label-page-next') || 'Next page') + '">&rsaquo;</button>'
-                + '<button type="button" class="facet-page-last" title="' + labelPage + ' ' + totalPages + '">&raquo;</button>'
-                + '</div>';
-            button.closest('.facet-see-more').before(paginationHtml);
-
-            // Store pagination state on the facet element.
-            facet.data('facet-page', 1);
-            facet.data('facet-total-pages', totalPages);
-            facet.data('facet-per-page', perPage);
-
-            self.showPage(button, 1);
-            return self;
-        };
-
-        /**
-         * Show a specific page of facet items.
-         *
-         * Active/checked items always remain visible.
-         *
-         * @param {jQuery} button The "see more/less" button.
-         * @param {number} page The page number (1-based).
-         */
-        self.showPage = function(button, page) {
-            button = $(button);
-            var facet = button.closest('.facet');
-            var items = facet.find('.facet-items .facet-item');
-            var perPage = facet.data('facet-per-page') || Number(button.attr('data-per-page')) || 10;
-            var totalPages = facet.data('facet-total-pages') || 1;
-
-            if (page < 1) page = 1;
-            if (page > totalPages) page = totalPages;
-
-            facet.data('facet-page', page);
-
-            var paginableIndex = 0;
-            var startIndex = (page - 1) * perPage;
-            var endIndex = page * perPage;
-
-            items.each(function() {
-                var item = $(this);
-                var input = item.find('input[type=checkbox]');
-                var isActive = input.length && input.prop('checked');
-
-                if (isActive) {
-                    // Active/checked items: visible on first page only.
-                    if (page === 1) {
-                        item.removeAttr('hidden');
-                    } else {
-                        item.attr('hidden', 'hidden');
-                    }
-                } else {
-                    // All non-active items are paginated.
-                    if (paginableIndex >= startIndex && paginableIndex < endIndex) {
-                        item.removeAttr('hidden');
-                    } else {
-                        item.attr('hidden', 'hidden');
-                    }
-                    paginableIndex++;
-                }
-            });
-
-            // Stabilize the container height so pagination buttons
-            // don't jump: fix max-height from the first page, then
-            // use overflow for pages with more content.
-            var facetItems = facet.find('.facet-items');
-            var fixedHeight = facet.data('facet-fixed-height');
-            if (!fixedHeight) {
-                fixedHeight = facetItems.outerHeight();
-                facet.data('facet-fixed-height', fixedHeight);
-            }
-            facetItems.css({
-                'height': fixedHeight + 'px',
-                'overflow-y': 'auto',
-            });
-
-            // Update indicator.
-            var pageInput = facet.find('.facet-page-input');
-            if (pageInput.length) {
-                pageInput.val(page);
-            } else {
-                facet.find('.facet-page-indicator').text(page + ' / ' + totalPages);
-            }
-
-            // Update button states.
-            facet.find('.facet-page-first, .facet-page-prev').prop('disabled', page <= 1);
-            facet.find('.facet-page-next, .facet-page-last').prop('disabled', page >= totalPages);
-
-            return self;
-        };
-
-        /**
-         * Remove pagination controls and reset state.
-         *
-         * @param {jQuery} button The "see more/less" button.
-         */
-        self.removePagination = function(button) {
-            button = $(button);
-            var facet = button.closest('.facet');
-            facet.find('.facet-pagination').remove();
-            facet.find('.facet-items').css({
-                'height': '',
-                'overflow-y': '',
-            });
-            facet.removeData('facet-page');
-            facet.removeData('facet-total-pages');
-            facet.removeData('facet-per-page');
-            facet.removeData('facet-fixed-height');
             return self;
         };
 
@@ -828,86 +561,6 @@ var Search = (function() {
     }
 
     /**
-     * Clean search query by removing empty inputs before form submission.
-     *
-     * This produces cleaner URLs like ?q=pont instead of
-     * ?q=pont&submit=&filter[0][join]=and&filter[0][field]=...&filter[0][val]=
-     *
-     * Generic solution for any form structure:
-     * - Groups with empty value field (val, text) AND type requiring value → remove group
-     * - Types without value (ex, nex, etc.) are kept even if val is empty
-     * - Empty simple inputs are removed directly
-     * - "0" is kept as a valid value
-     */
-    self.cleanSearchQuery = function(form) {
-        if (!form) return self;
-        const $form = $(form);
-
-        // Trim text inputs (q, refine, filter values…).
-        $form.find('input[type=search], input[type=text]').each(function() {
-            const $input = $(this);
-            const v = $input.val();
-            if (v && v !== v.trim()) {
-                $input.val(v.trim());
-            }
-        });
-
-        const isEmpty = (v) => v === '' || v === null || (Array.isArray(v) && !v.length);
-        const typesWithValue = self.filterTypes.withValue;
-
-        // Groups to remove (identified by their prefix).
-        const groupsToRemove = new Set();
-
-        // First pass: find groups with empty value fields where type requires value.
-        $form.find(':input[name]').each(function() {
-            const $input = $(this);
-            const name = $input.attr('name');
-            const value = $input.val();
-
-            // Keep "0" as valid value.
-            if (value === '0' || value === 0) return;
-
-            // Match grouped inputs: prefix[val] or prefix[text].
-            const match = name.match(/^(.+)\[(val|text)\]$/);
-            if (match && isEmpty(value)) {
-                const prefix = match[1]; // e.g., "filter[0]" or "property[1]"
-                // Check if the type requires a value.
-                const typeInput = $form.find(`[name="${prefix}[type]"]`);
-                const typeVal = typeInput.length ? typeInput.val() : null;
-                // Remove group if no type field, or type requires value.
-                if (!typeVal || typesWithValue.includes(typeVal)) {
-                    groupsToRemove.add(prefix);
-                }
-            }
-        });
-
-        // Second pass: remove groups and empty simple inputs.
-        $form.find(':input[name]').each(function() {
-            const $input = $(this);
-            const name = $input.attr('name');
-            const value = $input.val();
-
-            // Keep "0" as valid value.
-            if (value === '0' || value === 0) return;
-
-            // Check if this input belongs to a group to remove.
-            for (const prefix of groupsToRemove) {
-                if (name.startsWith(prefix + '[')) {
-                    $input.prop('name', '');
-                    return;
-                }
-            }
-
-            // Simple input: remove if empty.
-            if (isEmpty(value)) {
-                $input.prop('name', '');
-            }
-        });
-
-        return self;
-    }
-
-    /**
     * Search range double / sliders.
     *
     * "min" and "max" values are required to compute color.
@@ -935,130 +588,18 @@ var Search = (function() {
                 : [null, null, null, null];
         };
 
-        /**
-         * Read scale config from data attributes on .range-double. Returns {
-         * mode: 'linear'|'piecewise', breakpoints: [[v,p],...] }.
-         */
-        self.getScale = function(element) {
-            const rangeDouble = element ? element.closest('.range-double') : null;
-            if (!rangeDouble) {
-                return { mode: 'linear', breakpoints: [] };
-            }
-            const mode = rangeDouble.getAttribute('data-scale-mode') || 'linear';
-            if (mode === 'log') {
-                const lmin = parseFloat(rangeDouble.getAttribute('data-scale-min'));
-                const lmax = parseFloat(rangeDouble.getAttribute('data-scale-max'));
-                if (isNaN(lmin) || isNaN(lmax) || lmax <= lmin) {
-                    return { mode: 'linear', breakpoints: [] };
-                }
-                return { mode: 'log', min: lmin, max: lmax, breakpoints: [[lmin, 0], [lmax, 100]] };
-            }
-            if (mode !== 'piecewise') {
-                return { mode: 'linear', breakpoints: [] };
-            }
-            const raw = rangeDouble.getAttribute('data-scale-breakpoints') || '[]';
-            let bp;
-            try {
-                bp = JSON.parse(raw);
-            } catch (e) {
-                return { mode: 'linear', breakpoints: [] };
-            }
-            if (!Array.isArray(bp) || bp.length < 2) {
-                return { mode: 'linear', breakpoints: [] };
-            }
-            // Sort by value to be safe.
-            bp = bp.map(p => [parseFloat(p[0]), parseFloat(p[1])]).sort((a, b) => a[0] - b[0]);
-            return { mode: 'piecewise', breakpoints: bp };
-        };
-
-        self.logValueToPos = function(val, scale) {
-            if (val <= scale.min) return 0;
-            if (val >= scale.max) return 100;
-            const denom = Math.log10(scale.max - scale.min + 1);
-            return denom > 0 ? 100 * Math.log10(val - scale.min + 1) / denom : 0;
-        };
-
-        self.logPosToValue = function(pos, scale) {
-            if (pos <= 0) return scale.min;
-            if (pos >= 100) return scale.max;
-            const denom = Math.log10(scale.max - scale.min + 1);
-            return Math.round(scale.min + Math.pow(10, pos / 100 * denom) - 1);
-        };
-
-        self.domainToPos = function(val, scale) {
-            if (scale.mode === 'piecewise') return self.valueToPos(val, scale.breakpoints);
-            if (scale.mode === 'log') return self.logValueToPos(val, scale);
-            return val;
-        };
-
-        self.posToDomain = function(pos, scale) {
-            if (scale.mode === 'piecewise') return self.posToValue(pos, scale.breakpoints);
-            if (scale.mode === 'log') return self.logPosToValue(pos, scale);
-            return pos;
-        };
-
-        /**
-         * Convert a domain value to a slider position (0..100).
-         */
-        self.valueToPos = function(val, bp) {
-            if (val <= bp[0][0]) return bp[0][1];
-            const last = bp.length - 1;
-            if (val >= bp[last][0]) return bp[last][1];
-            for (let i = 0; i < last; i++) {
-                const [v0, p0] = bp[i];
-                const [v1, p1] = bp[i + 1];
-                if (val >= v0 && val <= v1) {
-                    return p0 + (p1 - p0) * (val - v0) / (v1 - v0);
-                }
-            }
-            return bp[last][1];
-        };
-
-        /**
-         * Convert a slider position (0..100) to a domain value.
-         */
-        self.posToValue = function(pos, bp) {
-            if (pos <= bp[0][1]) return bp[0][0];
-            const last = bp.length - 1;
-            if (pos >= bp[last][1]) return bp[last][0];
-            for (let i = 0; i < last; i++) {
-                const [v0, p0] = bp[i];
-                const [v1, p1] = bp[i + 1];
-                if (pos >= p0 && pos <= p1) {
-                    return Math.round(v0 + (v1 - v0) * (pos - p0) / (p1 - p0));
-                }
-            }
-            return bp[last][0];
-        };
-
         self.controlNumericFrom = function(element) {
             const [inputFrom, inputTo, sliderFrom, sliderTo] = self.getRangeDoubleElements(element);
-            // Let the user clear/edit the input freely; do not sync while the
-            // input is empty or not a valid number.
-            if (inputFrom.value === '' || isNaN(parseFloat(inputFrom.value))) {
-                return self;
-            }
-            const scale = self.getScale(element);
-            const [fromVal, toVal] = self.parseTwoElementsToNumber(inputFrom, inputTo);
-            const fromClamped = (!isNaN(toVal) && fromVal > toVal) ? toVal : fromVal;
-            sliderFrom.value = scale.mode === 'linear'
-                ? String(fromClamped)
-                : String(self.domainToPos(fromClamped, scale));
+            const [from, to] = self.parseTwoElementsToNumber(inputFrom, inputTo);
+            [inputFrom.value, sliderFrom.value] = from > to ? [to, to] : [from, from];
             self.fillSlider(inputFrom, inputTo, sliderTo);
             return self;
         };
 
         self.controlNumericTo = function(element) {
             const [inputFrom, inputTo, sliderFrom, sliderTo] = self.getRangeDoubleElements(element);
-            if (inputTo.value === '' || isNaN(parseFloat(inputTo.value))) {
-                return self;
-            }
-            const scale = self.getScale(element);
-            const [fromVal, toVal] = self.parseTwoElementsToNumber(inputFrom, inputTo);
-            const toClamped = (!isNaN(fromVal) && fromVal > toVal) ? fromVal : toVal;
-            sliderTo.value = scale.mode === 'linear'
-                ? String(toClamped)
-                : String(self.domainToPos(toClamped, scale));
+            const [from, to] = self.parseTwoElementsToNumber(inputFrom, inputTo);
+            [inputTo.value, sliderTo.value] = from <= to ? [to, to] : [from, from];
             self.fillSlider(inputFrom, inputTo, sliderTo);
             self.toggleRangeSliderAccessible(sliderTo);
             return self;
@@ -1066,34 +607,24 @@ var Search = (function() {
 
         self.controlSliderFrom = function(element) {
             const [inputFrom, inputTo, sliderFrom, sliderTo] = self.getRangeDoubleElements(element);
-            const scale = self.getScale(element);
-            const [fromPos, toPos] = self.parseTwoElementsToNumber(sliderFrom, sliderTo);
-            const clampedPos = fromPos > toPos ? toPos : fromPos;
-            sliderFrom.value = String(clampedPos);
-            inputFrom.value = scale.mode === 'linear'
-                ? String(clampedPos)
-                : String(self.posToDomain(clampedPos, scale));
+            const [from, to] = self.parseTwoElementsToNumber(sliderFrom, sliderTo);
+            [inputFrom.value, sliderFrom.value] = from > to ? [to, to] : [from, from];
             self.fillSlider(sliderFrom, sliderTo, sliderTo);
             return self;
         }
 
         self.controlSliderTo = function(element) {
             const [inputFrom, inputTo, sliderFrom, sliderTo] = self.getRangeDoubleElements(element);
-            const scale = self.getScale(element);
-            const [fromPos, toPos] = self.parseTwoElementsToNumber(sliderFrom, sliderTo);
-            const clampedPos = fromPos > toPos ? fromPos : toPos;
-            sliderTo.value = String(clampedPos);
-            inputTo.value = scale.mode === 'linear'
-                ? String(clampedPos)
-                : String(self.posToDomain(clampedPos, scale));
+            const [from, to] = self.parseTwoElementsToNumber(sliderFrom, sliderTo);
+            [inputTo.value, sliderTo.value] = from <= to ? [to, to] : [from, from];
             self.fillSlider(sliderFrom, sliderTo, sliderTo);
             self.toggleRangeSliderAccessible(sliderTo);
             return self;
         }
 
         self.fillSlider = function(fromEl, toEl, controlSlider, colorSlider, colorRange) {
-            // Here, from and to may be the input or the slider. This is the
-            // main point to manage the double slider simply.
+            // Here, from and to may be the input or the slider.
+            // This is the main point to manage the double slider simply.
 
             const rangeDouble = controlSlider.closest('.range-double');
             if (!rangeDouble) {
@@ -1104,35 +635,22 @@ var Search = (function() {
                 return self;
             }
 
-            const scale = self.getScale(controlSlider);
-            let fromPct;
-            let toPct;
-            if (scale.mode === 'piecewise' || scale.mode === 'log') {
-                // Slider value is the position (0..100); read directly from
-                // sliders to drive the progress bar regardless of which element
-                // pair (slider or numeric) was passed in.
-                const sliderFrom = rangeDouble.querySelector('.range-slider-from');
-                const sliderTo = rangeDouble.querySelector('.range-slider-to');
-                fromPct = sliderFrom && sliderFrom.value !== '' ? parseFloat(sliderFrom.value) : 0;
-                toPct = sliderTo && sliderTo.value !== '' ? parseFloat(sliderTo.value) : 100;
-            } else {
-                // Validate bounds (linear: slider min/max are domain extremes).
-                const min = toEl.min !== '' && !isNaN(parseFloat(toEl.min)) ? parseFloat(toEl.min) : self.minDefault;
-                const max = toEl.max !== '' && !isNaN(parseFloat(toEl.max)) ? parseFloat(toEl.max) : self.maxDefault;
+            // Validate bounds.
+            const min = toEl.min !== '' && !isNaN(parseFloat(toEl.min)) ? parseFloat(toEl.min) : self.minDefault;
+            const max = toEl.max !== '' && !isNaN(parseFloat(toEl.max)) ? parseFloat(toEl.max) : self.maxDefault;
 
-                // Parse current values.
-                const fromVal = fromEl.value !== '' && !isNaN(parseFloat(fromEl.value)) ? parseFloat(fromEl.value) : min;
-                const toVal = toEl.value !== '' && !isNaN(parseFloat(toEl.value)) ? parseFloat(toEl.value) : max;
+            // Parse current values.
+            const fromVal = fromEl.value !== '' && !isNaN(parseFloat(fromEl.value)) ? parseFloat(fromEl.value) : min;
+            const toVal = toEl.value !== '' && !isNaN(parseFloat(toEl.value)) ? parseFloat(toEl.value) : max;
 
-                fromPct = ((Math.min(Math.max(fromVal, min), max) - min) / (max - min)) * 100;
-                toPct = ((Math.min(Math.max(toVal, min), max) - min) / (max - min)) * 100;
-            }
+            const fromPct = ((Math.min(Math.max(fromVal, min), max) - min) / (max - min)) * 100;
+            const toPct = ((Math.min(Math.max(toVal, min), max) - min) / (max - min)) * 100;
 
-            const fromProgress = Math.min(fromPct, toPct);
+            const fromProgress= Math.min(fromPct, toPct);
             const toProgress = Math.max(fromPct, toPct);
 
-            // Drive CSS variables on the visible progress bar. Previous version
-            // used a linear-gradient on main range.
+            // Drive CSS variables on the visible progress bar.
+            // Previous version used a linear-gradient on main range.
             prog.style.setProperty('--from', fromProgress + '%');
             prog.style.setProperty('--to', toProgress + '%');
 
@@ -1212,39 +730,28 @@ var Search = (function() {
             // Ensure valid bounds on all parts.
             [inputFrom, inputTo, sliderFrom, sliderTo].forEach(self.ensureValidBounds);
 
-            const scale = self.getScale(rangeDouble);
-            if (scale.mode === 'piecewise' || scale.mode === 'log') {
-                // Numeric inputs hold domain values; sliders hold positions
-                // 0..100. Clamp domain values to scale extremes, then derive
-                // slider positions from domain values.
-                const minVal = scale.mode === 'log' ? scale.min : scale.breakpoints[0][0];
-                const maxVal = scale.mode === 'log' ? scale.max : scale.breakpoints[scale.breakpoints.length - 1][0];
-                const fromDomain = inputFrom && inputFrom.value !== '' && !isNaN(parseFloat(inputFrom.value))
-                    ? parseFloat(inputFrom.value) : minVal;
-                const toDomain = inputTo && inputTo.value !== '' && !isNaN(parseFloat(inputTo.value))
-                    ? parseFloat(inputTo.value) : maxVal;
-                const fromClampedVal = Math.min(Math.max(Math.min(fromDomain, toDomain), minVal), maxVal);
-                const toClampedVal = Math.min(Math.max(Math.max(fromDomain, toDomain), minVal), maxVal);
-                if (inputFrom) inputFrom.value = String(fromClampedVal);
-                if (inputTo) inputTo.value = String(toClampedVal);
-                if (sliderFrom) sliderFrom.value = String(self.domainToPos(fromClampedVal, scale));
-                if (sliderTo) sliderTo.value = String(self.domainToPos(toClampedVal, scale));
-            } else {
-                // Linear: slider value = domain value.
-                const fromVal = parseFloat(sliderFrom && sliderFrom.value || inputFrom && inputFrom.value || self.minDefault);
-                const toVal = parseFloat(sliderTo && sliderTo.value || inputTo && inputTo.value || self.maxDefault);
-                const min = parseFloat(sliderTo ? sliderTo.min : self.minDefault);
-                const max = parseFloat(sliderTo ? sliderTo.max : self.maxDefault);
+            // Sync values: prefer the slider values if present; keep order from <= to.
+            const fromVal = parseFloat(sliderFrom && sliderFrom.value || inputFrom && inputFrom.value || self.minDefault);
+            const toVal = parseFloat(sliderTo && sliderTo.value || inputTo && inputTo.value || self.maxDefault);
+            const min = parseFloat(sliderTo ? sliderTo.min : self.minDefault);
+            const max = parseFloat(sliderTo ? sliderTo.max : self.maxDefault);
 
-                const from = isNaN(fromVal) ? min : Math.min(Math.max(fromVal, min), max);
-                const to = isNaN(toVal) ? max : Math.min(Math.max(toVal, min), max);
-                const fromClamped = Math.min(from, to);
-                const toClamped = Math.max(from, to);
+            const from = isNaN(fromVal) ? min : Math.min(Math.max(fromVal, min), max);
+            const to = isNaN(toVal) ? max : Math.min(Math.max(toVal, min), max);
+            const fromClamped = Math.min(from, to);
+            const toClamped = Math.max(from, to);
 
-                if (inputFrom) inputFrom.value = String(fromClamped);
-                if (sliderFrom) sliderFrom.value = String(fromClamped);
-                if (inputTo) inputTo.value = String(toClamped);
-                if (sliderTo) sliderTo.value = String(toClamped);
+            if (inputFrom) {
+                inputFrom.value = String(fromClamped);
+            }
+            if (sliderFrom) {
+                sliderFrom.value = String(fromClamped);
+            }
+            if (inputTo) {
+                inputTo.value = String(toClamped);
+            }
+            if (sliderTo) {
+                sliderTo.value = String(toClamped);
             }
 
             // Render and adjust accessibility.
@@ -1254,57 +761,6 @@ var Search = (function() {
             } else if (inputFrom && inputTo && sliderTo) {
                 self.fillSlider(inputFrom, inputTo, sliderTo);
                 self.toggleRangeSliderAccessible(sliderTo);
-            }
-
-            return self;
-        };
-
-        /**
-         * Clear range values at extremes before form submission.
-         *
-         * When the slider is at the minimum, don't filter by "from" (any start).
-         * When the slider is at the maximum, don't filter by "to" (any end).
-         * This provides better UX: user hasn't moved the slider = no filter.
-         *
-         * Note: For <input type="range">, setting value='' resets to min,
-         * so we remove the name attribute to exclude from form submission.
-         *
-         * @todo Backend: sort items without date values last when no filter is active.
-         * @todo Backend: exclude items without date when filter is active, include when not.
-         * @todo Add admin option to enable/disable this behavior per field.
-         */
-        self.clearExtremesBeforeSubmit = function(rangeDouble) {
-            if (!rangeDouble) {
-                return self;
-            }
-
-            const inputFrom = rangeDouble.querySelector('.range-numeric-from');
-            const inputTo = rangeDouble.querySelector('.range-numeric-to');
-            const sliderFrom = rangeDouble.querySelector('.range-slider-from');
-            const sliderTo = rangeDouble.querySelector('.range-slider-to');
-
-            // Get min/max from slider or input attributes.
-            const refElement = sliderFrom || inputFrom;
-            if (!refElement) {
-                return self;
-            }
-
-            const min = parseFloat(refElement.min);
-            const max = parseFloat(refElement.max);
-
-            // Remove "from" from submission if it equals min.
-            // For range inputs, we remove the name attribute (value='' doesn't work).
-            const fromValue = parseFloat(sliderFrom ? sliderFrom.value : (inputFrom ? inputFrom.value : NaN));
-            if (!isNaN(fromValue) && !isNaN(min) && fromValue === min) {
-                if (sliderFrom) sliderFrom.removeAttribute('name');
-                if (inputFrom && inputFrom.name) inputFrom.removeAttribute('name');
-            }
-
-            // Remove "to" from submission if it equals max.
-            const toValue = parseFloat(sliderTo ? sliderTo.value : (inputTo ? inputTo.value : NaN));
-            if (!isNaN(toValue) && !isNaN(max) && toValue === max) {
-                if (sliderTo) sliderTo.removeAttribute('name');
-                if (inputTo && inputTo.name) inputTo.removeAttribute('name');
             }
 
             return self;
@@ -1339,13 +795,12 @@ $(document).ready(function() {
      * Events.
      */
 
-    $('#search-reset, #facets-reset').on('click', function (ev) {
-        ev.preventDefault();
+    $('#search-reset, #facets-reset').on('click', function () {
         // The button may be outside the form.
         const form = $(this)[0].form;
         Search.smartClearForm(form);
-        // Reload page only for facets form, when facets apply immediately.
-        if (this.id === 'facets-reset' && !Search.facets.useApplyFacets) {
+        // Reload page only when there is no button to apply.
+        if (!Search.facets.useApplyFacets) {
             const url = new URL(window.location.href);
             const params = new URLSearchParams(url.search);
             for (const key of params.keys()) {
@@ -1379,51 +834,6 @@ $(document).ready(function() {
     });
 
     /**
-     * Autosuggest on advanced filter values.
-     *
-     * Use search engine values endpoint to get field values with prefix filtering.
-     */
-    var advFilterAutosuggestUrl = $searchFiltersAdvanced.data('autosuggest-url');
-    if (advFilterAutosuggestUrl && typeof $.fn.autocomplete === 'function') {
-        var initAdvFilterAutosuggest = function(filterFieldset) {
-            var input = filterFieldset.find('input[name$="[val]"]');
-            if (!input.length) return;
-            if (input.data('autocomplete')) {
-                input.autocomplete('dispose');
-            }
-            var fieldSelect = filterFieldset.find('select[name$="[field]"]');
-            var field = fieldSelect.val();
-            if (!field) return;
-
-            input.autocomplete({
-                serviceUrl: advFilterAutosuggestUrl
-                    + '&field=' + encodeURIComponent(field),
-                dataType: 'json',
-                paramName: 'q',
-                minChars: 2,
-                transformResult: function(response) {
-                    return response.data ? response.data : response;
-                },
-            });
-            input.attr('autocomplete', 'off');
-        };
-
-        $searchFiltersAdvanced.on('change', 'select[name$="[field]"]', function() {
-            initAdvFilterAutosuggest($(this).closest('fieldset.filter'));
-        });
-
-        $searchFiltersAdvanced.on('o:advanced-search.filter.append', function() {
-            $(this).find('> fieldset.filter').each(function() {
-                initAdvFilterAutosuggest($(this));
-            });
-        });
-
-        $searchFiltersAdvanced.find('> fieldset.filter').each(function() {
-            initAdvFilterAutosuggest($(this));
-        });
-    }
-
-    /**
      * Results tools (sort, pagination, per-page).
      */
 
@@ -1439,17 +849,6 @@ $(document).ready(function() {
         Search.setViewType('grid');
         $('.search-view-type').removeClass('active');
         $('.search-view-type-grid').addClass('active');
-    });
-
-    /**
-     * Map view handler.
-     * Requires the Mapping module to be installed.
-     */
-    $('.search-view-type-map').on('click', function(e) {
-        e.preventDefault();
-        Search.setViewType('map');
-        $('.search-view-type').removeClass('active');
-        $('.search-view-type-map').addClass('active');
     });
 
     $('.as-url select, select.as-url').on('change', function(e) {
@@ -1484,103 +883,9 @@ $(document).ready(function() {
         });
 
         $searchFacets.find('.facet-see-more-or-less').each((index, button) => Search.facets.seeMoreOrLess(button));
-
-        // Pagination navigation buttons.
-        $searchFacets.on('click', '.facet-page-first', function() {
-            var facet = $(this).closest('.facet');
-            var button = facet.find('.facet-see-more-or-less');
-            Search.facets.showPage(button, 1);
-        });
-        $searchFacets.on('click', '.facet-page-prev', function() {
-            var facet = $(this).closest('.facet');
-            var button = facet.find('.facet-see-more-or-less');
-            var page = facet.data('facet-page') || 1;
-            Search.facets.showPage(button, page - 1);
-        });
-        $searchFacets.on('click', '.facet-page-next', function() {
-            var facet = $(this).closest('.facet');
-            var button = facet.find('.facet-see-more-or-less');
-            var page = facet.data('facet-page') || 1;
-            Search.facets.showPage(button, page + 1);
-        });
-        $searchFacets.on('click', '.facet-page-last', function() {
-            var facet = $(this).closest('.facet');
-            var button = facet.find('.facet-see-more-or-less');
-            var totalPages = facet.data('facet-total-pages') || 1;
-            Search.facets.showPage(button, totalPages);
-        });
-        $searchFacets.on('change', '.facet-page-input', function() {
-            var input = $(this);
-            var facet = input.closest('.facet');
-            var button = facet.find('.facet-see-more-or-less');
-            var page = parseInt(input.val(), 10) || 1;
-            Search.facets.showPage(button, page);
-        });
-        $searchFacets.on('keydown', '.facet-page-input', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                $(this).trigger('change');
-            }
-        });
-
-        // Filter facet values via the search input (CheckboxSearch type).
-        $searchFacets.on('input', '.facet-search-input', function() {
-            const input = $(this);
-            const filter = input.val().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            const facet = input.closest('.facet');
-            const seeMore = facet.find('.facet-see-more-or-less');
-            const pagination = facet.find('.facet-pagination');
-            if (filter.length) {
-                // Hide pagination while filtering.
-                if (pagination.length) {
-                    pagination.hide();
-                }
-                // Show all items (remove hidden from pagination) so filter works on all.
-                facet.find('.facet-items .facet-item').removeAttr('hidden');
-                // Expand if collapsed.
-                if (seeMore.length && seeMore.hasClass('expand')) {
-                    seeMore.removeClass('expand').addClass('collapse');
-                    // Don't call seeMoreOrLess here to avoid re-pagination,
-                    // just update the label.
-                    seeMore.text(seeMore.attr('data-label-see-less') || 'See less');
-                }
-            } else {
-                // Restore pagination when filter is cleared.
-                if (pagination.length) {
-                    pagination.show();
-                    var page = facet.data('facet-page') || 1;
-                    Search.facets.showPage(seeMore, page);
-                } else if (seeMore.length && seeMore.hasClass('collapse')) {
-                    // No pagination: re-apply see-more state.
-                    var perPage = Number(seeMore.attr('data-per-page')) || 0;
-                    if (perPage > 0) {
-                        // Re-init pagination.
-                        Search.facets.initPagination(seeMore, perPage);
-                    }
-                }
-            }
-            facet.find('.facet-items .facet-item').each(function() {
-                const item = $(this);
-                const text = item.text().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                if (!filter.length || text.indexOf(filter) !== -1) {
-                    item.removeClass('facet-search-hidden');
-                } else {
-                    item.addClass('facet-search-hidden');
-                }
-            });
-        });
     }
 
     const rangeDoubles = document.querySelectorAll('.range-double');
-
-    // Clean empty query parameters for cleaner URLs.
-    // Note: form id can be "form-search", "search-form", or custom.
-    $('#search-form, #form-search, #search-headroom-form, #search-filters-form, #facets-form, .search-facets form, #advanced-search-form form').on('submit', function() {
-        $(this).find('.range-double').each(function() {
-            Search.rangeSliderDouble.clearExtremesBeforeSubmit(this);
-        });
-        Search.cleanSearchQuery(this);
-    });
 
     // Init ranges only when present.
     if (rangeDoubles.length) {
@@ -1591,64 +896,6 @@ $(document).ready(function() {
         $('.range-numeric-to').on('input', (event) => Search.rangeSliderDouble.controlNumericTo(event.target));
         $('.range-slider-from').on('input', (event) => Search.rangeSliderDouble.controlSliderFrom(event.target));
         $('.range-slider-to').on('input', (event) => Search.rangeSliderDouble.controlSliderTo(event.target));
-
-        // Handle range-double submit button click (for link/js mode with Ok button).
-        $('.range-double-submit').on('click', function(e) {
-            const rangeDouble = $(this).closest('.range-double');
-            if (!rangeDouble.length) return;
-
-            // Check if using direct link mode (data-url on inputs).
-            const inputFrom = rangeDouble.find('.range-numeric-from, .range-slider-from').filter('[data-url]').first();
-            const inputTo = rangeDouble.find('.range-numeric-to, .range-slider-to').filter('[data-url]').first();
-
-            if (!inputFrom.length && !inputTo.length) {
-                // Not direct link mode, let form submission handle it.
-                return;
-            }
-
-            e.preventDefault();
-
-            // Get domain min/max (scale extremes in piecewise mode, else slider
-            // attribute values).
-            const refEl = rangeDouble.find('.range-slider-from, .range-numeric-from')[0];
-            const scale = Search.rangeSliderDouble.getScale(refEl);
-            const isMapped = scale.mode === 'piecewise' || scale.mode === 'log';
-            const numericFrom = rangeDouble.find('.range-numeric-from')[0];
-            const numericTo = rangeDouble.find('.range-numeric-to')[0];
-            const min = scale.mode === 'piecewise'
-                ? scale.breakpoints[0][0]
-                : (scale.mode === 'log' ? scale.min : parseFloat(numericFrom?.min || refEl?.min));
-            const max = scale.mode === 'piecewise'
-                ? scale.breakpoints[scale.breakpoints.length - 1][0]
-                : (scale.mode === 'log' ? scale.max : parseFloat(numericTo?.max || refEl?.max));
-            const fromVal = parseFloat(rangeDouble.find('.range-numeric-from').val() || rangeDouble.find('.range-slider-from').val());
-            const toVal = parseFloat(rangeDouble.find('.range-numeric-to').val() || rangeDouble.find('.range-slider-to').val());
-
-            // Build URL: use "to" input URL as base, modify from/to params.
-            let url = inputTo.data('url') || inputFrom.data('url');
-            if (!url) return;
-
-            // Parse URL to modify query parameters.
-            const urlObj = new URL(url, window.location.origin);
-            const facetName = inputFrom.attr('name')?.match(/facet\[([^\]]+)\]/)?.[1]
-                || inputTo.attr('name')?.match(/facet\[([^\]]+)\]/)?.[1];
-
-            if (facetName) {
-                // Only add from/to if not at extremes.
-                if (!isNaN(fromVal) && !isNaN(min) && fromVal !== min) {
-                    urlObj.searchParams.set(`facet[${facetName}][from]`, fromVal);
-                } else {
-                    urlObj.searchParams.delete(`facet[${facetName}][from]`);
-                }
-                if (!isNaN(toVal) && !isNaN(max) && toVal !== max) {
-                    urlObj.searchParams.set(`facet[${facetName}][to]`, toVal);
-                } else {
-                    urlObj.searchParams.delete(`facet[${facetName}][to]`);
-                }
-            }
-
-            window.location.href = urlObj.toString();
-        });
     }
 
     /**********

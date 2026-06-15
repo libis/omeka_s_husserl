@@ -21,7 +21,7 @@ class SearchFilters extends AbstractHelper
     /**
      * The default partial view script.
      */
-    const PARTIAL_NAME = 'common/search-filters-links';
+    const PARTIAL_NAME = 'common/search-filters';
 
     /**
      * @var string
@@ -126,7 +126,6 @@ class SearchFilters extends AbstractHelper
             $this->query['submit'],
             $this->query['__searchConfig'],
             $this->query['__searchQuery'],
-            $this->query['__partialOptions'],
             $this->query['__original_query'],
         );
 
@@ -153,10 +152,8 @@ class SearchFilters extends AbstractHelper
             switch ($key) {
                 // Fulltext
                 case 'fulltext_search':
-                    // Always shown first, before any other filter, regardless
-                    // of the order of keys in the cleaned query.
                     $filterLabel = $translate('Search full-text'); // @translate
-                    $filters = [$filterLabel => [$this->urlQuery($key) => $value]] + $filters;
+                    $filters[$filterLabel][$this->urlQuery($key)] = $value;
                     break;
 
                 // Search by class
@@ -562,22 +559,8 @@ class SearchFilters extends AbstractHelper
         );
         $filters = $result['filters'];
 
-        $partialOptions = is_array($query['__partialOptions'] ?? null) ? $query['__partialOptions'] : [];
-        $mode = $this->searchConfig
-            ? $this->searchConfig->subSetting('results', 'search_filters_mode', 'link_remove')
-            : 'link_remove';
-        // Caller-provided "show_field_label" wins; otherwise read from the
-        // search config so callers do not have to forward it on every call.
-        $showFieldLabel = array_key_exists('show_field_label', $partialOptions)
-            ? (bool) $partialOptions['show_field_label']
-            : ($this->searchConfig
-                ? (bool) $this->searchConfig->subSetting('results', 'search_filters_field_label', true)
-                : true);
-
         return $view->partial($partialName, [
             'filters' => $filters,
-            'show_field_label' => $showFieldLabel,
-            'mode' => $mode,
         ]);
     }
 
@@ -638,10 +621,7 @@ class SearchFilters extends AbstractHelper
         $linkIds = array_unique(array_filter(array_map('intval', $linkIds)));
         $linkUris = array_unique(array_filter($linkUris));
 
-        // Consolidate resource ID queries: $linkIds and $vrIds both query the
-        // Resource table for id => title mapping. Query once and split results.
-        $allResourceIds = array_unique(array_merge($linkIds, $vrIds));
-        if ($allResourceIds) {
+        if ($linkIds) {
             // Currently, "resources" cannot be searched, so use adapter
             // directly. Rights are managed.
             /** @var \Doctrine\ORM\EntityManager $entityManager */
@@ -654,20 +634,13 @@ class SearchFilters extends AbstractHelper
                 ->select('omeka_root.id', 'omeka_root.title')
                 ->from(\Omeka\Entity\Resource::class, 'omeka_root')
                 ->where($qb->expr()->in('omeka_root.id', ':ids'))
-                ->setParameter('ids', $allResourceIds, \Doctrine\DBAL\Connection::PARAM_INT_ARRAY);
+                ->setParameter('ids', $linkIds, \Doctrine\DBAL\Connection::PARAM_INT_ARRAY);
             if ($isAnonymous) {
                 $qb
                     ->andWhere($qb->expr()->eq('omeka_root.isPublic', ':is_public'))->setParameter('is_public', 1);
             }
             // Do not store unknown ids (may be removed or private).
-            $allResourceTitles = array_filter(array_column($qb->getQuery()->getScalarResult(), 'title', 'id'));
-            // Split results back into original variables.
-            $linkIds = array_intersect_key($allResourceTitles, array_flip($linkIds));
-            $vrIds = array_intersect_key($allResourceTitles, array_flip($vrIds));
-            unset($allResourceTitles);
-        } else {
-            $linkIds = [];
-            $vrIds = [];
+            $linkIds = array_filter(array_column($qb->getQuery()->getScalarResult(), 'title', 'id'));
         }
 
         if ($linkUris) {
@@ -690,6 +663,28 @@ class SearchFilters extends AbstractHelper
             }
             // Do not store uris without label (may be removed or private too).
             $linkUris = array_filter(array_column($qb->getQuery()->getScalarResult(), 'value', 'uri'));
+        }
+
+        if ($vrIds) {
+            // Currently, "resources" cannot be searched, so use adapter
+            // directly. Rights are managed.
+            /** @var \Doctrine\ORM\EntityManager $entityManager */
+            $services ??= $this->searchConfig
+                ? $this->searchConfig->getServiceLocator()
+                : $view->api()->read('vocabularies', 1)->getContent()->getServiceLocator();
+            $entityManager = $services->get('Omeka\EntityManager');
+            $qb = $entityManager->createQueryBuilder();
+            $qb
+                ->select('omeka_root.id', 'omeka_root.title')
+                ->from(\Omeka\Entity\Resource::class, 'omeka_root')
+                ->where($qb->expr()->in('omeka_root.id', ':ids'))
+                ->setParameter('ids', $vrIds, \Doctrine\DBAL\Connection::PARAM_INT_ARRAY);
+            if ($isAnonymous) {
+                $qb
+                   ->andWhere($qb->expr()->eq('omeka_root.isPublic', ':is_public'))->setParameter('is_public', 1);
+            }
+            // Do not store unknown ids (may be removed or private).
+            $vrIds = array_filter(array_column($qb->getQuery()->getScalarResult(), 'title', 'id'));
         }
 
         $queryTypesLabels = $this->getQueryTypesLabels();

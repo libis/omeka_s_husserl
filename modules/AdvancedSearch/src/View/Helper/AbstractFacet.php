@@ -153,20 +153,6 @@ class AbstractFacet extends AbstractHelper
     {
         $isFacetModeDirect = in_array($options['mode'] ?? null, ['link', 'js']);
 
-        // Filter boolean buckets when "boolean_filter" is set on the facet.
-        // Applies to fields ending with "_b" (Solr dynamic field convention)
-        // and to non-Solr boolean fields named "is_public".
-        $boolFilter = $options['boolean_filter'] ?? '';
-        $isBoolField = substr($facetField, -2) === '_b' || $facetField === 'is_public';
-        if ($boolFilter && $isBoolField) {
-            $facetValues = array_filter($facetValues, function ($f) use ($boolFilter) {
-                $v = strtolower((string) ($f['value'] ?? ''));
-                $isTruthy = in_array($v, ['1', 'true', 'yes'], true);
-                return $boolFilter === 'truthy_only' ? $isTruthy : !$isTruthy;
-            });
-        }
-
-        $skipped = [];
         foreach ($facetValues as $facetIndex => &$facetValue) {
             $facetValueValue = (string) $facetValue['value'];
 
@@ -178,9 +164,12 @@ class AbstractFacet extends AbstractHelper
                 // TODO Check item sets facets that are not filtered by site with module Search Solr.
                 // The facet value is not a real value; or not in the current
                 // site and there is a bad index.
-                if (strlen($facetValueValue)) {
-                    $skipped[] = $facetValueValue;
-                }
+                // $active = false;
+                // $url = '';
+                $this->logger->__invoke()->warn(
+                    '[AdvancedSearch] The facet value "{value}" for field "{field}" is skipped because it has no label or it is not in the current site.', // @translate
+                    ['value' => $facetValueValue, 'field' => $facetField]
+                );
                 unset($facetValues[$facetIndex]);
                 continue;
             }
@@ -191,16 +180,6 @@ class AbstractFacet extends AbstractHelper
             $facetValue['url'] = $url;
         }
         unset($facetValue);
-
-        // Aggregate to a single warning per field to avoid one log line per
-        // facet value (some indexes contain hundreds of unmatched values).
-        if ($skipped) {
-            $sample = array_slice($skipped, 0, 5);
-            $this->logger->__invoke()->warn(
-                '[AdvancedSearch] {count} facet values for field "{field}" were skipped because they have no label or are not in the current site (sample: {sample}).', // @translate
-                ['count' => count($skipped), 'field' => $facetField, 'sample' => implode(', ', $sample)]
-            );
-        }
 
         // The facets should be reordered when option is "total then alpha".
         $isTotalThenAlpha = strtok($options['order'] ?? '', ' ') === 'total_alpha' && !empty($options['more']);
@@ -258,24 +237,6 @@ class AbstractFacet extends AbstractHelper
      */
     protected function facetValueLabel(string $facetField, $value): ?string
     {
-        static $no;
-        static $yes;
-        static $private;
-        static $public;
-
-        // Boolean fields: translate 1/true/yes to Yes, anything else (including
-        // empty / missing bucket from Solr facet.missing) to No, since
-        // SearchSolr indexes the field only when the value is true.
-        if (substr($facetField, -2) === '_b') {
-            if (!$yes) {
-                $no = $this->translate->__invoke('No'); // @translate
-                $yes = $this->translate->__invoke('Yes'); // @translate
-            }
-            return in_array(strtolower((string) $value), ['1', 'true', 'yes'], true)
-                ? $yes
-                : $no;
-        }
-
         if ($value === null || !strlen((string) $value)) {
             return null;
         }
@@ -286,13 +247,9 @@ class AbstractFacet extends AbstractHelper
                 return $value;
 
             case 'is_public':
-                if (!$public) {
-                    $private = $this->translate->__invoke('Private'); // @translate
-                    $public = $this->translate->__invoke('Public'); // @translate
-                }
                 return $value
-                    ? $private
-                    : $public;
+                    ? 'Private'
+                    : 'Public';
 
             case 'id':
                 $data = ['id' => $value];
@@ -304,7 +261,7 @@ class AbstractFacet extends AbstractHelper
                 try {
                     // Resources cannot be searched, only read.
                     $resource = $this->api->read('resources', $data)->getContent();
-                } catch (\Throwable $e) {
+                } catch (\Exception $e) {
                 }
                 return $resource
                     ? (string) $resource->displayTitle(null, $this->siteLocales)
@@ -322,7 +279,7 @@ class AbstractFacet extends AbstractHelper
                 if (is_numeric($value)) {
                     try {
                         return $this->api->read('users', ['id' => $value])->getContent()->name();
-                    } catch (\Throwable $e) {
+                    } catch (\Exception $e) {
                         return null;
                     }
                 }
@@ -338,7 +295,7 @@ class AbstractFacet extends AbstractHelper
                 // Manage the case where a resource was indexed but removed.
                 try {
                     return $this->api->read('sites', [is_numeric($value) ? 'id' : 'slug' => $value])->getContent()->title();
-                } catch (\Throwable $e) {
+                } catch (\Exception $e) {
                     return null;
                 }
 
@@ -354,7 +311,7 @@ class AbstractFacet extends AbstractHelper
                 if (is_numeric($value)) {
                     try {
                         $resource = $this->api->read('resource_classes', ['id' => $value])->getContent();
-                    } catch (\Throwable $e) {
+                    } catch (\Exception $e) {
                         return null;
                     }
                 } elseif (!strpos($value, ':')) {
@@ -363,7 +320,7 @@ class AbstractFacet extends AbstractHelper
                     try {
                         $vocabularyId = $this->api->read('vocabularies', ['prefix' => strtok($value, ':')])->getContent()->id();
                         $resource = $this->api->read('resource_classes', ['vocabulary' => $vocabularyId, 'localName' => strtok(':')])->getContent();
-                    } catch (\Throwable $e) {
+                    } catch (\Exception $e) {
                         return null;
                     }
                 }
@@ -381,13 +338,13 @@ class AbstractFacet extends AbstractHelper
                     try {
                         /** @var \Omeka\Api\Representation\ResourceTemplateRepresentation $resource */
                         $resource = $this->api->read('resource_templates', ['id' => $value])->getContent();
-                    } catch (\Throwable $e) {
+                    } catch (\Exception $e) {
                         return null;
                     }
                 } else {
                     try {
                         $resource = $this->api->read('resource_templates', ['label' => $value])->getContent();
-                    } catch (\Throwable $e) {
+                    } catch (\Exception $e) {
                         return null;
                     }
                 }
@@ -430,7 +387,7 @@ class AbstractFacet extends AbstractHelper
                     /** @var \Omeka\Api\Representation\ItemSetRepresentation $resource */
                     try {
                         $resource = $this->api->read('item_sets', $data)->getContent();
-                    } catch (\Throwable $e) {
+                    } catch (\Exception $e) {
                         return null;
                     }
                 }

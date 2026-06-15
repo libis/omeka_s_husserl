@@ -42,11 +42,9 @@ $assetUrl = $plugins->get('assetUrl');
 $escapeAttr = $plugins->get('escapeHtmlAttr');
 
 $this->headLink()
-    ->appendStylesheet($assetUrl('css/advanced-search-manager.css', 'AdvancedSearch'))
-    ->appendStylesheet($assetUrl('css/common-dialog-admin.css', 'Common'));
+    ->appendStylesheet($assetUrl('css/advanced-search-manager.css', 'AdvancedSearch'));
 $this->headScript()
-    ->appendFile($assetUrl('js/advanced-search-manager.js', 'AdvancedSearch'), 'text/javascript', ['defer' => 'defer'])
-    ->appendFile($assetUrl('js/common-dialog.js', 'Common'), 'text/javascript', ['defer' => 'defer']);
+    ->appendFile($assetUrl('js/advanced-search-manager.js', 'AdvancedSearch'), 'text/javascript', ['defer' => 'defer']);
 
 $this->htmlElement('body')->appendAttribute('class', 'search-admin resource browse');
 ?>
@@ -61,14 +59,6 @@ $this->htmlElement('body')->appendAttribute('class', 'search-admin resource brow
         <a class="button" href="<?= $url('admin/search-manager/suggester', ['action' => 'add']) ?>"><?= $translate('Add suggester') ?></a>
     <?php endif; ?>
 </div>
-
-<?php
-$hasJobState = $plugins->has('jobState');
-$hasLog = $hasJobState || class_exists('Log\Module', false);
-$jobStateCssJsIncluded = false;
-$runningEngineJobs = $runningJobs['engines'] ?? [];
-$runningSuggesterJobs = $runningJobs['suggesters'] ?? [];
-?>
 
 <h3 id="table-caption-engines"><?= $translate('Search engines') ?></h3>
 
@@ -89,24 +79,6 @@ $runningSuggesterJobs = $runningJobs['suggesters'] ?? [];
                     <td>
                         <span><?= $searchEngine->name() ?></span>
                         <ul class="actions">
-                            <?php if (isset($runningEngineJobs[$searchEngine->id()])): ?>
-                                <?php $job = $runningEngineJobs[$searchEngine->id()]; ?>
-                            <li>
-                                <?php $jobUrl = $hasLog
-                                    ? $url('admin/default', ['controller' => 'log'], ['query' => ['job_id' => $job->id()]])
-                                    : $url('admin/id', ['controller' => 'job', 'id' => $job->id()]); ?>
-                                <?php if ($hasJobState): ?>
-                                <a href="<?= $escape($jobUrl) ?>"
-                                title="<?= $escapeAttr(sprintf($translate('Indexing in progress (job #%d)'), $job->id())) ?>"><?= $this->jobState($job, ['output' => 'html', 'inline' => true, 'include_css_js' => !$jobStateCssJsIncluded]) ?></a>
-                                <?php $jobStateCssJsIncluded = true; ?>
-                                <?php else: ?>
-                                <a href="<?= $escape($jobUrl) ?>"
-                                class="o-icon- fas fa-spinner fa-spin"
-                                aria-label="<?= $escape($translate('Indexing in progress')) ?>"
-                                title="<?= $escapeAttr(sprintf($translate('Indexing in progress (job #%d)'), $job->id())) ?>"></a>
-                                <?php endif; ?>
-                            </li>
-                            <?php endif; ?>
                             <?php if ($engineAdapter): ?>
                                 <li>
                                     <?= $searchEngine->link('', 'edit', [
@@ -172,14 +144,14 @@ $runningSuggesterJobs = $runningJobs['suggesters'] ?? [];
                                     'title' => $translate('Edit'),
                                 ]) ?>
                             </li>
+                            <?php if ($searchConfig->engineAdapter()): ?>
                             <li>
-                                <?= $searchConfig->link('', 'copy', [
-                                    'class' => 'o-icon- far fa-copy copy-search-config',
-                                    'aria-label' => $translate('Copy'),
-                                    'title' => $translate('Copy'),
-                                    'data-confirm-message' => $translate('Are you sure you want to copy this search page?'),
+                                <?= $searchConfig->link('', 'configure', [
+                                    'class' => 'o-icon- fa fa-sliders fa-sliders-h',
+                                    'title' => $translate('Configure facets and sort fields'),
                                 ]) ?>
                             </li>
+                            <?php endif; ?>
                             <li>
                                 <a href="#"
                                 data-sidebar-content-url="<?= $escape($searchConfig->url('delete-confirm')) ?>"
@@ -228,24 +200,6 @@ $runningSuggesterJobs = $runningJobs['suggesters'] ?? [];
                     <td>
                         <span><?= $suggester->name() ?></span>
                         <ul class="actions">
-                            <?php if (isset($runningSuggesterJobs[$suggester->id()])): ?>
-                                <?php $job = $runningSuggesterJobs[$suggester->id()]; ?>
-                            <li>
-                                <?php $jobUrl = $hasLog
-                                    ? $url('admin/default', ['controller' => 'log'], ['query' => ['job_id' => $job->id()]])
-                                    : $url('admin/id', ['controller' => 'job', 'id' => $job->id()]); ?>
-                                <?php if ($hasJobState): ?>
-                                <a href="<?= $escape($jobUrl) ?>"
-                                title="<?= $escapeAttr(sprintf($translate('Indexing in progress (job #%d)'), $job->id())) ?>"><?= $this->jobState($job, ['output' => 'html', 'inline' => true, 'include_css_js' => !$jobStateCssJsIncluded]) ?></a>
-                                <?php $jobStateCssJsIncluded = true; ?>
-                                <?php else: ?>
-                                <a href="<?= $escape($jobUrl) ?>"
-                                class="o-icon- fas fa-spinner fa-spin"
-                                aria-label="<?= $escape($translate('Indexing in progress')) ?>"
-                                title="<?= $escapeAttr(sprintf($translate('Indexing in progress (job #%d)'), $job->id())) ?>"></a>
-                                <?php endif; ?>
-                            </li>
-                            <?php endif; ?>
                             <li>
                             <?php if ($engineAdapter): ?>
                                 <?= $suggester->link('', 'edit', [
@@ -260,11 +214,17 @@ $runningSuggesterJobs = $runningJobs['suggesters'] ?? [];
                             <?php endif; ?>
                             </li>
                             <li>
+                            <?php if ($isInternal): ?>
                                 <a href="#"
                                 data-sidebar-content-url="<?= $escape($suggester->url('index-confirm')) ?>"
                                 class="o-icon- fa fa-refresh fa-sync sidebar-content"
                                 aria-label="<?= $escape($translate('Reindex')) ?>"
                                 title="<?= $escape($translate('Reindex')) ?>"></a>
+                            <?php else: ?>
+                                <span class="o-icon- fa fa-refresh fa-sync sidebar-content disabled"
+                                    title="<?= $escapeAttr($translate('Reindex disabled: search adapter does not support it.')) ?>">
+                                </span>
+                            <?php endif; ?>
                             </li>
                             <li>
                                 <a href="#"

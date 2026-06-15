@@ -27,7 +27,7 @@ It can be extended in two ways:
 - Adapters that will do the real work (indexing and querying).
 
 The default form answers to most of the common needs. It can be configured in
-the admin interface to make it a basic form _à la Google_, or to build a complex
+the admin interface to make it a basic form _à la_ Google, or to build a complex
 form with or without auto-suggestion, advanced filters, sort fields,
 facets, collection selector, resource class selector, resource template
 selector, properties filters with various input elements, like numbers or date
@@ -131,12 +131,12 @@ Furthermore:
   when used with api. So it is recommenced to force it by adding `sort_order=asc`
   to avoid issues.
 
-Finally, an option allows to display only the used proper
-ties and classes in the
+Finally, an option allows to display only the used properties and classes in the
 advanced search form, with chosen-select.
 
 **IMPORTANT**: the improvements done on query argument "property" were moved to
-"filter" and were removed. So use the key "filter" instead of "property" for future compatibility.
+"filter" and will be removed in a future version. So use the key "filter"
+instead of "property" for future compatibility.
 
 
 Installation
@@ -436,54 +436,20 @@ $query['filter'][] = [
     'type' => 'in',
     'val' => "text to search",
 ];
+// With property (deprecated).
+$query['property'][] = [
+    'joiner' => 'and',
+    'property' => '',
+    'except' => $excludedFields,
+    'type' => 'in',
+    'text' => "text to search",
+];
 ```
 
 The excluded fields may be one or multiple property ids or terms.
 
 The title cannot be excluded currently, because it is automatically added by
 the core.
-
-### Resource navigation block
-
-The resource page block layout `Resource navigation` adds a `< prev / next >`
-navigation on an item show page, within the context of the last browse of the
-user: search results, item set (collection/album), user selection, or an
-arbitrary series of items (a `Browse preview` block on a site page).
-
-Four navigation contexts are supported, enabled via the site setting
-`Block Resource navigation: active contexts`:
-
-- `search`: last search results (auto-stored by a view listener on search
-  controllers).
-- `collection`: item set browse or an item set of the item (fallback, see site
-  setting `Block Resource navigation: fallback item set`).
-- `selection`: user selection of the module Selection.
-- `series`: an arbitrary list built from any `Browse preview` block, when the
-  block uses the dedicated template `Advanced Search: Browse preview with
-  resource navigation`. The series is recorded in session when the user views
-  the page containing the block.
-
-Series label is resolved in this order:
-
-1. If the block is placed inside a `block group` (module BlockPlus) with two
-   `heading` blocks, the first heading is used as the type label and the
-   second as the series name, rendered as `<heading 1> : <heading 2>`.
-2. Else if the block group contains a single `heading` block, it is used as
-   the series name.
-3. Else the heading of the `browse preview` block itself is used.
-4. Else a generic `Browse` label is displayed.
-
-The "back" link attached to the label points to the page that contains the
-block.
-
-To enable the series navigation from any theme, assign the block template
-`Advanced Search: Browse preview with resource navigation` on the `Browse
-preview` block. The template renders the default core browse preview and
-records the series in the session.
-
-To propagate context through shared URLs (for collections and selections),
-the block reads the query parameters `resource_nav_item_set=<id>` and
-`resource_nav_selection=<id>` and stores them on prev/next URLs.
 
 ### Visibility
 
@@ -509,11 +475,17 @@ results too, that is used when no paginator is enable. The argument `limit`
 cannot go further.
 
 When ready, the api search is available via multiple means.
+- Add `index=1` as query in the block layouts that use it, like [Browse preview].
+- Do a standard search with `$this->api()->search()` with the value `'index' => true`
+  appended to the argument `$data` or `$options` (recommended when possible to
+  avoid to mix the query and the parameters).
+- Do a standard search in the theme with the view helpers `$this->apiSearch()`,
+  and `$this->apiSearchOne()`, that have the same arguments than `$this->api()->search()`
+  and `$this->api()->searchOne()`. The result is an Omeka Response.
+  Note that it is preferable to use `$this->api()->read()` when possible for
+  performance and simplicity of the processes.
 - Use the controller plugins `$this->apiSearch()` and `$this->apiSearchOne()`.
-  These have the same arguments as `$this->api()->search()` and
-  `$this->api()->searchOne()`. The result is an Omeka Response.
-- Use the view helpers `$this->apiSearch()` and `$this->apiSearchOne()` in themes.
-- Use the service `AdvancedSearch\IndexSearch` for programmatic access.
+- The main api manager understand these arguments too.
 - If the api config is made available on a site, it will be a quick access to
   the results at `/s/mysite/api_search_page`.
 
@@ -540,15 +512,11 @@ be some minutes with Solr, according to your configuration).
 Deprecated improvements of the advanced search elements
 -------------------------------------------------------
 
-The default advanced search form was improved mainly for the element "property"
+The default advanced search form is improved mainly for the element "property"
 to support multiple properties, many more search types, and multiple values.
-This improvement was removed in order to keep standard queries without the
-module. The upgrade process of the module converted all these queries into
-"filter", but you may check if some remain.
-
-In previous versions, before version 3.4.59, it was possible to search for
-dcterms:creator and dcterms:contributor at the same time, and search for strings
-that look like "bossuet" and "ralelais", and only for data type literal:
+For example you can search for dcterms:creator and dcterms:contributor at the
+same time, and search for strings that look like "bossuet" and "ralelais", and
+only for data type literal:
 
 ```
 property[0] => [
@@ -559,7 +527,6 @@ property[0] => [
 ```
 
 Such a query should be replaced by this one:
-
 ```
 filter[0] => [
   field => [dcterms:creator, dcterms:contributor],
@@ -568,8 +535,9 @@ filter[0] => [
 ]
 ```
 
-The change was done automatically in version 3.4.59, but you may have some
-remaining queries in site pages or some settings.
+The change should be done mainly in the site pages when there are queries, for
+example for the block Browse Preview. You can do it directly in the user
+interface. There will be an automatic upgrade when the feature will be removed.
 
 
 Upgrade from module Search
@@ -620,7 +588,6 @@ TODO
 - [x] Manage pagination when item set is redirected to search.
 - [ ] Reorder items in items set (from module Next, see MvcListeners).
 - [x] Integrate the override in a way a direct call to adapter->buildQuery() can work with advanced property search (see Reference and some other modules).
-- [ ] Add an option to expand/collapse tree facets (ItemSetsTree, Thesaurus) by default, with a threshold on the number of items.
 - [ ] Rename search config "name" by "title" or "label".
 - [ ] Add hidden query to site settings.
 - [ ] DateRange field (_dr) may not appear in the type of index in mapping.
@@ -641,11 +608,6 @@ TODO
 - [ ] Do not include indexes in form so get multiple form with an index.
 - [x] Automatic min/max for facet range double.
 - [ ] Restructure with late binding: the response calls the querier when needed, so the querier does not need to fill all data early.
-- [ ] RangeDouble: sort items without date values last when no filter is active.
-- [ ] RangeDouble: exclude items without date when filter is active, include when not.
-- [ ] RangeDouble: add admin option to enable/disable "ignore extremes" behavior per field.
-- [ ] Stopwords by language according to values (and manage values without languages and a default language)
-- [ ] Autosuggestion: for solr, use _txt or _ss according to property, length of values and type too.
 
 No more todo:
 

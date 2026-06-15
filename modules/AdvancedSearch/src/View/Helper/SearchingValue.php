@@ -84,31 +84,26 @@ class SearchingValue extends AbstractHelper
                     'filter' => [[
                         'field' => $property,
                         'type' => $vr ? 'res' : 'eq',
-                        'val' => $vr ? $vr->id() : $uriOrVal,
+                        'value' => $vr ? $vr->id() : $uriOrVal,
                     ]],
                 ];
             } else {
                 // For resource, the id may or may not be indexed in Solr, so
-                // use title. But generally, the vr id title is more often
-                // indexed than the id alone. So use the two values.
-                // And the property may not be indexed too, anyway.
+                // use title. And the property may not be indexed too, anyway.
                 if ($vr) {
                     $urlQuery = [
                         'filter' => [[
                             'field' => $property,
                             'type' => 'eq',
-                            'val' => [
-                                $vr->displayTitle(),
-                                $vr->id(),
-                            ],
-                        ]],
-                    ];
+                            'value' => $vr->displayTitle(),
+                        ],
+                    ]];
                 } else {
                     $urlQuery = [
                         'filter' => [[
                             'field' => $property,
                             'type' => 'eq',
-                            'val' => $uriOrVal,
+                            'value' => $uriOrVal,
                         ]],
                     ];
                 }

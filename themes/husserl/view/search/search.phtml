@@ -1,7 +1,7 @@
 <?php
 /*
  * Copyright BibLibre, 2016
- * Copyright Daniel Berthereau, 2017-2025
+ * Copyright Daniel Berthereau, 2017-2026
  *
  * This software is governed by the CeCILL license under French law and abiding
  * by the rules of distribution of free software.  You can use, modify and/ or
@@ -37,13 +37,15 @@
  *
  * For block layout:
  * @var bool $skipFormAction Remove action of the form, so it uses current page.
+ * @var bool $formAction Specific url for form action.
  */
 
 $plugins = $this->getHelperPluginManager();
+$url = $plugins->get('url');
+$hyperlink = $plugins->get('hyperlink');
 $partial = $plugins->get('partial');
 $assetUrl = $plugins->get('assetUrl');
 $translate = $plugins->get('translate');
-$api = $plugins->get('api');
 $vars = $this->vars();
 $variables = $vars->getArrayCopy();
 
@@ -67,8 +69,8 @@ $this->htmlElement('body')->appendAttribute('class', 'page search-page item-set 
     <div class="search__search-page-top search-page-top">
         <div class="container__page-breadcrumb page-breadcrumb">
             <ul class="page-breadcrumb__breadcrumb-list breadcrumb-list">
-                <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>">Home</a></li>
-                <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/page/collections">Collections</a></li>
+                <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->siteUrl();?>">Home</a></li>
+                <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->siteUrl();?>/page/collections">Collections</a></li>
                 <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $searchConfig->siteUrl()?>">Search</a></li>
             </ul>
         </div>
@@ -120,7 +122,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page search-page item-set 
                     <div class="search-nav__nav-aside-item nav-aside-item middle-item">
                         <p class="nav-aside-item__nav-aside-item-text nav-aside-item-text">|</p>
                     </div>
-                    <div onclick="handleClickAsideNav(this)" data-link="<?= $site->url() ?>item/browse" class="search-nav__nav-aside-item nav-aside-item browse-item-nav">
+                    <div onclick="handleClickAsideNav(this)" data-link="<?= $site->url() ?>/item/browse" class="search-nav__nav-aside-item nav-aside-item browse-item-nav">
                         <p class="nav-aside-item__nav-aside-item-text nav-aside-item-text">Browse</p>
                         <div class="nav-aside-item__nav-aside-item-icon nav-aside-item-icon browse-icon">
                             <svg width="31" height="30" viewBox="0 0 31 30" fill="none" xmlns="http://www.w3.org/2000/svg">

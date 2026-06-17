@@ -17,47 +17,6 @@ class EmptyValue {
   }
 };
 
-$itemData = [
-  "values" => [
-    "title" => "A I 1-4a",
-    "description" => "Lorem ipsum dolor sit amet consectetur. Leo gravida aenean nulla accumsan tortor senectus sodales nunc a. Euismod sit turpis pulvinar morbi orci tellus metus facilisis. Nibh donec pretium at netus felis vestibulum curabitur sit. Ultrices amet aenean at facilisis eget sed iaculis sollicitudin montes. Quam nulla vitae non velit in semper morbi vel odio. Quam dui vulputate odio ante eget.",
-    "identifier" => "A I 1-4a",
-    "alternative Pagination" => 1,
-    "date" => 1912,
-    "creator / contributor" => "Edmund Husserl",
-    "manuscript collection" => "Einleitung In Die Phänomenologie Vorlesungen Sommersemester 1912",
-    "location" => "Leuven, University Archives KU Leuven",
-    "references" => "BE/212934/PP/HUSSERL/F I 4 Archives of Edmund Husserl, F I 4/4b",
-    "links" => [
-      [
-        "text" => "View The Full Archival Description",
-        "link" => "",
-      ],
-      [
-        "text" => "View The Images",
-        "link" => "",
-      ]
-    ],
-    "folder structure" => "Manuscripts / Gruppe A / A I / A I 1",
-    "transcription" => [
-      "person" => "Thomas Voneehr",
-      "content" => "Ich beginne mit einer Einleitung.[1] [Einleitung] [Um] eine gemeinsame Wanderung in unbekannte Forschungsgebiete zu unternehmen, brauchen wir selbstverständlich uns allen bekannte und gegebene Ausgangspunkte. Diese liegen also vor dem noch Unbekannten und allererst zu Erforschenden. Sie brauchen keineswegs theoretische Voraussetzungen für das zu erforschende Neue zu enthalten, sie brauchen nicht Fundamente zu sein, auf welchen sich die Themata der Forschung logisch aufbauen. Ausgangspunkte brauchen keine andere Vorgegebenheit und Bekanntheit zu besitzen als diejenige, welche für die Möglichkeit einer Heranführung [und] Hinleitung zur intendierten Forschungsdomäne erforderlich ist; diese mag ihre eigenen Anfänge haben, die nicht vorgegeben, sondern durch die ersten Handlungen forschender Arbeit ergriffen sind. In unserem Fall nehmen wir als Ausgangs- und Treffpunkt unserer Wanderung, als den gemeinsamen Boden, über den wir ohne weiteres verfügen, den des natürlichen Vorstellens und Denkens und den der allgemeinen Sprache, die sich nach dem natürlich Gegebenen und Gemeinsamen verständlich orientiert. Unser gemeinsames philosophisches und psychologisches Wissen setzen wir außer Aktion; haben wir etwas schon von Phänomenologie gehört, so scheiden wir es aus und das vor allem anderen; denn Phänomenologie soll es allererst sein, zu dem wir gemeinsam hinwandern wollen. Und ist es Phänomenologie des „erlebenden“, „wahrnehmenden“,",
-    ],
-    "publications" => [
-      [
-        "where" => "In Husserliana",
-        "title" => "Hua III/2 (ideen Zu Einer Reinen Phänomenologie Und Phänomenologische Philosophie)",
-        "pages" => "530-532",
-      ],
-      [
-        "where" => "Outside Husserliana",
-        "title" => "Die Urarche Erde Bewegt Sich Nicht, N-N., Phenomenological Research",
-        "pages" => "",
-      ]
-    ]
-  ]
-];
-
 $itemCache = [];
 
 function getItemCached($id, $site, &$cache) {
@@ -179,9 +138,20 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                     // check if value is empty but needed to be shown in the front-end ==> not available
                     else if (!isset($itemValues[$key]) && in_array($key, ["schema:pagination", "schema:dateCreated", "schema:significantLinks", "schema:creator", "schema:contributor"])) {                                            
                       $label = $templateProperty->alternateLabel() ?: $property->label();
-                      $values = [
-                        new EmptyValue("text", "Not available")
-                      ];
+                      if($key == "schema:significantLinks") {
+                        $url = $itemValues["schema:contentUrl"]['values'][1]->value();
+
+                        $values = [[
+                          '@type'   => 'uri',
+                          'o:label' => 'View the images',
+                          'o:uri'   => $url,
+                        ]];
+                      }
+                      else {
+                        $values = [
+                          new EmptyValue("text", "Not available")
+                        ];
+                      }
                     }
                     else if(!isset($itemValues[$key])) {
                       continue;
@@ -193,7 +163,7 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                     
                     $full = in_array($key, ['schema:name', 'schema:description']);
                   ?>
-                  <?php if (in_array($key, ['transcription', 'publications', 'schema:transcript', 'schema:contentUrl', 'schema:category', 'schema:isPartOf', 'schema:alternateName', 'schema:hasPart'])) continue; ?>
+                  <?php if (in_array($key, ['transcription', 'publications', 'schema:transcript', 'schema:contentUrl', 'schema:category', 'schema:isPartOf', 'schema:alternateName', 'schema:hasPart', 'schema:workExample', 'schema:digitalSourceType'])) continue; ?>
                   <?php if($item->resourceTemplate()->label() == "Manuscript page" && $key == "schema:name") continue; ?>
                   <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item <?= $full ? 'full' : '' ?>">
                     <h5 class="item-metadata-item__metadata-item-title metadata-item-title h5">
@@ -202,8 +172,23 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                     <div class="item-metadata-item__metadata-values metadata-values">
                       <?php foreach ($values as $value): ?>
                         <div class="metadata-values__metadata-value metadata-value">
-                          <?php if ($value->type() === 'uri'): ?>
-                            <?php if($key == "schema:links"): ?>
+                          <?php if (is_array($value) && ($value['@type'] ?? null) === 'uri'): ?>
+                            <?php if($key == "schema:significantLinks"): ?>
+                              <div class="metadata-value__metadata-arrow metadata-arrow">
+                                <img
+                                  src="<?= $this->assetUrl('img/full-arrow.svg') ?>"
+                                  alt="full arrow icon"
+                                />
+                              </div>
+                            <?php endif; ?>
+                            <a href="<?= $this->escapeHtml($value['o:uri']) ?>"
+                            class="metadata-value__metadata-value-link metadata-value-link body-text"
+                            target="_blank"
+                            rel="noopener">
+                              <?= $this->escapeHtml($value['o:label']) ?>
+                            </a>
+                          <?php elseif ($value->type() === 'uri'): ?>
+                            <?php if($key == "schema:significantLinks"): ?>
                               <div class="metadata-value__metadata-arrow metadata-arrow">
                                 <img
                                   src="<?= $this->assetUrl('img/full-arrow.svg') ?>"
@@ -245,14 +230,30 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
                   </div>
                   <p class="transcription-person__person-name person-name body-text"><?= $item->value('schema:contributor') ?></p>
                 </div>
-                <div class="item-transcription-section__transcription-text transcription-text body-text"><?= $item->value('schema:transcript') ?></div>
+                <div class="item-transcription-section__transcription-text transcription-text body-text">                  
+                  <?php
+                    $transcriptText = $item->value('schema:transcript');
+
+                    if ($transcriptText) {
+                      $transcriptText = preg_replace_callback(
+                        '#href=[\'"]https?://[^\'"]*(/mp/[^\'"]*)[\'"]#i',
+                        function ($matches) {
+                          return 'href="' . $matches[1] . '" target="_blank"';
+                        },
+
+                        $transcriptText
+                      );
+                    }
+                  ?>
+                  <?= $transcriptText ?>
+                </div>
               </div>
             <?php endif; ?>
           </div>
         </div>
       </div>
     </div>
-    <?php if($item->resourceTemplate()->label() == "Manuscript page"): ?>
+    <?php if($item->resourceTemplate()->label() == "Manuscript page" && ($item->value('schema:digitalSourceType') != null || $item->value('schema:workExample', ['all' => true]) != null)): ?>
       <div class="item-information__item-publications-section item-publications-section">
         <h2 class="item-publications-section__publications-title publications-title h2">Publications</h2>
         <div class="item-publications-section__table-section table-section">
@@ -262,11 +263,20 @@ $this->htmlElement('body')->appendAttribute('class', 'page');
               <th class="publications-table-title-row__table-title table-title body-text">Title</th>
               <th class="publications-table-title-row__table-title table-title body-text">Page(s)</th>
             </tr>
-            <?php foreach($itemData["values"]["publications"] as $publication): ?>
+            <?php if($item->value('schema:digitalSourceType') != null && $item->value('schema:digitalSourceType') != ""): ?> 
               <tr class="publications-table__publications-table-row publications-table-row table-row">
-                <td class="publications-table-row__table-field table-field body-text"><?= ($publication['where'] != "")? $publication['where'] : ""  ?></td>
-                <td class="publications-table-row__table-field table-field body-text"><?= ($publication['title'] != "")? $publication['title'] : ""  ?></td>
-                <td class="publications-table-row__table-field table-field body-text"><?= ($publication['pages'] != "")? $publication['pages'] : ""  ?></td>
+                <td class="publications-table-row__table-field table-field body-text">Digital publication</td>
+                <td class="publications-table-row__table-field table-field body-text"><?= $item->value('schema:digitalSourceType')  ?></td>
+                <td class="publications-table-row__table-field table-field body-text"></td>
+              </tr>
+            <?php endif; ?>
+            <?php $workExamples = $item->value('schema:workExample', ['all' => true]); ?>
+            <?php foreach($workExamples as $huaPublication): ?>
+              <?php $linkedItem = $huaPublication->valueResource(); ?>
+              <tr class="publications-table__publications-table-row publications-table-row table-row">
+                <td class="publications-table-row__table-field table-field body-text">In Husserliana</td>
+                <td class="publications-table-row__table-field table-field body-text"><?= $linkedItem ? $linkedItem->value('schema:recordLabel') : $huaPublication ?></td>
+                <td class="publications-table-row__table-field table-field body-text"><?= $linkedItem ? $linkedItem->value('schema:pagination') : $huaPublication ?></td>
               </tr>
             <?php endforeach; ?>
           </table>

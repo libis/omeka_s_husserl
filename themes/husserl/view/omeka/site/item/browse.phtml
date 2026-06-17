@@ -184,8 +184,9 @@ function renderTree($rootId, $resPathId, $site, $context, $options = [], $level 
       </ul>
     </div>
     <div class="browse-top-section__page-information page-information">
-      <h1 class="page-information__page-title page-title h1">The collection items</h1>
-      <p class="page-information__page-information-text page-information-text body-text">Lorem ipsum dolor sit amet consectetur. Laoreet nisl tincidunt sit est. Nulla pellentesque neque tellus dolor lectus. Dictumst et nunc nec volutpat justo diam ac nam. Magna ultricies porttitor sagittis aliquet blandit purus pellentesque tempor.</p>
+      <h1 class="page-information__page-title page-title h1">Husserl Nachlass</h1>
+      <p class="page-information__page-information-text page-information-text body-text">“Search and explore Husserl’s Nachlass by browsing or filtering through archival folders and manuscript pages.
+Find links to related publications and available transcriptions to support your research.”</p>
     </div>
   </div>
   <div class="browse-page__browse-result-section browse-result-section result-wrapper">
@@ -281,7 +282,7 @@ function renderTree($rootId, $resPathId, $site, $context, $options = [], $level 
                   $values = $itemValues[$key]['values'];
                   $label = $templateProperty->alternateLabel() ?: $property->label();
                 ?>
-                <?php if (in_array($key, ['transcription', 'publications', 'schema:transcript', 'schema:contentUrl', 'schema:category', 'schema:isPartOf', 'schema:alternateName', 'schema:hasPart'])) continue; ?>
+                <?php if (in_array($key, ['transcription', 'publications', 'schema:transcript', 'schema:contentUrl', 'schema:category', 'schema:isPartOf', 'schema:alternateName', 'schema:hasPart', 'schema:workExample', 'schema:digitalSourceType'])) continue; ?>
                 <?php if ($key == 'schema:containedIn'): ?>
                   <?php if(count($values) == 1): ?>
                     <div class="item-metadata-section__item-metadata-item item-metadata-item metadata-item">

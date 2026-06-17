@@ -60,7 +60,7 @@ $sitename = $block->page()->site()->title();
   <?php endif;?>
   <?php if($block->dataValue('link-active') != null): ?>
     <div class="browse-item-section__browse-item-section-more-items browse-item-section-more-items">
-      <a class="browse-item-section-more-items__cta-button cta-button primary-button button-text icon" href="http://localhost:9013/husserl/s/husserl<?= $block->dataValue('link');?>">
+      <a class="browse-item-section-more-items__cta-button cta-button primary-button button-text icon" href="<?= $block->page()->site()->url()?><?= $block->dataValue('link');?>">
         <?php echo $block->dataValue('link-text');?>
       </a>
     </div>

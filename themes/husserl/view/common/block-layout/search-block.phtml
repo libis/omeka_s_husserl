@@ -1,5 +1,5 @@
 <?php 
-$siteurl = 'http://localhost:9013/husserl/s/'.$block->page()->site()->slug();
+$siteurl = $block->page()->site()->url();
 $lang = $block->page()->site()->slug();
 $translate = $this->plugin('translate');
 ?>
@@ -23,7 +23,7 @@ $translate = $this->plugin('translate');
     </div>
     <div class="search-block__search-section search-section">
       <div class="search-section__search-form-simple search-form-simple active">
-        <form class="search-form-simple__search-form-simple-form search-form-simple-form" action="http://localhost:9013/husserl/s/<?php echo $block->page()->site()->slug();?>/search" id="search-form">
+        <form class="search-form-simple__search-form-simple-form search-form-simple-form" action="<?php echo $block->page()->site()->url();?>/search" id="search-form">
             <div class="search-section__search-bar search-bar">
                 <input class="search-bar__search-bar-input search-bar-input big-body-text" value="<?= (isset($_GET['q']) && $_GET['q'] !== '') ? htmlspecialchars($_GET['q']) : ''; ?>" type="text" name="q" id="q" placeholder="<?= $translate("Search");?>" aria-label="">
                 <div class="serach-bar__search-bar-controls search-bar-controls">
@@ -40,7 +40,7 @@ $translate = $this->plugin('translate');
         </div>
       </div>
       <div class="search-section__search-form-advanced search-form-advanced">
-        <?php $searchConfig = $this->getSearchConfig(1);?>
+        <?php $searchConfig = $this->getSearchConfig();?>
           <?= $searchConfig->renderForm(['template' => null, 'skip_form_action' => false]); ?>
           <div class="search-form-simple__switch-search-form-button switch-search-form-button">
               <p class="secondary-button__button-text button-text">Simple search</p>

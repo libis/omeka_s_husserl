@@ -79,6 +79,22 @@
                         }
                     }
                 }
+
+                .transcription-text {
+                    sup {
+                        scroll-margin-top: 270px;
+                    }
+
+                    .endnotes {
+                        margin-top: 25px;
+                        margin-left: 15px;
+
+                        li {
+                            list-style: unset;
+                            scroll-margin-top: 270px;
+                        }
+                    }
+                }
             }
 
             .item-title-section.no-sticky {
@@ -149,12 +165,15 @@
                 .item-transcription-section {
                     margin-bottom: 80px;
 
-                    .transcription-text .endnotes {
-                        margin-top: 25px;
-                        margin-left: 15px;
+                    .transcription-text {
+                        sup {
+                            scroll-margin-top: 200px;
+                        }
 
-                        li {
-                            list-style: unset;
+                        .endnotes {
+                            li {
+                                scroll-margin-top: 200px;
+                            }
                         }
                     }
                 }

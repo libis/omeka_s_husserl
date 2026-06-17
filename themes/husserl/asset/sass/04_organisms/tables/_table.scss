@@ -7,7 +7,6 @@
     .title-table-row, .table-row {
         .table-title, .table-field {
             text-align: left;
-            border-bottom: 1px solid var(--fourth-border-color);
             padding-bottom: 15px;
             padding-right: 45px;
             max-width: 450px;
@@ -18,9 +17,21 @@
         }
         .table-field {
             padding-top: 15px;
+            border-top: 1px solid var(--fourth-border-color);
         }
         .table-title {
             font-weight: var(--semi);
+            border-bottom: 1px solid var(--fourth-border-color);
+        }
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .table {
+        .title-table-row, .table-row {
+            .table-title, .table-field {
+                max-width: 550px;
+            }
         }
     }
 }

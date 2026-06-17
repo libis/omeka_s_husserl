@@ -56,13 +56,14 @@ class ReferenceTree extends AbstractBlockLayout implements TemplateableBlockLayo
         $data['query'] = $query;
 
         // Normalize options one time.
-        $data['search_config'] = $data['search_config'] ?? null;
-        $data['link_to_single'] = (bool) ($data['link_to_single'] ?? true);
-        $data['custom_url'] = (bool) $data['custom_url'];
-        $data['total'] = (bool) $data['total'];
-        $data['thumbnail'] = $data['thumbnail'] ?? null;
-        $data['branch'] = (bool) $data['branch'];
-        $data['expanded'] = (bool) $data['expanded'];
+        $data['search_config'] ??= null;
+        $data['link_to_single'] = !empty($data['link_to_single']);
+        $data['custom_url'] = !empty($data['custom_url']);
+        $data['total'] = !empty($data['total']);
+        $data['url_argument_reference'] = !empty($data['url_argument_reference']);
+        $data['thumbnail'] ??= null;
+        $data['branch'] = !empty($data['branch']);
+        $data['expanded'] = !empty($data['expanded']);
         $data['query_type'] ??= 'eq';
 
         $block->setData($data);
@@ -71,8 +72,8 @@ class ReferenceTree extends AbstractBlockLayout implements TemplateableBlockLayo
     public function form(
         PhpRenderer $view,
         SiteRepresentation $site,
-        SitePageRepresentation $page = null,
-        SitePageBlockRepresentation $block = null
+        ?SitePageRepresentation $page = null,
+        ?SitePageBlockRepresentation $block = null
     ) {
         // Factory is not used to make rendering simpler.
         $services = $site->getServiceLocator();

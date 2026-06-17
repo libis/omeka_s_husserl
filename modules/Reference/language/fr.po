@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Reference\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-06 00:00+0000\n"
-"PO-Revision-Date: 2025-01-06 00:00+0000\n"
+"POT-Creation-Date: 2026-02-02 00:00+0000\n"
+"PO-Revision-Date: 2026-02-02 00:00+0000\n"
 "Last-Translator: Daniel Berthereau <Daniel.fr@Berthereau.net>\n"
 "Language-Team: \n"
 "Language: fr\n"
@@ -15,9 +15,13 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"X-Generator: Poedit 3.2.2\n"
+"X-Generator: Poedit 3.6\n"
 
-#: data/scripts/upgrade.php:34 Module.php:56
+#: config/module.config.php:185
+msgid "References"
+msgstr "Références"
+
+#: data/scripts/upgrade.php:34 Module.php:60
 #, php-format
 msgid "The module %1$s should be upgraded to version %2$s or later."
 msgstr "Le module %1$s doit être mis à niveau à la version %2$s ou supérieure."
@@ -26,11 +30,11 @@ msgstr "Le module %1$s doit être mis à niveau à la version %2$s ou supérieur
 msgid "Method Not Allowed"
 msgstr "Méthode non autorisée"
 
-#: src/Site/BlockLayout/Reference.php:130
+#: src/Site/BlockLayout/Reference.php:131
 msgid "Choose one or more properties or one or more resource classes."
 msgstr "Choisir une propriété ou une classe de ressource."
 
-#: src/Site/BlockLayout/Reference.php:131
+#: src/Site/BlockLayout/Reference.php:132
 msgid ""
 "With the layout template \"Reference Index\", the pages for the selected "
 "terms should be created manually with the terms as slug, with the \":\" "
@@ -47,30 +51,30 @@ msgstr ""
 msgid "There is no references."
 msgstr "Il n’y a aucune référence."
 
-#: view/common/reference-grid.phtml:84 view/common/reference.phtml:72
+#: view/common/reference-grid.phtml:86 view/common/reference.phtml:74
 msgid "See all…"
 msgstr "Tout voir…"
 
-#: view/common/reference-grid.phtml:85 view/common/reference.phtml:73
+#: view/common/reference-grid.phtml:87 view/common/reference.phtml:75
 #, php-format
 msgid "And %d more."
 msgstr "Et %d de plus."
 
-#: view/common/reference-grid.phtml:128
+#: view/common/reference-grid.phtml:130
 msgid "See resources"
 msgstr "Voir les ressources"
 
-#: view/common/reference-grid.phtml:134 view/common/reference-grid.phtml:144
+#: view/common/reference-grid.phtml:136 view/common/reference-grid.phtml:146
 #, php-format
 msgid "(%d resources)"
 msgstr "(%d ressources)"
 
-#: view/common/reference-grid.phtml:135 view/common/reference-grid.phtml:145
+#: view/common/reference-grid.phtml:137 view/common/reference-grid.phtml:147
 #, php-format
 msgid "(%d resource)"
 msgstr "(%d ressource)"
 
-#: view/common/reference-grid.phtml:246
+#: view/common/reference-grid.phtml:251
 msgid "List"
 msgstr "Liste"
 
@@ -79,16 +83,39 @@ msgstr "Liste"
 msgid "%s (%d)"
 msgstr "%s (%d)"
 
-#: view/common/reference-index.phtml:33 view/common/reference-index.phtml:42
+#: view/common/reference-index.phtml:34
 #: view/reference/site/reference/browse.phtml:38
 #: view/reference/site/reference/browse.phtml:67
 #, php-format
 msgid "Browse %s"
 msgstr "Parcourir %s"
 
+#: view/reference/admin/reference/browse.phtml:29
+msgid "Count"
+msgstr "Nombre"
+
+#: view/reference/admin/reference/browse.phtml:77
 #: view/reference/site/reference/browse.phtml:28
 msgid "No references available."
 msgstr "Aucune référence disponible."
+
+#: view/reference/admin/reference/show.phtml:29
+#, php-format
+msgid "%d references"
+msgstr "%d références"
+
+#: view/reference/admin/reference/show.phtml:36
+#, php-format
+msgid "There are no references for \"%s\"."
+msgstr "Il n’y a aucune référence pour \"%s\"."
+
+#: view/reference/admin/reference/values.phtml:29
+msgid "No values."
+msgstr "Pas de valeurs."
+
+#: view/reference/admin/reference/values.phtml:32
+msgid "View all values"
+msgstr "Voir toutes les valeurs"
 
 #: view/reference/site/reference/browse.phtml:58
 msgid "Main types"
@@ -135,7 +162,7 @@ msgstr ""
 msgid "It is possible now to get translated linked resource."
 msgstr "Il est désormais possible de disposer des ressources liées traduites."
 
-#: data/scripts/upgrade.php:418 Module.php:75
+#: data/scripts/upgrade.php:418
 msgid "Translated linked resource metadata should be indexed in main settings."
 msgstr ""
 "Les métadonnées des ressources liées et traduites doivent être indexées dans "
@@ -193,9 +220,10 @@ msgstr ""
 "dossier « view/common/block-template/ » pour chaque thème, sauf les fichiers "
 "par défaut of each theme, except the default files « reference.phtml » et "
 "« reference-tree.phtml ». Ensuite, vous devez ajouter tous les gabarits du "
-"dossier« view/common/block-template/ » en bas du fichier « config/theme."
-"ini » de chaque thème, par exemple `block_templates.reference.reference-"
-"index = \"Référence index custom\"`. Fichiers correspondant : {json}"
+"dossier« view/common/block-template/ » en bas du fichier « config/"
+"theme.ini » de chaque thème, par exemple "
+"`block_templates.reference.reference-index = \"Référence index custom\"`. "
+"Fichiers correspondant : {json}"
 
 #: data/scripts/upgrade.php:556
 msgid ""
@@ -249,12 +277,19 @@ msgstr ""
 "Un gabarit a été ajouté pour afficher les références en liste/grille "
 "(maçonnerie)."
 
-#: Module.php:71
-msgid "The translated and linked resource metadata are currently indexing."
+#: data/scripts/upgrade.php:760
+msgid ""
+"The references with single or fallback locales was removed for now due to "
+"complex maintainability. The listing of existing references may be different "
+"when values have multiple languages. The feature could be reimplemented in a "
+"future version."
 msgstr ""
-"Les métadonnées des ressources liées et traduites sont en cours d’indexation."
+"Les références avec des traductions multiples ont été supprimées pour "
+"réduire la complexité de la maintenance. Les listes de références avec des "
+"valeurs avec plusieurs langues peuvent désormais être différentes. La "
+"fonctionnalité sera réintroduite dans une version ultérieure."
 
-#: Module.php:82
+#: Module.php:74
 msgid ""
 "The php extension \"intl\" is recommended to fix issues with diacritic "
 "letters."
@@ -262,78 +297,7 @@ msgstr ""
 "L’extension php « intl » est recommandé pour éviter les problèmes avec les "
 "caractères diacritiques."
 
-#: Module.php:255
-msgid ""
-"Another job is running for the same process (job {link_job}#{job_id}"
-"{link_end} ({link_log}logs{link_end})."
-msgstr ""
-"Une autre tâche est en cours pour le même traitement (tâche {link_job}"
-"#{job_id}{link_end} ({link_log}journaux{link_end})."
-
-#: Module.php:275
-msgid ""
-"Indexing translated and linked resource metadata in background (job "
-"{link_job}#{job_id}{link_end} ({link_log}logs{link_end})."
-msgstr ""
-"Indexation des métadonnées des traductions et des ressources liées en "
-"arrière-plan (tâche {link_job}#{job_id}{link_end} ({link_log}"
-"journaux{link_end})."
-
-#: Module.php:396
-msgid "Reference: Index fields"
-msgstr "Référence : Index des champs"
-
-#: src/Mvc/Controller/Plugin/CurrentReferenceMetadata.php:180
-msgid "Resource #{resource_id} has a recursive title."
-msgstr "La ressource #{resource_id} a un titre récursif."
-
-#: src/Mvc/Controller/Plugin/References.php:433
-msgid ""
-"This output format is deprecated. Set a string key to metadata to use the "
-"new format or append option \"single_reference_format\" to remove this "
-"warning."
-msgstr ""
-"Ce format de sortie est obsolète. Indiquez une clé à la métadonnée à "
-"utiliser pour utiliser le nouveau format ou ajouter l’option "
-"\"single_reference_format\" pour supprimer cet avertissement."
-
-#: src/Mvc/Controller/Plugin/References.php:927
-msgid ""
-"The order for facets is \"by a list of values\", but no values are defined."
-msgstr ""
-"Le tri des facettes est « par liste de valeurs », mais aucune valeur n’est "
-"définie."
-
-#: src/Mvc/Controller/Plugin/References.php:2526
-msgid "Owners"
-msgstr "Propriétaires"
-
-#: src/Mvc/Controller/Plugin/References.php:2528
-msgid "Access"
-msgstr "Accès"
-
-#: src/Job/UpdateReferenceMetadata.php:46
-msgid "Starting creation of reference metadata."
-msgstr "Lancement de la création des métadonnées des références."
-
-#: src/Job/UpdateReferenceMetadata.php:53
-msgid "No resource to process."
-msgstr "Aucune ressource à traiter."
-
-#: src/Job/UpdateReferenceMetadata.php:73
-msgid "{processed}/{total} resources processed."
-msgstr "{processed}/{total} ressources traitées."
-
-#: src/Job/UpdateReferenceMetadata.php:78
-msgid "The job was stopped."
-msgstr "La tâche a été arrêtée."
-
-#: src/Job/UpdateReferenceMetadata.php:110
-msgid "End of process: {processed}/{total} processed."
-msgstr "Fin du traitement : {processed}/{total} traités."
-
-#: src/Form/SiteSettingsFieldset.php:15 src/Form/SettingsFieldset.php:13
-#: src/Site/BlockLayout/Reference.php:35
+#: src/Form/SiteSettingsFieldset.php:15 src/Site/BlockLayout/Reference.php:35
 msgid "Reference"
 msgstr "Référence"
 
@@ -370,7 +334,7 @@ msgstr "Total individuel"
 msgid "Link to single records"
 msgstr "Lien vers les documents isolés"
 
-#: src/Form/SiteSettingsFieldset.php:70 src/Form/ReferenceTreeFieldset.php:148
+#: src/Form/SiteSettingsFieldset.php:70 src/Form/ReferenceTreeFieldset.php:151
 #: src/Form/ReferenceFieldset.php:201
 msgid "Custom url for single records"
 msgstr "Url personnalisée pour les références uniques"
@@ -382,16 +346,6 @@ msgid ""
 msgstr ""
 "Pages Références pour les classes et les propriétés sélectionnées "
 "(obsolète : utiliser les blocs de page)"
-
-#: src/Form/SettingsFieldset.php:29
-msgid "Index reference metadata"
-msgstr "Indexer les métadonnées des références"
-
-#: src/Form/SettingsFieldset.php:30
-msgid "To use some features of module Reference, an index is required."
-msgstr ""
-"Pour utiliser certaines fonctionnalités du module Référence, un index est "
-"nécessaire."
 
 #: src/Form/ReferenceTreeFieldset.php:35 src/Form/ReferenceFieldset.php:40
 msgid "Select properties…"
@@ -488,7 +442,7 @@ msgstr ""
 "Quand une référence contient un seul document, faire le lien directement "
 "vers lui plutôt que vers la page items/browse."
 
-#: src/Form/ReferenceTreeFieldset.php:149 src/Form/ReferenceFieldset.php:202
+#: src/Form/ReferenceTreeFieldset.php:152 src/Form/ReferenceFieldset.php:202
 msgid ""
 "May be set with modules such Clean Url or Ark. May slow the display when "
 "there are many single references."
@@ -496,23 +450,27 @@ msgstr ""
 "Peut être utilisé avec les modules tels que CleanUrl et Ark. Peut ralentir "
 "l'affichage quand les références uniques sont nombreuses."
 
-#: src/Form/ReferenceTreeFieldset.php:159 src/Form/ReferenceFieldset.php:244
+#: src/Form/ReferenceTreeFieldset.php:165 src/Form/ReferenceFieldset.php:244
 msgid "Add the total of resources for each reference"
 msgstr "Indiquer le total de ressources pour chaque référence"
 
-#: src/Form/ReferenceTreeFieldset.php:169 src/Form/ReferenceFieldset.php:258
+#: src/Form/ReferenceTreeFieldset.php:178 src/Form/ReferenceFieldset.php:258
+msgid "Append \"reference\" as argument to query urls for themes"
+msgstr "Ajouter l’argument « reference » aux urls pour les thèmes"
+
+#: src/Form/ReferenceTreeFieldset.php:191 src/Form/ReferenceFieldset.php:272
 msgid "Add the thumbnail of the first resource"
 msgstr "Ajouter la vignette de la première ressource"
 
-#: src/Form/ReferenceTreeFieldset.php:180
+#: src/Form/ReferenceTreeFieldset.php:202
 msgid "Expand the tree"
 msgstr "Développer l’arborescence"
 
-#: src/Form/ReferenceTreeFieldset.php:190
+#: src/Form/ReferenceTreeFieldset.php:215
 msgid "Managed as branch"
 msgstr "Gérée comme branches"
 
-#: src/Form/ReferenceTreeFieldset.php:191
+#: src/Form/ReferenceTreeFieldset.php:216
 msgid ""
 "Check this box if the tree is managed as branch (the path is saved with "
 "\" :: \" between each branch)."
@@ -540,10 +498,6 @@ msgstr ""
 "Limiter les résultats aux langues indiquées. Utiliser \"|\" pour séparer "
 "plusieurs langues. Utiliser \"||\" pour les valeurs sans langue."
 
-#: src/Form/ReferenceFieldset.php:117 src/Form/ReferenceFieldset.php:134
-msgid "Select order"
-msgstr "Choisir l’ordre"
-
 #: src/Form/ReferenceFieldset.php:119
 msgid "Alphabetic"
 msgstr "Alphabétique"
@@ -551,14 +505,6 @@ msgstr "Alphabétique"
 #: src/Form/ReferenceFieldset.php:120
 msgid "Total"
 msgstr "Total"
-
-#: src/Form/ReferenceFieldset.php:136
-msgid "Ascendant"
-msgstr "Croissant"
-
-#: src/Form/ReferenceFieldset.php:137
-msgid "Descendant"
-msgstr "Décroissant"
 
 #: src/Form/ReferenceFieldset.php:155
 msgid "One page by initial"
@@ -576,11 +522,11 @@ msgstr "Ajouter des raccourcis au dessus et en dessous de la liste"
 msgid "Add first letter as headings between references"
 msgstr "Ajouter l’initiale comme entête entre les références"
 
-#: src/Form/ReferenceFieldset.php:270
+#: src/Form/ReferenceFieldset.php:284
 msgid "Maximum resources to display by reference"
 msgstr "Nombre de ressources maximum à afficher par référence"
 
-#: src/Form/ReferenceFieldset.php:271
+#: src/Form/ReferenceFieldset.php:285
 msgid ""
 "For example, display the items by subject. Let 0 to display a simple list. "
 "Maximum is 1024."
@@ -588,11 +534,11 @@ msgstr ""
 "Par exemple, afficher les contenus par sujet. Laisser 0 pour afficher une "
 "liste simple. Le maximum est 1024."
 
-#: src/Form/ReferenceFieldset.php:288
+#: src/Form/ReferenceFieldset.php:302
 msgid "Subject values"
 msgstr "Valeurs sujet"
 
-#: src/Form/ReferenceFieldset.php:289
+#: src/Form/ReferenceFieldset.php:303
 msgid ""
 "Allow to list related resources. For example, in a library where there are "
 "items of types \"Authors\" and \"Documents\", and if the creator of the "
@@ -606,7 +552,7 @@ msgstr ""
 "voir la liste des documents par auteur. Cette option est ignorée quand "
 "l’option \"maximum par référence\" est utilisée."
 
-#: src/Form/ReferenceFieldset.php:297
+#: src/Form/ReferenceFieldset.php:311
 msgid "Select a property…"
 msgstr "Choisir une propriété…"
 
@@ -622,13 +568,96 @@ msgstr ""
 "Pour créer des références, une propriété ou une classe de ressource doit "
 "être indiquée."
 
-#: config/module.config.php:40
+#: src/Stdlib/References.php:433
+msgid ""
+"This output format is deprecated. Set a string key to metadata to use the "
+"new format or append option \"single_reference_format\" to remove this "
+"warning."
+msgstr ""
+"Ce format de sortie est obsolète. Indiquez une clé à la métadonnée à "
+"utiliser pour utiliser le nouveau format ou ajouter l’option "
+"\"single_reference_format\" pour supprimer cet avertissement."
+
+#: src/Stdlib/References.php:931
+msgid ""
+"The order for facets is \"by a list of values\", but no values are defined."
+msgstr ""
+"Le tri des facettes est « par liste de valeurs », mais aucune valeur n’est "
+"définie."
+
+#: src/Stdlib/References.php:2800
+msgid "Owners"
+msgstr "Propriétaires"
+
+#: src/Stdlib/References.php:2802
+msgid "Access"
+msgstr "Accès"
+
+#: config/module.config.php:36
 msgid "Reference grid"
 msgstr "Références en grille"
 
-#: config/module.config.php:41
+#: config/module.config.php:37
 msgid "Reference (index)"
 msgstr "Références (index)"
+
+#~ msgid "The translated and linked resource metadata are currently indexing."
+#~ msgstr ""
+#~ "Les métadonnées des ressources liées et traduites sont en cours "
+#~ "d’indexation."
+
+#~ msgid ""
+#~ "Another job is running for the same process (job {link_job}#{job_id}"
+#~ "{link_end} ({link_log}logs{link_end})."
+#~ msgstr ""
+#~ "Une autre tâche est en cours pour le même traitement (tâche {link_job}"
+#~ "#{job_id}{link_end} ({link_log}journaux{link_end})."
+
+#~ msgid ""
+#~ "Indexing translated and linked resource metadata in background (job "
+#~ "{link_job}#{job_id}{link_end} ({link_log}logs{link_end})."
+#~ msgstr ""
+#~ "Indexation des métadonnées des traductions et des ressources liées en "
+#~ "arrière-plan (tâche {link_job}#{job_id}{link_end} ({link_log}"
+#~ "journaux{link_end})."
+
+#~ msgid "Reference: Index fields"
+#~ msgstr "Référence : Index des champs"
+
+#~ msgid "Resource #{resource_id} has a recursive title."
+#~ msgstr "La ressource #{resource_id} a un titre récursif."
+
+#~ msgid "Starting creation of reference metadata."
+#~ msgstr "Lancement de la création des métadonnées des références."
+
+#~ msgid "No resource to process."
+#~ msgstr "Aucune ressource à traiter."
+
+#~ msgid "{processed}/{total} resources processed."
+#~ msgstr "{processed}/{total} ressources traitées."
+
+#~ msgid "The job was stopped."
+#~ msgstr "La tâche a été arrêtée."
+
+#~ msgid "End of process: {processed}/{total} processed."
+#~ msgstr "Fin du traitement : {processed}/{total} traités."
+
+#~ msgid "Index reference metadata"
+#~ msgstr "Indexer les métadonnées des références"
+
+#~ msgid "To use some features of module Reference, an index is required."
+#~ msgstr ""
+#~ "Pour utiliser certaines fonctionnalités du module Référence, un index est "
+#~ "nécessaire."
+
+#~ msgid "Select order"
+#~ msgstr "Choisir l’ordre"
+
+#~ msgid "Ascending"
+#~ msgstr "Croissant"
+
+#~ msgid "Descending"
+#~ msgstr "Décroissant"
 
 #, php-format
 #~ msgid "This module requires the module \"%s\"."
@@ -925,9 +954,6 @@ msgstr "Références (index)"
 
 #~ msgid "Some slugs are not single."
 #~ msgstr "Certains identifiants ne sont pas uniques."
-
-#~ msgid "References"
-#~ msgstr "Références"
 
 #~ msgid "Browse References"
 #~ msgstr "Parcourir les références"

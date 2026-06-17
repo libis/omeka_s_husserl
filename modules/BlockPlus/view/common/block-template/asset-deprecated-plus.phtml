@@ -1,0 +1,17 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SitePageBlockRepresentation $block
+ * @var array $attachments Contains keys:
+ *   - asset (AssetRepresentation)
+ *   - page (PageRepresentation)
+ *   - caption (string): the html is purified according to settings
+ *   - alt_link_title (string)
+ */
+
+$this->logger()->warn(
+    'The template "asset-deprecated-plus" should be replaced by "asset-class-url" in page {url}.', // @translate
+    ['url' => $_SERVER['REQUEST_URI']]
+);
+
+echo $this->partial('common/block-template/asset-class-url');

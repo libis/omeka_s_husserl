@@ -4,42 +4,13 @@ namespace BlockPlus\Form;
 
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
-use Omeka\Form\Element\Asset;
+use Omeka\Form\Element as OmekaElement;
 
 class PageMetadataFieldset extends Fieldset
 {
-    /**
-     * @var array
-     */
-    protected $pageTypes = [];
-
     public function init(): void
     {
-        $pageTypes = $this->getPageTypes();
-
-        $hasPageTypes = count($pageTypes);
-        if (!$hasPageTypes) {
-            $pageTypes = [
-                'Set types in the parameters of the site.', // @translate
-            ];
-        }
-
         $this
-            ->add([
-                'name' => 'o:block[__blockIndex__][o:data][type]',
-                'type' => Element\Select::class,
-                'options' => [
-                    'label' => 'Page type', // @translate
-                    'value_options' => $pageTypes,
-                    'empty_option' => '',
-                ],
-                'attributes' => [
-                    'id' => 'page-metadata-type',
-                    'required' => false,
-                    'class' => 'chosen-select',
-                    'data-placeholder' => 'Select the page type…', // @translate
-                ],
-            ])
             ->add([
                 'name' => 'o:block[__blockIndex__][o:data][credits]',
                 'type' => Element\Text::class,
@@ -77,7 +48,7 @@ class PageMetadataFieldset extends Fieldset
                 'type' => Element\Text::class,
                 'options' => [
                     'label' => 'Tags', // @translate
-                    'infos' => 'Comma-separated list of keywords', // @translate
+                    'info' => 'Comma-separated list of keywords', // @translate
                 ],
                 'attributes' => [
                     'id' => 'page-metadata-tags',
@@ -98,7 +69,7 @@ class PageMetadataFieldset extends Fieldset
             ])
             ->add([
                 'name' => 'o:block[__blockIndex__][o:data][cover]',
-                'type' => Asset::class,
+                'type' => OmekaElement\Asset::class,
                 'options' => [
                     'label' => 'Cover image', // @translate
                 ],
@@ -107,16 +78,5 @@ class PageMetadataFieldset extends Fieldset
                 ],
             ])
         ;
-    }
-
-    public function setPageTypes(array $pageTypes): self
-    {
-        $this->pageTypes = $pageTypes;
-        return $this;
-    }
-
-    public function getPageTypes(): array
-    {
-        return $this->pageTypes;
     }
 }

@@ -29,49 +29,33 @@ $entityManager = $services->get('Omeka\EntityManager');
 
 $defaultConfig = require dirname(__DIR__, 2) . '/config/module.config.php';
 
-if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.66')) {
+if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.86')) {
     $message = new \Omeka\Stdlib\Message(
         $translate('The module %1$s should be upgraded to version %2$s or later.'), // @translate
-        'Common', '3.4.66'
+        'Common', '3.4.86'
     );
-    throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
+    $messenger->addError($message);
+    throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $translate('Missing requirement. Unable to upgrade.')); // @translate
 }
 
 if (version_compare($oldVersion, '3.4.7', '<')) {
-    // The reference plugin is not available during upgrade, so prepare it.
-    include_once dirname(__DIR__, 2) . '/src/Mvc/Controller/Plugin/References.php';
-    include_once dirname(__DIR__, 2) . '/src/Mvc/Controller/Plugin/ReferenceTree.php';
-
-    if (version_compare($oldVersion, '3.4.43', '<')) {
-        /** @var \Omeka\Module\Manager $moduleManager */
-        $moduleManager = $services->get('Omeka\ModuleManager');
-        $module = $moduleManager->getModule('AdvancedSearch');
-        $hasAdvancedSearch = $module
-            && $module->getState() === \Omeka\Module\Manager::STATE_ACTIVE;
-        $referencesPlugin = new Mvc\Controller\Plugin\References(
-            $services->get('Omeka\EntityManager'),
-            $services->get('Omeka\ApiAdapterManager'),
-            $services->get('Omeka\Acl'),
-            $services->get('Omeka\AuthenticationService')->getIdentity(),
-            $services->get('ControllerPluginManager')->get('api'),
-            $services->get('ControllerPluginManager')->get('translate'),
-            false,
-            $hasAdvancedSearch
-        );
-        $referenceTreePlugin = new Mvc\Controller\Plugin\ReferenceTree($api, $referencesPlugin);
-    } else {
-        $referencesPlugin = new Mvc\Controller\Plugin\References(
-            $services->get('Omeka\EntityManager'),
-            $services->get('Omeka\Connection'),
-            $services->get('Omeka\ApiAdapterManager'),
-            $services->get('Omeka\Acl'),
-            $services->get('Omeka\AuthenticationService')->getIdentity(),
-            $services->get('Omeka\ApiManager'),
-            $plugins->get('translate'),
-            false
-        );
-        $referenceTreePlugin = new Mvc\Controller\Plugin\ReferenceTree($api, $referencesPlugin);
-    }
+    // Tree conversion functions inlined from Stdlib\ReferenceTree, since
+    // plugin constructors have been refactored since these versions.
+    $convertTreeToLevels = function (string $dashTree): array {
+        $values = array_filter(array_map('trim', explode("\n", strtr($dashTree, ["\r\n" => "\n", "\n\r" => "\n", "\r" => "\n"]))));
+        return array_reduce($values, function ($result, $item) {
+            $first = substr($item, 0, 1);
+            $space = strpos($item, ' ');
+            $level = ($first !== '-' || $space === false) ? 0 : $space;
+            $value = trim($level == 0 ? $item : substr($item, $space));
+            $result[] = [$value => $level];
+            return $result;
+        }, []);
+    };
+    $convertFlatLevelsToTree = function (array $levels): string {
+        $tree = array_map(fn ($v, $k) => $v ? str_repeat('-', $v) . ' ' . trim($k) : trim($k), $levels, array_keys($levels));
+        return implode("\n", $tree);
+    };
 }
 
 if (version_compare($oldVersion, '3.4.5', '<')) {
@@ -86,7 +70,7 @@ if (version_compare($oldVersion, '3.4.5', '<')) {
     $tree = $settings->get('reference_tree_hierarchy', '');
     $settings->set(
         'reference_tree_hierarchy',
-        $referenceTreePlugin->convertTreeToLevels($tree)
+        $convertTreeToLevels($tree)
     );
 
     $settings->set(
@@ -102,10 +86,10 @@ if (version_compare($oldVersion, '3.4.5', '<')) {
 if (version_compare($oldVersion, '3.4.7', '<')) {
     $tree = $settings->get('reference_tree_hierarchy') ?: [];
     $tree = (array) $tree;
-    $treeString = $referenceTreePlugin->convertFlatLevelsToTree($tree);
+    $treeString = $convertFlatLevelsToTree($tree);
     $settings->set(
         'reference_tree_hierarchy',
-        $referenceTreePlugin->convertTreeToLevels($treeString)
+        $convertTreeToLevels($treeString)
     );
 
     $repository = $entityManager->getRepository(\Omeka\Entity\SitePageBlock::class);
@@ -115,8 +99,8 @@ if (version_compare($oldVersion, '3.4.7', '<')) {
         if (empty($data['reference']['tree']) || $data['reference']['mode'] !== 'tree') {
             continue;
         }
-        $treeString = $referenceTreePlugin->convertFlatLevelsToTree($data['reference']['tree']);
-        $data['reference']['tree'] = $referenceTreePlugin->convertTreeToLevels($treeString);
+        $treeString = $convertFlatLevelsToTree($data['reference']['tree']);
+        $data['reference']['tree'] = $convertTreeToLevels($treeString);
         $block->setData($data);
         $entityManager->persist($block);
     }
@@ -306,7 +290,7 @@ if (version_compare($oldVersion, '3.4.23.3', '<')) {
             )
             ->from('property', 'property')
             ->innerJoin('property', 'vocabulary', 'vocabulary', 'property.vocabulary_id = vocabulary.id');
-        $result = $connection->executeQuery($qb)->fetchAllKeyValue();
+        $result = $connection->executeQuery($qb->getSQL())->fetchAllKeyValue();
         $terms['properties'] = array_map('intval', $result);
 
         $qb = $connection->createQueryBuilder();
@@ -317,7 +301,7 @@ if (version_compare($oldVersion, '3.4.23.3', '<')) {
             )
             ->from('resource_class', 'resource_class')
             ->innerJoin('resource_class', 'vocabulary', 'vocabulary', 'resource_class.vocabulary_id = vocabulary.id');
-        $result = $connection->executeQuery($qb)->fetchAllKeyValue();
+        $result = $connection->executeQuery($qb->getSQL())->fetchAllKeyValue();
         $terms['resource_classes'] = array_map('intval', $result);
 
         return $terms;
@@ -407,17 +391,8 @@ if (version_compare($oldVersion, '3.4.33.3', '<')) {
 }
 
 if (version_compare($oldVersion, '3.4.34.3', '<')) {
-    $this->execSqlFromFile($this->modulePath() . '/data/install/schema.sql');
-
-    $message = new PsrMessage(
-        'It is possible now to get translated linked resource.' // @translate
-    );
-    // Job is not available during upgrade.
-    $messenger->addSuccess($message);
-    $message = new PsrMessage(
-        'Translated linked resource metadata should be indexed in main settings.' // @translate
-    );
-    $messenger->addWarning($message);
+    // The table reference_metadata was created here but was dropped in
+    // version 3.4.55, so the creation is skipped.
 }
 
 if (version_compare($oldVersion, '3.4.35.3', '<')) {
@@ -477,22 +452,13 @@ if (version_compare($oldVersion, '3.4.43', '<')) {
 }
 
 if (version_compare($oldVersion, '3.4.47', '<')) {
-    $sql = <<<'SQL'
-        ALTER TABLE `reference_metadata` ADD INDEX `idx_is_public` (`is_public`);
-        SQL;
-    try {
-        $connection->executeStatement($sql);
-    } catch (\Exception $e) {
-        // Index exists.
-    }
+    // Index on reference_metadata was added here but the table was dropped
+    // in version 3.4.55.
 }
 
 if (version_compare($oldVersion, '3.4.48', '<')) {
-    $sql = <<<'SQL'
-        ALTER TABLE `reference_metadata`
-        CHANGE `lang` `lang` varchar(190) NOT NULL DEFAULT '' AFTER `field`;
-        SQL;
-    $connection->executeStatement($sql);
+    // Column change on reference_metadata was done here but the table was
+    // dropped in version 3.4.55.
 }
 
 if (version_compare($oldVersion, '3.4.49', '<')) {
@@ -663,28 +629,33 @@ if (version_compare($oldVersion, '3.4.50', '<')) {
             }
             unset($data['template']);
 
-            // Make config of block reference flat.
-            if ($layout === 'reference' && isset($data['args'])) {
-                $heading = $data['options']['heading'] ?? '';
-                $order = empty($data['args']['order']) ? ['alphabetic' => 'ASC'] : $data['args']['order'];
+            // Make config of block reference flat. Trigger on any reference
+            // block that does not yet have the new top-level "fields" key, so
+            // blocks in a partial / halfway legacy state are migrated too, not
+            // only those still carrying an "args" sub-array.
+            if ($layout === 'reference' && !isset($data['fields'])) {
+                $args = $data['args'] ?? [];
+                $opts = $data['options'] ?? [];
+                $heading = $opts['heading'] ?? $data['heading'] ?? '';
+                $order = empty($args['order']) ? ['alphabetic' => 'ASC'] : $args['order'];
                 $sortBy = key($order) === 'alphabetic' ? 'alphabetic' : 'total';
                 $sortOrder = reset($order);
                 $data = [
-                    'fields' => $data['args']['fields'] ?? [],
-                    'type' => $data['args']['type'] ?? 'properties',
-                    'resource_name' => $data['args']['resource_name'] ?? 'items',
-                    'query' => $data['args']['query'] ?? [],
-                    'languages' => $data['args']['languages'] ?? [],
+                    'fields' => $args['fields'] ?? [],
+                    'type' => $args['type'] ?? 'properties',
+                    'resource_name' => $args['resource_name'] ?? 'items',
+                    'query' => $args['query'] ?? [],
+                    'languages' => $args['languages'] ?? [],
                     'sort_by' => $sortBy,
                     'sort_order' => $sortOrder,
-                    'by_initial' => !empty($data['options']['by_initial']),
-                    'link_to_single' => !empty($data['options']['link_to_single']),
-                    'custom_url' => !empty($data['options']['custom_url']),
-                    'skiplinks' => !empty($data['options']['skiplinks']),
-                    'headings' => !empty($data['options']['headings']),
-                    'total' => !empty($data['options']['total']),
-                    'list_by_max' => empty($data['options']['list_by_max']) ? 0 : (int) $data['options']['list_by_max'],
-                    'subject_property' => $data['options']['subject_property'] ?? null,
+                    'by_initial' => !empty($opts['by_initial']),
+                    'link_to_single' => !empty($opts['link_to_single']),
+                    'custom_url' => !empty($opts['custom_url']),
+                    'skiplinks' => !empty($opts['skiplinks']),
+                    'headings' => !empty($opts['headings']),
+                    'total' => !empty($opts['total']),
+                    'list_by_max' => empty($opts['list_by_max']) ? 0 : (int) $opts['list_by_max'],
+                    'subject_property' => $opts['subject_property'] ?? null,
                 ];
             } else {
                 $heading = $data['options']['heading'] ?? $data['heading'] ?? '';
@@ -746,4 +717,78 @@ if (version_compare($oldVersion, '3.4.51', '<')) {
         'A template has been added to display references as list/grid (mansory).' // @translate
     );
     $messenger->addSuccess($message);
+}
+
+if (version_compare($oldVersion, '3.4.55', '<')) {
+    $sql = <<<'SQL'
+        SET foreign_key_checks = 0;
+        DROP TABLE IF EXISTS reference_metadata;
+        SET foreign_key_checks = 1;
+        SQL;
+    foreach (array_filter(array_map('trim', explode(";\n", $sql))) as $sql) {
+        $connection->executeStatement($sql);
+    }
+
+    $message = new PsrMessage(
+        'The references with single or fallback locales was removed for now due to complex maintainability. The listing of existing references may be different when values have multiple languages. The feature could be reimplemented in a future version.' // @translate
+    );
+    $messenger->addWarning($message);
+}
+
+if (version_compare($oldVersion, '3.4.58', '<')) {
+    $url = $services->get('ViewHelperManager')->get('url');
+    $message = new PsrMessage(
+        'A new {link}admin page{link_end} is available to browse all references (properties and classes) with their counts and values.', // @translate
+        [
+            'link' => sprintf('<a href="%s">', htmlspecialchars($url('admin') . '/reference')),
+            'link_end' => '</a>',
+        ]
+    );
+    $message->setEscapeHtml(false);
+    $messenger->addSuccess($message);
+}
+
+if (version_compare($oldVersion, '3.4.61', '<')) {
+    // Some "reference" blocks may still hold the legacy structure
+    // {"args": {...}, "options": {...}} when the 3.4.50 migration did not
+    // process them (block created after upgrade with a stale form, partial
+    // migration, etc.). Re-scan all reference blocks and flatten any
+    // remaining legacy structure.
+    $blocksRepository = $entityManager->getRepository(\Omeka\Entity\SitePageBlock::class);
+    $migrated = 0;
+    foreach ($blocksRepository->findBy(['layout' => 'reference']) as $block) {
+        $data = $block->getData() ?: [];
+        if (isset($data['fields']) || (!isset($data['args']) && !isset($data['options']))) {
+            continue;
+        }
+        $args = $data['args'] ?? [];
+        $opts = $data['options'] ?? [];
+        $order = empty($args['order']) ? ['alphabetic' => 'ASC'] : $args['order'];
+        $newData = [
+            'fields' => $args['fields'] ?? [],
+            'type' => $args['type'] ?? 'properties',
+            'resource_name' => $args['resource_name'] ?? 'items',
+            'query' => $args['query'] ?? [],
+            'languages' => $args['languages'] ?? [],
+            'sort_by' => key($order) === 'alphabetic' ? 'alphabetic' : 'total',
+            'sort_order' => reset($order),
+            'by_initial' => !empty($opts['by_initial']),
+            'link_to_single' => !empty($opts['link_to_single']),
+            'custom_url' => !empty($opts['custom_url']),
+            'skiplinks' => !empty($opts['skiplinks']),
+            'headings' => !empty($opts['headings']),
+            'total' => !empty($opts['total']),
+            'list_by_max' => empty($opts['list_by_max']) ? 0 : (int) $opts['list_by_max'],
+            'subject_property' => $opts['subject_property'] ?? null,
+        ];
+        $block->setData($newData);
+        ++$migrated;
+    }
+    if ($migrated) {
+        $entityManager->flush();
+        $messenger->addSuccess(new PsrMessage(
+            'Flattened {count} reference block(s) still using the legacy "args"/"options" structure.', // @translate
+            ['count' => $migrated]
+        ));
+    }
 }

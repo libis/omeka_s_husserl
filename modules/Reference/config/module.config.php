@@ -4,12 +4,6 @@ namespace Reference;
 
 return [
     'entity_manager' => [
-        'mapping_classes_paths' => [
-            dirname(__DIR__) . '/src/Entity',
-        ],
-        'proxy_paths' => [
-            dirname(__DIR__) . '/data/doctrine-proxies',
-        ],
         'functions' => [
             'string' => [
                 'any_value' => \DoctrineExtensions\Query\Mysql\AnyValue::class,
@@ -18,10 +12,13 @@ return [
     ],
     'service_manager' => [
         'factories' => [
+            'Reference\References' => Service\Stdlib\ReferencesFactory::class,
+            'Reference\ReferenceTree' => Service\Stdlib\ReferenceTreeFactory::class,
+        ] + (version_compare(\Omeka\Module::VERSION, '4.2', '<')
             // Override theme factory to inject module pages and block templates.
             // Copied in BlockPlus, Reference, Timeline.
-            'Omeka\Site\ThemeManager' => Service\ThemeManagerFactory::class,
-        ],
+            ? ['Omeka\Site\ThemeManager' => Service\ThemeManagerFactory::class]
+            : []),
     ],
     'view_manager' => [
         'template_path_stack' => [
@@ -50,7 +47,6 @@ return [
     'form_elements' => [
         'invokables' => [
             Form\Element\DoubleArrayTextarea::class => Form\Element\DoubleArrayTextarea::class,
-            Form\SettingsFieldset::class => Form\SettingsFieldset::class,
             Form\SiteSettingsFieldset::class => Form\SiteSettingsFieldset::class,
         ],
         'factories' => [
@@ -60,6 +56,7 @@ return [
     ],
     'controllers' => [
         'invokables' => [
+            Controller\Admin\ReferenceController::class => Controller\Admin\ReferenceController::class,
             Controller\Site\ReferenceController::class => Controller\Site\ReferenceController::class,
         ],
         'factories' => [
@@ -68,13 +65,61 @@ return [
     ],
     'controller_plugins' => [
         'factories' => [
-            'currentReferenceMetadata' => Service\ControllerPlugin\CurrentReferenceMetadataFactory::class,
             'references' => Service\ControllerPlugin\ReferencesFactory::class,
             'referenceTree' => Service\ControllerPlugin\ReferenceTreeFactory::class,
         ],
     ],
     'router' => [
         'routes' => [
+            'admin' => [
+                'child_routes' => [
+                    'reference' => [
+                        'type' => \Laminas\Router\Http\Literal::class,
+                        'options' => [
+                            'route' => '/reference',
+                            'defaults' => [
+                                '__NAMESPACE__' => 'Reference\Controller\Admin',
+                                'controller' => Controller\Admin\ReferenceController::class,
+                                'action' => 'browse',
+                            ],
+                        ],
+                        'may_terminate' => true,
+                        'child_routes' => [
+                            'show' => [
+                                'type' => \Laminas\Router\Http\Segment::class,
+                                'options' => [
+                                    'route' => '/:prefix/:local',
+                                    'constraints' => [
+                                        'prefix' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                                        'local' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                                    ],
+                                    'defaults' => ['action' => 'show'],
+                                ],
+                                'may_terminate' => true,
+                                'child_routes' => [
+                                    'values' => [
+                                        'type' => \Laminas\Router\Http\Literal::class,
+                                        'options' => [
+                                            'route' => '/values',
+                                            'defaults' => ['action' => 'values'],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                            'show-term' => [
+                                'type' => \Laminas\Router\Http\Segment::class,
+                                'options' => [
+                                    'route' => '/:term',
+                                    'constraints' => [
+                                        'term' => '[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+',
+                                    ],
+                                    'defaults' => ['action' => 'show'],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
             'site' => [
                 'child_routes' => [
                     'reference' => [
@@ -135,10 +180,21 @@ return [
             ],
         ],
     ],
+    'navigation' => [
+        'AdminModule' => [
+            'reference' => [
+                'label' => 'References', // @translate
+                'route' => 'admin/reference',
+                'resource' => 'Omeka\Controller\Admin\Module',
+                'privilege' => 'browse',
+                'class' => 'o-icon- fa-sort-alpha-down',
+            ],
+        ],
+    ],
     'translator' => [
         'translation_file_patterns' => [
             [
-                'type' => 'gettext',
+                'type' => \Laminas\I18n\Translator\Loader\Gettext::class,
                 'base_dir' => dirname(__DIR__) . '/language',
                 'pattern' => '%s.mo',
                 'text_domain' => null,
@@ -183,6 +239,7 @@ return [
                 'skiplinks' => true,
                 'headings' => true,
                 'total' => true,
+                'url_argument_reference' => false,
                 'thumbnail' => false,
                 'list_by_max' => 0,
                 'subject_property' => null,
@@ -199,6 +256,7 @@ return [
                 'link_to_single' => true,
                 'custom_url' => false,
                 'total' => true,
+                'url_argument_reference' => false,
                 'thumbnail' => false,
                 'branch' => false,
                 'expanded' => true,

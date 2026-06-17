@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
+
 namespace BlockPlus\Form;
 
-use BlockPlus\Form\Element\TemplateSelect;
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
 
@@ -15,18 +15,11 @@ class ListOfSitesFieldset extends Fieldset
             'main' => 'Main site', // @translate
             'current' => 'Current site', // @translate
         ];
-        if (class_exists(\Internationalisation\Form\Element\SitesPageSelect::class)) {
+        if (class_exists('Internationalisation\Form\LanguageSwitcherFieldset', false)) {
             $exclude['translated'] = 'Translated sites'; // @translate
         }
 
         $this
-            ->add([
-                'name' => 'o:block[__blockIndex__][o:data][heading]',
-                'type' => Element\Text::class,
-                'options' => [
-                    'label' => 'Block title', // @translate
-                ],
-            ])
             ->add([
                 'name' => 'o:block[__blockIndex__][o:data][sort]',
                 'type' => Element\Select::class,
@@ -97,17 +90,6 @@ class ListOfSitesFieldset extends Fieldset
                     'id' => 'list-of-sites-thumbnails',
                 ],
             ])
-            ->add([
-                'name' => 'o:block[__blockIndex__][o:data][template]',
-                'type' => TemplateSelect::class,
-                'options' => [
-                    'label' => 'Template to display', // @translate
-                    'info' => 'Templates are in folder "common/block-layout" of the theme and should start with "list-of-sites".', // @translate
-                    'template' => 'common/block-layout/list-of-sites',
-                ],
-                'attributes' => [
-                    'class' => 'chosen-select',
-                ],
-            ]);
+        ;
     }
 }

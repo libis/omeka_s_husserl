@@ -1,0 +1,76 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SitePageBlockRepresentation $block
+ * @var array $attachments Contains keys:
+ *   - asset (AssetRepresentation)
+ *   - page (PageRepresentation)
+ *   - caption (string): the html is purified according to settings
+ *   - alt_link_title (string)
+ *
+ * The optional class, url and label may be set at start of caption like:
+ * ```
+ * url = https://example.org/
+ * class = xxx yyy
+ * label = Any zzz
+ * Next lines are the true caption, that may be raw text ot html.
+ * ```
+ *
+ * The string may be html.
+ * The url may be a local media file, for example `/files/original/xxx.pdf`.
+ * The label is used when there is no page, so no alt_link_title.
+ *
+ * @see \BlockPlus\View\Helper\AssetElement
+ * @uses \BlockPlus\View\Helper\CaptionClassAndUrl
+ */
+
+$plugins = $this->getHelperPluginManager();
+$escapeAttr = $plugins->get('escapeHtmlAttr');
+
+// Manage minimal display when the module is disabled.
+$assetElement = $plugins->has('assetElement')
+    ? $plugins->get('assetElement')
+    : $plugins->get('thumbnail');
+$captionClassAndUrl = $plugins->has('captionClassAndUrl')
+    ? $plugins->get('captionClassAndUrl')
+    : fn($string) => [trim((string) $string), '', '', '', false, false, $string !== strip_tags($string)];
+?>
+
+<style>
+.partners {
+    text-align: center;
+}
+.partner-logo img {
+    margin: 12px;
+    height: 128px;
+    max-height: 128px;
+    width: auto;
+}
+</style>
+
+<div class="assets partners">
+    <div class="asset partners-logos">
+        <?php foreach ($attachments as $attachment):
+            if (!$attachment['asset']) continue;
+            $asset = $attachment['asset'];
+            $assetTag = $asset ? $assetElement($asset, 'square') : '';
+            $page = $attachment['page'] ?? null;
+            [$caption, $class, $url, $label, $isLocalUrl, $isMediaFile, $isHtmlCaption] = $captionClassAndUrl($attachment['caption'] ?? '');
+            $title = strlen($attachment['alt_link_title']) ? $attachment['alt_link_title'] : ($page ? $page->title() : ($label ?: ($caption && $isHtmlCaption ? strip_tags($caption) : $caption)));
+            ?>
+            <?php if ($page): ?>
+        <a class="partner-logo<?= strlen($class) ? ' ' . $escapeAttr($class) : '' ?>" href="<?= $escapeAttr($page->siteUrl()) ?>" title="<?= $escapeAttr($title) ?>">
+            <?= $assetTag ?>
+        </a>
+            <?php elseif ($url): ?>
+        <a class="partner-logo<?= strlen($class) ? ' ' . $escapeAttr($class) : '' ?>" href="<?= $escapeAttr($url) ?>"<?php if ($title): ?> title="<?= $escapeAttr($title) ?>"<?php endif; ?><?php if (!$isLocalUrl || $isMediaFile): ?> target="_blank"<?php endif; ?><?php if (!$isLocalUrl): ?> rel="noopener"<?php endif; ?>>
+            <?= $assetTag ?>
+        </a>
+            <?php else: ?>
+        <span class="partner-logo<?= strlen($class) ? ' ' . $escapeAttr($class) : '' ?>"<?php if ($title): ?> title="<?= $escapeAttr($title) ?>"<?php endif; ?>>
+            <?= $assetTag ?>
+        </span>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    </div>
+</div>

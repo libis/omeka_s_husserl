@@ -1,0 +1,44 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SitePageBlockRepresentation $block
+ * @var string $params
+ * @var string $paramType "auto", "raw", "ini", "json_array", "key_value", "key_value_array".
+ * @var string|array $parameters Params according to type.
+ *
+ * Fill this partial as you want. The view is available, so any feature can be used.
+ * Warning: check security of any user input.
+ *
+ * To use this block: set a list of key-value separated by "=" in params.
+ */
+
+
+$plugins = $this->getHelperPluginManager();
+$partial = $plugins->get('partial');
+
+if (!is_array($parameters)) {
+    return;
+}
+
+$glossary = $parameters;
+
+// Create the glossary alphabet, the list of current letters and current definitions and prepare first letters.
+foreach ($glossary as $key => $termDefinition) {
+    $term = strtr((string) reset($termDefinition), ["\t" => '    ']);
+    if ($term === '') {
+        unset($glossary[$key]);
+        continue;
+    }
+    $definition = $termDefinition[1] ?? '';
+    $definition = strtr($definition, ["\t" => '    ']);
+    $glossary[$key] = [
+        'term' => $term,
+        'definition' => $definition,
+    ];
+}
+$glossary = array_values($glossary);
+?>
+
+<?= $partial('common/glossary', [
+    'glossary' => $glossary,
+]) ?>

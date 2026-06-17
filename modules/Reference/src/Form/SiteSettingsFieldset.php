@@ -48,6 +48,7 @@ class SiteSettingsFieldset extends Fieldset
                         'items' => 'Items',  // @translate
                         'item_sets' => 'Item sets',  // @translate
                         // 'media' => 'Media',  // @translate
+                        'digital_objects' => 'Digital objects',  // @translate
                     ],
                 ],
                 'attributes' => [
@@ -91,10 +92,11 @@ class SiteSettingsFieldset extends Fieldset
                 'attributes' => [
                     'id' => 'reference_slugs',
                     'rows' => 12,
-                    'placeholder' => 'slug = term = label
-dctype:Image = dctype:Image = Image
-dcterms:subject = dcterms:subject = Subjects
-',
+                    'placeholder' => <<<'TXT'
+                        slug = term = label
+                        dctype:Image = dctype:Image = Image
+                        dcterms:subject = dcterms:subject = Subjects
+                        TXT,
                 ],
             ])
         ;

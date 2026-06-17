@@ -110,7 +110,7 @@ class SchemaOrg extends AbstractHarvesterMap
                     $response = $this->api->search('items', $queryArray);
                     $parentItem = $response->getContent()[0] ?? null;
                     if ($parentItem) {
-                        $resource['schema:isPartOf'][] = [
+                        $resource['schema:isPartOf'][0] = [
                             "value_resource_id" => $parentItem->id(),
                             "value_resource_name" => "items",
                             'property_id' => $args["schemaTerms"]['schema:isPartOf'],
@@ -119,6 +119,36 @@ class SchemaOrg extends AbstractHarvesterMap
                     }
                 } catch (NotFoundException $e) {
                     // Parent item not found, skip relationship
+                }
+            }
+        }
+
+        if(isset($resource['schema:workExample'])) {
+            $propertyId = $args["schemaTerms"]['schema:workExample'];
+            foreach($resource['schema:workExample'] as $index => $value) {
+                if (!empty($value['@value'])) {
+                    $parentLabel = $value['@value'];
+                    if ($parentLabel) {
+                        try {
+                            //todo get property id out of data
+                            $query = "property[0][joiner]=and&property[0][property]=".$args["schemaTerms"]['schema:identifier']."&property[0][type]=eq&property[0][text]=".$parentLabel;
+                            //turn query into array
+                            $queryArray = [];
+                            parse_str($query, $queryArray);
+                            $response = $this->api->search('items', $queryArray);
+                            $parentItem = $response->getContent()[0] ?? null;
+                            if ($parentItem) {
+                                $resource['schema:workExample'][$index] = [
+                                    "value_resource_id" => $parentItem->id(),
+                                    "value_resource_name" => "items",
+                                    'property_id' => $propertyId,
+                                    'type' => 'resource',
+                                ];
+                            }
+                        } catch (NotFoundException $e) {
+                            // Parent item not found, skip relationship
+                        }
+                    }
                 }
             }
         }

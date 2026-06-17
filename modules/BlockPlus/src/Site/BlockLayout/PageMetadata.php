@@ -14,14 +14,14 @@ class PageMetadata extends AbstractBlockLayout
 {
     public function getLabel()
     {
-        return 'Page metadata'; // @translate
+        return 'Page metadata (deprecated)'; // @translate
     }
 
     public function onHydrate(SitePageBlock $block, ErrorStore $errorStore): void
     {
         $data = $block->getData() + ['summary' => '', 'params' => '', 'tags' => []];
-        $data['summary'] = str_replace(["\r\n", "\n\r", "\r"], ["\n", "\n", "\n"], $data['summary']);
-        $data['params'] = str_replace(["\r\n", "\n\r", "\r"], ["\n", "\n", "\n"], $data['params']);
+        $data['summary'] = strtr($data['summary'], ["\r\n" => "\n", "\n\r" => "\n", "\r" => "\n"]);
+        $data['params'] = strtr($data['params'], ["\r\n" => "\n", "\n\r" => "\n", "\r" => "\n"]);
         if (empty($data['tags'])) {
             $data['tags'] = [];
         } elseif (!is_array($data['tags'])) {
@@ -42,7 +42,7 @@ class PageMetadata extends AbstractBlockLayout
         $defaultSettings = $services->get('Config')['blockplus']['block_settings']['pageMetadata'];
         $blockFieldset = \BlockPlus\Form\PageMetadataFieldset::class;
 
-        $data = $block ? $block->data() + $defaultSettings : $defaultSettings;
+        $data = $block ? ($block->data() ?? []) + $defaultSettings : $defaultSettings;
 
         if (is_array($data['tags'])) {
             $data['tags'] = implode(', ', $data['tags']);
@@ -58,30 +58,11 @@ class PageMetadata extends AbstractBlockLayout
 
         $translate = $view->plugin('translate');
         $html = '<p>'
-            . $translate('This block doesn’t display anything, but store the type and various metadata about this page for themes.') // @translate
+            . $translate('This block doesn’t display anything, but stores various metadata for themes. It will be removed soon and replaced by the main page metadata above.') // @translate
             . '</p>';
         $html .= $view->formCollection($fieldset, false);
-
-        // Hack to hide the advanced metadata by default.
-        $posHtml = <<<HTML
-<div class="field">
-    <div class="field-meta">
-        <label for="page-metadata-credits">
-HTML;
-        $advancedOptionsHtml = '<a href="#" class="expand" title="' . $translate('expand') . '" aria-label="' . $translate('expand') . '"><h4>' . $translate('Metadata') . '</h4></a>';
-        $advancedOptionsHtml .= '<div class="collapsible no-override">';
-        $advancedOptionsHtml .= '<style>.collapsible.no-override {overflow:visible;}</style>';
-        $html = str_replace($posHtml, $advancedOptionsHtml . $posHtml, $html);
-
         $html .= $view->blockAttachmentsForm($block);
-        $html .= '</div>';
-
-        // Fix https://github.com/Daniel-KM/Omeka-S-module-BlockPlus/issues/11.
-        $replace = [
-            '<span class="selected-asset" style="display: none;">' => '<span class="selected-asset-page-metadata" style="display: none;">',
-            '<span class="selected-asset">' => '<span class="selected-asset-page-metadata">',
-        ];
-        return str_replace(array_keys($replace), array_values($replace), $html);
+        return $html;
     }
 
     public function render(PhpRenderer $view, SitePageBlockRepresentation $block)

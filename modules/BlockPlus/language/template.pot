@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-01-09 00:00+0000\n"
+"POT-Creation-Date: 2025-07-21 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,88 +17,90 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: Module.php:33
+#: data/scripts/upgrade_vocabulary.php:19
 #, php-format
-msgid "The library \"%s\" should be installed."
+msgid "This module requires module %1$s version %2$s or greater."
 msgstr ""
 
-#: Module.php:36
-msgid "See module’s installation documentation."
-msgstr ""
-
-#: src/Generic/AbstractModule.php:81 src/Generic/AbstractModule.php:759
+#: data/scripts/upgrade.php:37 Module.php:39
 #, php-format
-msgid "This module requires the module \"%s\"."
+msgid "The module %1$s should be upgraded to version %2$s or later."
 msgstr ""
 
-#: src/Generic/AbstractModule.php:86
-#, php-format
-msgid "This module requires modules \"%s\"."
-msgstr ""
-
-#: src/Generic/AbstractModule.php:94
-msgid "This module has resources that cannot be installed."
-msgstr ""
-
-#: src/Generic/AbstractModule.php:101
-msgid ""
-"This module cannot install its tables, because they exist already. Try to "
-"remove them first."
-msgstr ""
-
-#: src/Generic/AbstractModule.php:362
-#, php-format
-msgid "The module removed tables \"%s\" from a previous broken install."
-msgstr ""
-
-#: src/Generic/AbstractModule.php:754
-#, php-format
-msgid "This module requires the module \"%1$s\", version %2$s or above."
-msgstr ""
-
-#: src/Generic/AbstractModule.php:851
-#, php-format
-msgid ""
-"The module \"%s\" was automatically deactivated because the dependencies are "
-"unavailable."
-msgstr ""
-
-#: src/Site/BlockLayout/Block.php:46
-msgid "A simple block allows to display a partial from the theme."
+#: Module.php:466
+msgid "Create page model"
 msgstr ""
 
 #: src/Site/BlockLayout/Block.php:47
 msgid ""
-"Provided samples are a block to display the config, and a block to display "
-"the tree view from a tsv/csv file."
+"A simple block allows to display data via one of the templates set in the "
+"block layout settings."
 msgstr ""
 
-#: src/Site/BlockLayout/Division.php:142
-msgid "Add divisions and classes to wrap one or multiple block."
+#: src/Site/BlockLayout/Breadcrumbs.php:33
+msgid ""
+"This block uses the options set in the {link}site settings{link_end}, unless "
+"you use the template of Omeka in the config of the block."
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:95
+#: src/Site/BlockLayout/Buttons.php:86 src/Site/BlockLayout/Buttons.php:90
+#: src/Site/ResourcePageBlockLayout/Buttons.php:79
+msgid "Download"
+msgstr ""
+
+#: src/Site/BlockLayout/Buttons.php:103
+#: src/Site/ResourcePageBlockLayout/Buttons.php:111
+#, php-format
+msgid ""
+"%1$s%2$s\n"
+"-\n"
+"%3$s"
+msgstr ""
+
+#: src/Site/BlockLayout/Buttons.php:104
+#: src/Site/ResourcePageBlockLayout/Buttons.php:112
+msgid "Share by mail"
+msgstr ""
+
+#: src/Site/BlockLayout/Buttons.php:117
+#: src/Site/ResourcePageBlockLayout/Buttons.php:125
+msgid "Share on Facebook"
+msgstr ""
+
+#: src/Site/BlockLayout/Buttons.php:132
+#: src/Site/ResourcePageBlockLayout/Buttons.php:140
+msgid "Share on Pinterest"
+msgstr ""
+
+#: src/Site/BlockLayout/Buttons.php:147
+#: src/Site/ResourcePageBlockLayout/Buttons.php:155
+msgid "Share on Twitter"
+msgstr ""
+
+#: src/Site/BlockLayout/Messages.php:31
+msgid ""
+"This block displays the messages to the visitor or user, for example for "
+"modules Bulk Export, Contact Us, Contribute, and Guest."
+msgstr ""
+
+#: src/Site/BlockLayout/MirrorPage.php:97
 msgid "Choose any page from any site."
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:96
+#: src/Site/BlockLayout/MirrorPage.php:98
 msgid ""
 "If a page of a private site is selected, it will be hidden on the public "
 "side."
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:97
+#: src/Site/BlockLayout/MirrorPage.php:99
 msgid "The current page and recursive pages are forbidden."
 msgstr ""
 
 #: src/Site/BlockLayout/PageMetadata.php:61
 msgid ""
-"This block doesn’t display anything, but store the type and various metadata "
-"about this page for themes."
-msgstr ""
-
-#: src/Site/BlockLayout/PageMetadata.php:71
-msgid "expand"
+"This block doesn’t display anything, but stores various metadata for themes. "
+"It will be removed soon and replaced by the main page metadata above."
 msgstr ""
 
 #: src/Site/BlockLayout/RedirectToUrl.php:51
@@ -107,96 +109,205 @@ msgstr ""
 msgid "Redirect to %s"
 msgstr ""
 
-#: view/common/block-layout/block-arborescence.phtml:14
+#: src/Site/ResourcePageBlockLayout/Buttons.php:83
+msgid "Download file"
+msgstr ""
+
+#: src/Site/ResourcePageBlockLayout/Buttons.php:94
+#: src/Site/ResourcePageBlockLayout/Buttons.php:98
+msgid "Print"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:425 src/View/Helper/Breadcrumbs.php:435
+#: src/View/Helper/Breadcrumbs.php:477 src/View/Helper/Breadcrumbs.php:513
+#: src/View/Helper/Breadcrumbs.php:519
+msgid "Dashboard"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:441 src/View/Helper/Breadcrumbs.php:540
+msgid "Basket"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:449
+msgid "Collecting"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:456 src/View/Helper/Breadcrumbs.php:543
+msgid "Selection for contact"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:463 src/View/Helper/Breadcrumbs.php:546
+msgid "Selection"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:480
+msgid "Login"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:483
+msgid "Register"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:486
+msgid "Authentication error"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:531
+msgid "Update account"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:534
+msgid "Update email"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:537
+msgid "Accept terms"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:557
+msgid "Current page"
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:600
+msgid "Collections"
+msgstr ""
+
+#: view/common/block-layout/breadcrumbs.phtml:29
+#: view/common/block-layout/breadcrumbs.phtml:35
+#: view/common/block-template/breadcrumbs-standard.phtml:26
+#: view/common/breadcrumbs.phtml:50
+msgid "Breadcrumb"
+msgstr ""
+
+#: view/common/block-layout/mapping-block-search.phtml:54
+msgid "Search on map"
+msgstr ""
+
+#: view/common/block-layout/twitter.phtml:16
+msgid "No message."
+msgstr ""
+
+#: view/common/block-template/block-arborescence.phtml:21
 msgid ""
 "No file defined. Set the param in the block: \"file = filename.tsv\" (use a "
 "file inside /asset/data/) or \"file = https://example.com/file.tsv\"."
 msgstr ""
 
-#: view/common/block-layout/browse-preview-gallery.phtml:102
+#: view/common/block-template/browse-preview-gallery.phtml:115
+msgid "Display info"
+msgstr ""
+
+#: view/common/block-template/browse-preview-gallery.phtml:142
 msgid "More information"
 msgstr ""
 
-#: view/common/block-layout/page-date.phtml:37
+#: view/common/block-template/browse-preview-timeline-list.phtml:47
+msgid "[No date]"
+msgstr ""
+
+#: view/common/block-template/page-date-time-plus.phtml:36
 #, php-format
 msgid "Created on %s, updated on %s"
 msgstr ""
 
-#: view/common/block-layout/page-date.phtml:39
+#: view/common/block-template/page-date-time-plus.phtml:38
 #, php-format
 msgid "Created on %s"
 msgstr ""
 
-#: view/common/block-layout/twitter.phtml:20
-msgid "No message."
-msgstr ""
-
-#: view/common/glossary.phtml:149
+#: view/common/glossary.phtml:147
 msgid "First"
 msgstr ""
 
-#: view/common/glossary.phtml:151
+#: view/common/glossary.phtml:149
 msgid "No previous"
 msgstr ""
 
-#: view/common/glossary.phtml:160
+#: view/common/glossary.phtml:158
 msgid "No next"
 msgstr ""
 
-#: view/common/glossary.phtml:164
+#: view/common/glossary.phtml:162
 msgid "Last"
 msgstr ""
 
-#: data/scripts/upgrade_vocabulary.php:15
-#, php-format
-msgid "This module requires module %s version %s or greater."
+#: view/common/resource-page-block-layout/block.phtml:14
+msgid "Simple block to customize in theme"
 msgstr ""
 
-#: data/scripts/upgrade_vocabulary.php:31
+#: view/common/resource-page-block-layout/download-primary.phtml:21
 #, php-format
-msgid "The vocabulary \"%s\" was updated successfully."
+msgid "Download file (%s)"
 msgstr ""
 
-#: data/scripts/upgrade.php:100
+#: view/common/resource-page-block-layout/no-item.phtml:17
+msgid "No item"
+msgstr ""
+
+#: view/common/resource-page-block-layout/no-media.phtml:19
+#: view/common/resource-page-block-layout/no-media.phtml:22
+msgid "Unavailable resource"
+msgstr ""
+
+#: view/common/resource-page-block-layout/previous-next.phtml:19
+msgid "Previous resource"
+msgstr ""
+
+#: view/common/resource-page-block-layout/previous-next.phtml:21
+msgid "No previous resource"
+msgstr ""
+
+#: view/common/resource-page-block-layout/previous-next.phtml:33
+msgid "Next resource"
+msgstr ""
+
+#: view/common/resource-page-block-layout/previous-next.phtml:35
+msgid "No next resource"
+msgstr ""
+
+#: data/scripts/upgrade_vocabulary.php:36
+msgid "The vocabulary \"{vocabulary}\" was updated successfully."
+msgstr ""
+
+#: data/scripts/upgrade.php:116
 msgid ""
 "Change: The method \"blockMetadata()\" returns an array by default for key "
 "\"params_json\". Use key \"params_json_object\" to keep object output."
 msgstr ""
 
-#: data/scripts/upgrade.php:111
-#, php-format
-msgid "The vocabulary \"%s\" is not installed."
+#: data/scripts/upgrade.php:126
+msgid "The vocabulary \"{vocabulary}\" is not installed."
 msgstr ""
 
-#: data/scripts/upgrade.php:125
+#: data/scripts/upgrade.php:140
 msgid "Is reserved Access"
 msgstr ""
 
-#: data/scripts/upgrade.php:126
+#: data/scripts/upgrade.php:141
 msgid "Gives an ability for private resource to be previewed."
 msgstr ""
 
-#: data/scripts/upgrade.php:130
+#: data/scripts/upgrade.php:145
 msgid "Is new resource"
 msgstr ""
 
-#: data/scripts/upgrade.php:131
+#: data/scripts/upgrade.php:146
 msgid "Allows to identify a resource as a new one."
 msgstr ""
 
-#: data/scripts/upgrade.php:135
+#: data/scripts/upgrade.php:150
 msgid "Category"
 msgstr ""
 
-#: data/scripts/upgrade.php:136
+#: data/scripts/upgrade.php:151
 msgid "Non-standard topic that can be used for some purposes."
 msgstr ""
 
-#: data/scripts/upgrade.php:209
+#: data/scripts/upgrade.php:224
 msgid "The block \"Assets\" was merged with the new upstream block \"Asset\"."
 msgstr ""
 
-#: data/scripts/upgrade.php:213
+#: data/scripts/upgrade.php:228
 msgid ""
 "You may have to check the pages when a specific template is used, in "
 "particular for deprecated keys \"title\", replaced by \"alt_link_title\", "
@@ -204,458 +315,914 @@ msgid ""
 "title, or asset title)."
 msgstr ""
 
-#: data/scripts/upgrade.php:217
+#: data/scripts/upgrade.php:232
 msgid ""
-"Furthermore, it is recommended to rename \"assets\" templates as \"asset-xxx"
-"\" and to update pages accordingly. You may replace the default template "
+"Furthermore, it is recommended to rename \"assets\" templates as \"asset-"
+"xxx\" and to update pages accordingly. You may replace the default template "
 "with \"asset-block\" too."
 msgstr ""
 
-#: data/scripts/upgrade.php:221
+#: data/scripts/upgrade.php:236
 msgid "The block still supports html captions and media assets."
 msgstr ""
 
-#: data/scripts/upgrade.php:228
+#: data/scripts/upgrade.php:243
 msgid "It’s now possible to maximize the field \"Html\" in page edition."
 msgstr ""
 
-#: data/scripts/upgrade.php:232
+#: data/scripts/upgrade.php:247
 msgid "It’s now possible to add footnotes in fields \"Html\" in page edition."
 msgstr ""
 
-#: data/scripts/upgrade.php:258
+#: data/scripts/upgrade.php:273
 msgid ""
 "It’s now possible to choose mode of display to edit html blocks of pages in "
 "main params."
 msgstr ""
 
-#: data/scripts/upgrade.php:265
+#: data/scripts/upgrade.php:280
 msgid ""
 "The output for block D3 Graph was modified. Check it if you modified the "
 "template in your theme."
 msgstr ""
 
-#: data/scripts/upgrade.php:406
+#: data/scripts/upgrade.php:430
 msgid ""
 "Template \"Asset\": The variable $assets has been replaced by $attachments; "
 "attachment key \"title\" by \"alt_link_title\"; attachment key \"url\" was "
 "removed. Check it if you customized template."
 msgstr ""
 
-#: data/scripts/upgrade.php:412
-#, php-format
+#: data/scripts/upgrade.php:436
 msgid ""
 "The key \"url\" of attachments of block \"Asset\" was removed. The block "
-"template should be updated if you customized it in pages %s."
+"template should be updated if you customized it in pages: {html}"
 msgstr ""
 
-#: src/Form/SiteSettingsFieldset.php:10 src/Form/SettingsFieldset.php:10
+#: data/scripts/upgrade.php:460
+msgid ""
+"The feature \"Breadcrumbs\" was moved from module \"Menu\" into this module. "
+"Upgrade is automatic. Check your options if you use it."
+msgstr ""
+
+#: data/scripts/upgrade.php:465
+msgid ""
+"It is now possible to define a breadcrumbs (may need to be added inside "
+"theme)."
+msgstr ""
+
+#: data/scripts/upgrade.php:483
+msgid ""
+"Two new resource page blocks has been added, in particular to display "
+"buttons to previous and next resource (require module Easy Admin)."
+msgstr ""
+
+#: data/scripts/upgrade.php:774 data/scripts/upgrade.php:1382
+msgid ""
+"The block \"Separator\" was replaced by the Omeka block \"Line Break\" with "
+"block class \"transparent\" and layout class \"separator\"."
+msgstr ""
+
+#: data/scripts/upgrade.php:794
+msgid ""
+"The options \"alignment\" and \"divclass\" of some blocks were moved to "
+"block layout."
+msgstr ""
+
+#: data/scripts/upgrade.php:843
+msgid ""
+"Site {site_slug} / Page {page_slug}: Type \"intermediate\" and \"end\" "
+"divisions must be after a block \"start\" or \"intermediate\"."
+msgstr ""
+
+#: data/scripts/upgrade.php:861
+msgid ""
+"Site {site_slug} / Page {page_slug}: Unauthorized type \"{type}\" for block "
+"division."
+msgstr ""
+
+#: data/scripts/upgrade.php:879
+msgid ""
+"Site {site_slug} / Page {page_slug}: A block \"division\" cannot be single."
+msgstr ""
+
+#: data/scripts/upgrade.php:892
+msgid ""
+"Site {site_slug} / Page {page_slug}: The first division block must be of "
+"type \"start\"."
+msgstr ""
+
+#: data/scripts/upgrade.php:904
+msgid ""
+"Site {site_slug} / Page {page_slug}: The last division block must be of type "
+"\"end\"."
+msgstr ""
+
+#: data/scripts/upgrade.php:915
+msgid "Site {site_slug} / Page {page_slug}: Some divisions have no end."
+msgstr ""
+
+#: data/scripts/upgrade.php:972
+msgid ""
+"Site {site_slug} / Page {page_slug}: The migration does not manage nested "
+"divisions. You should finalize migration of the page manually, for example "
+"with grid and block groups."
+msgstr ""
+
+#: data/scripts/upgrade.php:1030
+msgid ""
+"The blocks Division were replaced by a group of blocks when possible (not "
+"nested). See messages above or logs for issues."
+msgstr ""
+
+#: data/scripts/upgrade.php:1083
+msgid ""
+"The setting \"html\" was removed from block Browse Preview. A new block "
+"\"Html\" was prepended to all blocks that had a filled html. You may check "
+"pages for styles: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:1145
+msgid ""
+"The block Browse Preview is no more managed by this module. If you used "
+"specific settings, use the block Search Results."
+msgstr ""
+
+#: data/scripts/upgrade.php:1152 data/scripts/upgrade.php:1501
+msgid ""
+"The block \"Browse Preview\" filled with specific features (query with "
+"specific site, pagination and sort headings) were replaced by block Search "
+"results and template \"search-results-browse-preview-deprecated\": {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:1231
+msgid ""
+"The setting \"heading\" was removed from blocks. A new block \"Heading\" was "
+"prepended to all blocks that had a filled heading. You may check pages for "
+"styles: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:1238
+msgid ""
+"A new block \"Heading\" allows to separate blocks with a html heading and "
+"replaces previous blocks with setting \"heading\"."
+msgstr ""
+
+#: data/scripts/upgrade.php:1263
+msgid ""
+"The old block \"Page Date\" was replaced by the core one \"Page Date Time\". "
+"The variable names were changed, so check your theme if needed."
+msgstr ""
+
+#: data/scripts/upgrade.php:1313
+msgid ""
+"For block Asset, the keys \"class\" and \"url\" of assets were moved to the "
+"start of the caption and available only with specific block templates."
+msgstr ""
+
+#: data/scripts/upgrade.php:1318
+msgid ""
+"The block Item Showcase was renamed Media in Omeka S v4.1. The option "
+"\"linkType\" was renamed \"link\". Check your themes to update them."
+msgstr ""
+
+#: data/scripts/upgrade.php:1323
+msgid ""
+"The templates item-showcase-xxx were renamed media-item-showcase-xxx. Check "
+"your themes to update them or to move them to common/block-template and to "
+"add them in theme.ini as templates for block \"Media\"."
+msgstr ""
+
+#: data/scripts/upgrade.php:1328
+msgid ""
+"The old template mechanism of the module BlockPlus was replaced by the new "
+"mechanism of Omeka S v4.1."
+msgstr ""
+
+#: data/scripts/upgrade.php:1333
+msgid ""
+"It is recommended to check your themes and to move specific templates from "
+"\"view/common/block-layout\" to \"view/common/block-template\" and to "
+"declare them in the file theme.ini. This is not needed for the default "
+"template of a block. After moving, the option \"template\" of each block "
+"should be updated in each page."
+msgstr ""
+
+#: data/scripts/upgrade.php:1338
+msgid ""
+"Because old features of the module were integrated inside Omeka S since v4.1 "
+"({link}user doc{link_end}, {link_2}dev doc{link_end}), the blocks Asset, "
+"Browse Preview, Html, Item Showcase, Item With Metadata, List of Pages, Page "
+"Date, and Page Title are no more overridden."
+msgstr ""
+
+#: data/scripts/upgrade.php:1349
+msgid ""
+"Warning: It is important to check all site pages because the integration of "
+"the module features in Omeka S is a complex process and some features are "
+"not upgradable."
+msgstr ""
+
+#: data/scripts/upgrade.php:1353
+msgid ""
+"In particular, check deprecated block templates and blocks Asset, Browse "
+"Preview and nested Division. Check styles too, because some html <div> and "
+"classes were added or removed by Omeka S and the module. Warning: as long as "
+"you do not re-save a page, old page settings will work. Once saved a new "
+"time, some old settings will be removed."
+msgstr ""
+
+#: data/scripts/upgrade.php:1431
+msgid ""
+"The template name of some of the blocks {list} where renamed for "
+"deprecation. Check your theme if you use them. Matching pages: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:1553
+msgid ""
+"The setting \"heading\" was removed from blocks Search Results. A new block "
+"\"Heading\" was prepended to all blocks that had a filled heading. You may "
+"check pages for styles: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:1632
+msgid ""
+"These templates for block \"Html\" should contain `$block->dataValue('html', "
+"'')` because `$html` is no more available by default. Matching files: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:1658
+msgid ""
+"The block \"Browse Preview\" do not have the variable `$site` anymore. Check "
+"your theme if you customized it. Matching pages: {json}."
+msgstr ""
+
+#: data/scripts/upgrade.php:1703
+msgid ""
+"The template layout of some blocks was renamed. Check your theme if you used "
+"them. Matching pages: {json}."
+msgstr ""
+
+#: data/scripts/upgrade.php:1812
+msgid ""
+"The data of blocks \"Asset\" were migrated to manage asset class and url as "
+"the first two lines of the caption. Update your theme like asset templates. "
+"Matching pages: {json}."
+msgstr ""
+
+#: data/scripts/upgrade.php:1904
+msgid ""
+"The setting \"heading\" was removed from block Media. A new block "
+"\"Heading\" was prepended to all blocks that had a filled heading. You may "
+"check pages for styles: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:2020
+msgid ""
+"The block Resource Text has been converted to a group of blocks Media and "
+"Html. The option \"caption position\" was moved to layout class. You may "
+"check pages for styles: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:2036
+msgid ""
+"The variables \"$html\" and \"$captionPosition\" were removed from block "
+"Resource Text (converted into block Media). You should fix them: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:2084
+msgid ""
+"The option \"type\" of block Page Metadata was migrated to page layout "
+"option and page templates were added. Update your theme if needed. Matching "
+"pages: {json}."
+msgstr ""
+
+#: data/scripts/upgrade.php:2094
+msgid ""
+"The option \"type\" of block Page Metadata cannot be migrated because a page "
+"layout template was already set. Matching pages: {json}."
+msgstr ""
+
+#: data/scripts/upgrade.php:2102
+msgid ""
+"All themes that contain custom templates of the blocks should be moved from "
+"\"view/common/block-layout\" to \"view/common/block-template\" except if "
+"they override the default one with the same name. See {link}readme{link_end} "
+"for more information about migration."
+msgstr ""
+
+#: data/scripts/upgrade.php:2126
+msgid ""
+"New resource blocks allow to wrap other blocks with html elements <div> and "
+"<section>."
+msgstr ""
+
+#: data/scripts/upgrade.php:2133
+msgid ""
+"It is now possible to append a list of blocks via a simple click when "
+"editing a site page."
+msgstr ""
+
+#: data/scripts/upgrade.php:2151
+msgid ""
+"If you created some lists of blocks in version 3.4.25, the block group is no "
+"more implicit, so you should update each group manually: prepend `o:block.0."
+"o:layout = \"blockGroup\"` and prepend `blocks.0.` to optional root `o:"
+"layout_data`. Furthermore, the key \"block_groups\" in config was renamed "
+"\"page_models\"."
+msgstr ""
+
+#: data/scripts/upgrade.php:2156
+msgid ""
+"It is now possible to select a page model with page settings and blocks when "
+"creating a new page."
+msgstr ""
+
+#: data/scripts/upgrade.php:2160
+msgid ""
+"It is now possible to create a page model or a list of blocks via a simple "
+"click when editing a page."
+msgstr ""
+
+#: data/scripts/upgrade.php:2202
+msgid ""
+"A new site setting allows to permit site editors to create page models and "
+"blocks groups."
+msgstr ""
+
+#: data/scripts/upgrade.php:2206
+msgid ""
+"New templates were added to block html in order to display an accordion and "
+"a dialog box."
+msgstr ""
+
+#: data/scripts/upgrade.php:2283
+msgid ""
+"The setting \"html\" was removed from block External Content and Search "
+"Form. A new block \"Html\" was prepended to all blocks that had a filled "
+"html. You may check pages for styles: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:2291
+msgid ""
+"New templates were added to blocks Showcase, External Content and Search "
+"form."
+msgstr ""
+
+#: data/scripts/upgrade.php:2298
+msgid ""
+"The block Page metadata is deprecated in favor of an integrated form and "
+"will be removed in a future version. The metadata will be available as "
+"standard rdf data too."
+msgstr ""
+
+#: data/scripts/upgrade.php:2339
+msgid ""
+"The setting \"show title\" was replaced by components (title, body, "
+"thumbnail) in block Item Set Showcase. You may check pages: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:2346
+msgid ""
+"The setting \"show title\" was replaced by components (title, body, "
+"thumbnail) in block Item Set Showcase."
+msgstr ""
+
+#: data/scripts/upgrade.php:2361
+msgid ""
+"The js library \"ThumbnailGridExpandingPreview\" was renamed \"thumbnail-"
+"grid-expanding-preview\". You should fix your theme: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:2398
+msgid ""
+"A sub-template was added to display the block browse preview gallery with "
+"thumbnail \"medium\"."
+msgstr ""
+
+#: data/scripts/upgrade.php:2508
+msgid ""
+"The setting \"components\" of blocks Item Set Showcase and Search Results "
+"were updated: to set empty components now means no component. You may check "
+"pages: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:2518
+msgid ""
+"A resource block was added to be displayed when no item or no media is "
+"available."
+msgstr ""
+
+#: data/scripts/upgrade.php:2628
+msgid ""
+"The block Showcase has now a setting \"components\", the key \"title\" was "
+"renamed \"heading\", and option \"media_display\" was removed. The field "
+"html was re-upgraded. You may check pages: {json}"
+msgstr ""
+
+#: data/scripts/upgrade.php:2635
+msgid "The block Showcase has now a setting \"components\"."
+msgstr ""
+
+#: Module.php:48
+msgid ""
+"The javascript library should be installed. See module’s installation "
+"documentation."
+msgstr ""
+
+#: Module.php:205
+msgid "The page model \"{page_model}\" does not exist."
+msgstr ""
+
+#: Module.php:423
+msgid "Blocks only"
+msgstr ""
+
+#: Module.php:424
+msgid "Full page"
+msgstr ""
+
+#: Module.php:440
+msgid "Main settings"
+msgstr ""
+
+#: Module.php:444
+msgid "Site settings"
+msgstr ""
+
+#: Module.php:449
+msgid "Theme settings"
+msgstr ""
+
+#: Module.php:450
+msgid "Theme settings (unsupported)"
+msgstr ""
+
+#: Module.php:473
+msgid "Save as page model or blocks groups"
+msgstr ""
+
+#: Module.php:476
+msgid ""
+"If a label is set, the model will be stored when the current page will be "
+"saved."
+msgstr ""
+
+#: Module.php:541
+msgid "\"{name}\" is already used as page model and was renamed \"{name_2}\"."
+msgstr ""
+
+#: Module.php:612
+msgid "The page models can’t contain a value with a double quote (\")"
+msgstr ""
+
+#: Module.php:624
+msgid ""
+"The blocks group cannot be stored in the theme settings: the theme does not "
+"support it. See {link}readme{link_end}."
+msgstr ""
+
+#: Module.php:657
+msgid "The page model \"{label}\" ({name}) was saved in theme settings."
+msgstr ""
+
+#: Module.php:658
+msgid "The blocks group \"{label}\" ({name}) was saved in theme settings."
+msgstr ""
+
+#: Module.php:662
+msgid "The page model \"{label}\" ({name}) was saved in site settings."
+msgstr ""
+
+#: Module.php:663
+msgid "The blocks group \"{label}\" ({name}) was saved in site settings."
+msgstr ""
+
+#: Module.php:667
+msgid "The page model \"{label}\" ({name}) was saved in main settings."
+msgstr ""
+
+#: Module.php:668
+msgid "The blocks group \"{label}\" ({name}) was saved in main settings."
+msgstr ""
+
+#: Module.php:696
+msgid "Page models and blocks groups"
+msgstr ""
+
+#: Module.php:722 Module.php:730 config/module.config.php:233
+msgid "Page metadata"
+msgstr ""
+
+#: Module.php:744 src/Form/PageMetadataFieldset.php:18
+msgid "Credits"
+msgstr ""
+
+#: Module.php:755 src/Form/PageMetadataFieldset.php:50
+msgid "Tags"
+msgstr ""
+
+#: Module.php:756 src/Form/PageMetadataFieldset.php:51
+msgid "Comma-separated list of keywords"
+msgstr ""
+
+#: Module.php:770 src/Form/PageMetadataFieldset.php:40
+msgid "Featured"
+msgstr ""
+
+#: Module.php:781
+msgid "Is new"
+msgstr ""
+
+#: Module.php:805 src/Form/D3GraphFieldset.php:17
+#: src/Form/PageMetadataFieldset.php:62 src/Form/BlockFieldset.php:18
+msgid "Params"
+msgstr ""
+
+#: Module.php:806
+msgid ""
+"The params can be fetched as raw text, key/value pairs, or json depending on "
+"theme."
+msgstr ""
+
+#: view/common/block-template/asset-deprecated-plus.phtml:13
+msgid ""
+"The template \"asset-deprecated-plus\" should be replaced by \"asset-class-"
+"url\" in page {url}."
+msgstr ""
+
+#: view/common/block-template/asset-left-right.phtml:29
+msgid ""
+"The template \"asset-left-right\" should be replaced by new page block "
+"features in page {url}."
+msgstr ""
+
+#: src/View/Helper/PageBlockMetadataTrait.php:160
+msgid ""
+"Since Omeka S 4.1, the metadata \"type\" is replaced by the page template "
+"name (key \"template\"). Check your theme."
+msgstr ""
+
+#: src/View/Helper/Breadcrumbs.php:740
+msgid "Contributions"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:11 src/Form/SettingsFieldset.php:10
 msgid "Block Plus"
 msgstr ""
 
-#: src/Form/SiteSettingsFieldset.php:20
-msgid "Page types"
+#: src/Form/SiteSettingsFieldset.php:14 src/Form/SettingsFieldset.php:13
+msgid "Block plus"
 msgstr ""
 
-#: src/Form/SiteSettingsFieldset.php:21
+#: src/Form/SiteSettingsFieldset.php:15
+#: src/Site/ResourcePageBlockLayout/Breadcrumbs.php:16
+#: src/Site/BlockLayout/Breadcrumbs.php:22
+msgid "Breadcrumbs"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:16
+msgid "Block plus resources"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:32
+msgid "Allow site editor to create page models and groups of blocks"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:44
+msgid "Skip page models defined internally by the module Block Plus"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:45
 msgid ""
-"Specify the list of types that will be available to build specific pages."
+"Default page models are mainly used as examples or for upgrade from Omeka "
+"Classic: home_page, exhibit, exhibit_page, simple_page and resource_text."
 msgstr ""
 
-#: src/Form/SiteSettingsFieldset.php:26
+#: src/Form/SiteSettingsFieldset.php:57 src/Form/SettingsFieldset.php:64
+msgid "Page models and groups of blocks"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:58 src/Form/SettingsFieldset.php:65
 msgid ""
-"home = Home\n"
-"exhibit = Exhibit\n"
-"exhibit_page = Exhibit page\n"
-"simple = Simple page"
+"List all page models and blocks groups formatted as ini with a section for "
+"each group."
 msgstr ""
 
-#: src/Form/ItemShowcaseFieldset.php:20 src/Form/ItemSetShowcaseFieldset.php:20
-#: src/Form/HtmlFieldset.php:18 src/Form/ResourceTextFieldset.php:74
-#: src/Form/SearchFormFieldset.php:18 src/Form/BrowsePreviewFieldset.php:19
-#: src/Form/SearchResultsFieldset.php:19 src/Form/D3GraphFieldset.php:18
-#: src/Form/TreeStructureFieldset.php:18 src/Form/TwitterFieldset.php:18
-#: src/Form/ListOfPagesFieldset.php:18 src/Form/ExternalContentFieldset.php:16
-#: src/Form/TableOfContentsFieldset.php:17 src/Form/ShowcaseFieldset.php:21
-#: src/Form/AssetFieldset.php:19 src/Form/PageDateFieldset.php:19
-#: src/Form/ListOfSitesFieldset.php:27 src/Form/ItemWithMetadataFieldset.php:19
-#: src/Form/BlockFieldset.php:17 src/Form/LinksFieldset.php:19
-msgid "Block title"
+#: src/Form/SiteSettingsFieldset.php:73
+msgid "Crumbs"
 msgstr ""
 
-#: src/Form/ItemShowcaseFieldset.php:49 src/Form/ItemSetShowcaseFieldset.php:62
-#: src/Form/HtmlFieldset.php:47 src/Form/ResourceTextFieldset.php:88
-#: src/Form/SearchFormFieldset.php:56 src/Form/PageTitleFieldset.php:16
-#: src/Form/BrowsePreviewFieldset.php:147
-#: src/Form/SearchResultsFieldset.php:114 src/Form/D3GraphFieldset.php:58
-#: src/Form/TreeStructureFieldset.php:69 src/Form/TwitterFieldset.php:88
-#: src/Form/ListOfPagesFieldset.php:35 src/Form/ExternalContentFieldset.php:86
-#: src/Form/TableOfContentsFieldset.php:43 src/Form/ShowcaseFieldset.php:88
-#: src/Form/AssetFieldset.php:65 src/Form/PageDateFieldset.php:78
-#: src/Form/ListOfSitesFieldset.php:104
-#: src/Form/ItemWithMetadataFieldset.php:26 src/Form/BlockFieldset.php:32
-#: src/Form/LinksFieldset.php:40
-msgid "Template to display"
+#: src/Form/SiteSettingsFieldset.php:76
+msgid "Prepend home"
 msgstr ""
 
-#: src/Form/ItemShowcaseFieldset.php:50
+#: src/Form/SiteSettingsFieldset.php:77
+msgid "Include \"Collections\""
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:78
+msgid "Include main item set for item"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:79
+msgid "Include item sets tree"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:80
+msgid "Append current resource"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:81
+msgid "Append current resource as a link"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:93
+msgid "Prepended links"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:94
 msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"item-showcase\"."
+"List of urls followed by a label, separated by a \"=\", one by line, that "
+"will be prepended to the breadcrumb."
 msgstr ""
 
-#: src/Form/SeparatorFieldset.php:17
+#: src/Form/SiteSettingsFieldset.php:111
+msgid "Url for collections"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:112
 msgid ""
-"Set the class or the name of the separator. Default is \"transparent\". "
-"Other ones depends on the theme."
+"The url to use for the link \"Collections\", if set above. Let empty to use "
+"the default one."
 msgstr ""
 
-#: src/Form/ItemSetShowcaseFieldset.php:52
-#: src/Form/ExternalContentFieldset.php:42
-msgid "Show title"
+#: src/Form/SiteSettingsFieldset.php:124
+msgid "Separator"
 msgstr ""
 
-#: src/Form/ItemSetShowcaseFieldset.php:63
+#: src/Form/SiteSettingsFieldset.php:125
 msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"item-set-showcase\"."
+"The separator between crumbs may be set as raw text or via css. it should be "
+"set as an html text (\"&gt;\")."
 msgstr ""
 
-#: src/Form/HtmlFieldset.php:48
+#: src/Form/SiteSettingsFieldset.php:137
+msgid "Display on home page"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:151
+msgid "Settings for the resource block Buttons"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:155 src/Form/ButtonsFieldset.php:20
+msgid "Share by email"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:158 src/Form/ButtonsFieldset.php:23
+msgid "Share on Twitter (now X)"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:173
+msgid "Default items order in each item set"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:174
 msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"html\"."
+"Set order for item set, one by row, format \"id,id,id property order\". Use "
+"\"0\" for the default."
 msgstr ""
 
-#: src/Form/SettingsFieldset.php:20
+#: src/Form/SiteSettingsFieldset.php:189
+msgid "Query to limit and sort the list of items for the previous/next buttons"
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:190 src/Form/SiteSettingsFieldset.php:203
+msgid ""
+"Use a standard query. Arguments from module Advanced Search are supported if "
+"present and needed."
+msgstr ""
+
+#: src/Form/SiteSettingsFieldset.php:202
+msgid ""
+"Query to limit and sort the list of item sets for the previous/next buttons"
+msgstr ""
+
+#: src/Form/ItemSetShowcaseFieldset.php:53 src/Form/ShowcaseFieldset.php:73
+msgid "Thumbnail type"
+msgstr ""
+
+#: src/Form/SettingsFieldset.php:29
 msgid "Html edition mode for pages"
 msgstr ""
 
-#: src/Form/SettingsFieldset.php:22
+#: src/Form/SettingsFieldset.php:31
 msgid "Inline (default)"
 msgstr ""
 
-#: src/Form/SettingsFieldset.php:23
+#: src/Form/SettingsFieldset.php:32
 msgid "Document (maximizable)"
 msgstr ""
 
-#: src/Form/SettingsFieldset.php:34
+#: src/Form/SettingsFieldset.php:44
 msgid "Html edition config and toolbar for pages"
 msgstr ""
 
-#: src/Form/ResourceTextFieldset.php:30
-msgid "Thumbnail alignment"
+#: src/Form/SettingsFieldset.php:80
+msgid "Property to set primary item set"
 msgstr ""
 
-#: src/Form/ResourceTextFieldset.php:59 src/Form/ExternalContentFieldset.php:53
-msgid "Captions position"
-msgstr ""
-
-#: src/Form/ResourceTextFieldset.php:89
+#: src/Form/SettingsFieldset.php:81
 msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"resource-text\"."
+"When an item is included in multiple item sets, the main one may be "
+"determined by this property."
 msgstr ""
 
-#: src/Form/SearchFormFieldset.php:28
-msgid "Html to display"
+#: src/Form/SettingsFieldset.php:89
+msgid "Select a property…"
 msgstr ""
 
-#: src/Form/SearchFormFieldset.php:40
+#: src/Form/SearchFormFieldset.php:23
+msgid "Link to display"
+msgstr ""
+
+#: src/Form/SearchFormFieldset.php:24
+msgid "Formatted as \"/url/full/path Label of the link\"."
+msgstr ""
+
+#: src/Form/SearchFormFieldset.php:34
 msgid "Main filter"
 msgstr ""
 
-#: src/Form/SearchFormFieldset.php:44
+#: src/Form/SearchFormFieldset.php:38
 msgid "Resource classes"
 msgstr ""
 
-#: src/Form/SearchFormFieldset.php:57
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"search-form\"."
+#: src/Form/SearchFormFieldset.php:50
+msgid "Search config page (module Advanced Search)"
 msgstr ""
 
-#: src/Form/PageTitleFieldset.php:17
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"page-title\"."
+#: src/Form/SearchFormFieldset.php:52
+msgid "Search config of the site"
 msgstr ""
 
-#: src/Form/BrowsePreviewFieldset.php:92 src/Form/SearchResultsFieldset.php:70
+#: src/Form/SearchFormFieldset.php:61
+msgid "Select a search engine…"
+msgstr ""
+
+#: src/Form/Element/PageModelSelect.php:43
+msgid "Page models"
+msgstr ""
+
+#: src/Form/Element/PageModelSelect.php:47
+msgid "Blocks groups"
+msgstr ""
+
+#: src/Form/SearchResultsFieldset.php:34
+msgid "Search pool query"
+msgstr ""
+
+#: src/Form/SearchResultsFieldset.php:35
+msgid "Used to restrict resources to search, for example on an item set."
+msgstr ""
+
+#: src/Form/SearchResultsFieldset.php:59
 msgid "Show pagination to browse all resources on the same page."
 msgstr ""
 
-#: src/Form/BrowsePreviewFieldset.php:102 src/Form/SearchResultsFieldset.php:80
+#: src/Form/SearchResultsFieldset.php:69
 msgid "Sort headings"
 msgstr ""
 
-#: src/Form/BrowsePreviewFieldset.php:103 src/Form/SearchResultsFieldset.php:81
+#: src/Form/SearchResultsFieldset.php:70
 msgid "Display sort links for the list of results."
 msgstr ""
 
-#: src/Form/BrowsePreviewFieldset.php:114
-msgid "Select properties…"
-msgstr ""
-
-#: src/Form/BrowsePreviewFieldset.php:121 src/Form/SearchResultsFieldset.php:99
+#: src/Form/SearchResultsFieldset.php:88
 msgid "Resource template for sort headings"
 msgstr ""
 
-#: src/Form/BrowsePreviewFieldset.php:122
-#: src/Form/SearchResultsFieldset.php:100
+#: src/Form/SearchResultsFieldset.php:89
 msgid ""
 "If set, the alternative labels of this resource template will be used to "
 "display the sort headings."
 msgstr ""
 
-#: src/Form/BrowsePreviewFieldset.php:129
-#: src/Form/SearchResultsFieldset.php:107
+#: src/Form/SearchResultsFieldset.php:96
 msgid "Select resource template…"
 msgstr ""
 
-#: src/Form/BrowsePreviewFieldset.php:137
-msgid "Text for link to full browse view, if any. There is no link for media."
+#: src/Form/SearchResultsFieldset.php:110
+#: src/Site/BlockLayout/SearchForm.php:21
+msgid "Search form"
 msgstr ""
 
-#: src/Form/BrowsePreviewFieldset.php:148
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"browse-preview\"."
-msgstr ""
-
-#: src/Form/Element/AbstractGroupBySiteSelect.php:156
-msgid "[No site]"
-msgstr ""
-
-#: src/Form/Element/Note.php:114
-#, php-format
-msgid ""
-"Argument \"wrap\" of method %1$s must be a null or alphanumeric string, "
-"received unstringable object \"%2$s\"."
-msgstr ""
-
-#: src/Form/Element/Note.php:121 src/Form/Element/Note.php:133
-#, php-format
-msgid ""
-"Argument \"wrap\" of method %1$s must be a null or alphanumeric string, "
-"received \"%2$s\"."
-msgstr ""
-
-#: src/Form/SearchResultsFieldset.php:45
-msgid "Search pool query"
-msgstr ""
-
-#: src/Form/SearchResultsFieldset.php:46
-msgid "Used to restrict resources to search, for example on an item set."
-msgstr ""
-
-#: src/Form/SearchResultsFieldset.php:115
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"search-results\"."
-msgstr ""
-
-#: src/Form/D3GraphFieldset.php:25 src/Form/PageMetadataFieldset.php:91
-#: src/Form/BlockFieldset.php:24
-msgid "Params"
-msgstr ""
-
-#: src/Form/D3GraphFieldset.php:26 src/Form/BlockFieldset.php:25
+#: src/Form/D3GraphFieldset.php:18 src/Form/BlockFieldset.php:19
 msgid "The params are passed directly to the block layout."
 msgstr ""
 
-#: src/Form/D3GraphFieldset.php:59
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"d3-graph\"."
-msgstr ""
-
-#: src/Form/TreeStructureFieldset.php:28
+#: src/Form/TreeStructureFieldset.php:18
 msgid "Root resource id"
 msgstr ""
 
-#: src/Form/TreeStructureFieldset.php:29
+#: src/Form/TreeStructureFieldset.php:19
 msgid ""
 "The root of the structure. Can be an item, an item set or any other resource "
 "type."
 msgstr ""
 
-#: src/Form/TreeStructureFieldset.php:41
+#: src/Form/TreeStructureFieldset.php:31
 msgid "Property for structure"
 msgstr ""
 
-#: src/Form/TreeStructureFieldset.php:42
+#: src/Form/TreeStructureFieldset.php:32
 msgid "Generally, it is \"dcterms:hasPart\"."
 msgstr ""
 
-#: src/Form/TreeStructureFieldset.php:58
+#: src/Form/TreeStructureFieldset.php:48
 msgid "Level expanded"
 msgstr ""
 
-#: src/Form/TreeStructureFieldset.php:59
+#: src/Form/TreeStructureFieldset.php:49
 msgid "Set 0 to start closed, a big number to display all levels."
 msgstr ""
 
-#: src/Form/TreeStructureFieldset.php:70
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"tree-structure\"."
-msgstr ""
-
-#: src/Form/TwitterFieldset.php:28
+#: src/Form/TwitterFieldset.php:17
 msgid "Account"
 msgstr ""
 
-#: src/Form/TwitterFieldset.php:38
+#: src/Form/TwitterFieldset.php:27
 msgid "Authorization token (bearer)"
 msgstr ""
 
-#: src/Form/TwitterFieldset.php:39
+#: src/Form/TwitterFieldset.php:28
 msgid ""
 "You may need to set a token, not necessarily the account one. It may be an "
 "anonymous one."
 msgstr ""
 
-#: src/Form/TwitterFieldset.php:50
+#: src/Form/TwitterFieldset.php:39
 msgid "Twitter api version"
 msgstr ""
 
-#: src/Form/TwitterFieldset.php:51
+#: src/Form/TwitterFieldset.php:40
 msgid ""
 "According to Twitter, you may require to create an app inside dev account. "
 "In some cases, api 1.1 doesn’t require it."
 msgstr ""
 
-#: src/Form/TwitterFieldset.php:53
+#: src/Form/TwitterFieldset.php:42
 msgid "1.1 (home timeline)"
 msgstr ""
 
-#: src/Form/TwitterFieldset.php:67
+#: src/Form/TwitterFieldset.php:56
 msgid "Number of messages"
 msgstr ""
 
-#: src/Form/TwitterFieldset.php:78
+#: src/Form/TwitterFieldset.php:67
 msgid "Display retweets"
 msgstr ""
 
-#: src/Form/TwitterFieldset.php:89
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"twitter\"."
-msgstr ""
-
-#: src/Form/ListOfPagesFieldset.php:36
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"list-of-pages\"."
-msgstr ""
-
-#: src/Form/ExternalContentFieldset.php:23
+#: src/Form/ExternalContentFieldset.php:17
 msgid "Url (oEmbed or iframe)"
 msgstr ""
 
-#: src/Form/ExternalContentFieldset.php:24
+#: src/Form/ExternalContentFieldset.php:18
 msgid ""
 "The standard \"oEmbed\" normalizes the integration of external resources. "
 "Main third parties are supported. Set the url to be used for the iframe."
 msgstr ""
 
-#: src/Form/ExternalContentFieldset.php:79
+#: src/Form/ExternalContentFieldset.php:25
+msgid "Show title"
+msgstr ""
+
+#: src/Form/ExternalContentFieldset.php:43
 msgid "Link url"
 msgstr ""
 
-#: src/Form/ExternalContentFieldset.php:87
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"external-content\"."
-msgstr ""
-
-#: src/Form/TableOfContentsFieldset.php:35
+#: src/Form/TableOfContentsFieldset.php:28
 msgid "List from root"
 msgstr ""
 
-#: src/Form/TableOfContentsFieldset.php:36
+#: src/Form/TableOfContentsFieldset.php:29
 msgid ""
 "If set, all the pages will be displayed, else only the ones from the current "
 "page."
 msgstr ""
 
-#: src/Form/TableOfContentsFieldset.php:44
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"table-of-contents\"."
+#: src/Form/HeadingFieldset.php:27
+msgid "Level"
 msgstr ""
 
-#: src/Form/ShowcaseFieldset.php:78 src/Form/DivisionFieldset.php:52
-msgid "CSS class"
+#: src/Form/ShowcaseFieldset.php:84
+msgid "Show attachment title (when heading is included above)"
 msgstr ""
 
-#: src/Form/ShowcaseFieldset.php:89
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"showcase\"."
-msgstr ""
-
-#: src/Form/AssetFieldset.php:66
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"asset\"."
-msgstr ""
-
-#: src/Form/DivisionFieldset.php:22
-msgid "New division"
-msgstr ""
-
-#: src/Form/DivisionFieldset.php:23
-msgid "End previous and start new"
-msgstr ""
-
-#: src/Form/DivisionFieldset.php:24
-msgid "End division"
-msgstr ""
-
-#: src/Form/DivisionFieldset.php:37
-msgid "Tag"
-msgstr ""
-
-#: src/Form/DivisionFieldset.php:39
-msgid "div"
-msgstr ""
-
-#: src/Form/DivisionFieldset.php:40
-msgid "aside"
-msgstr ""
-
-#: src/Form/DivisionFieldset.php:53
-msgid ""
-"Set the classes according to the css of your theme. Only classes \"main\" "
-"and \"column\" are managed."
-msgstr ""
-
-#: src/Form/PageDateFieldset.php:29
-msgid "Dates"
-msgstr ""
-
-#: src/Form/PageDateFieldset.php:32
-msgid "Updated"
-msgstr ""
-
-#: src/Form/PageDateFieldset.php:33
-msgid "Created and updated"
-msgstr ""
-
-#: src/Form/PageDateFieldset.php:44
-msgid "Format date"
-msgstr ""
-
-#: src/Form/PageDateFieldset.php:61
-msgid "Format time"
-msgstr ""
-
-#: src/Form/PageDateFieldset.php:79
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"page-date\"."
+#: src/Form/ButtonsFieldset.php:17
+#: src/Site/ResourcePageBlockLayout/Buttons.php:16
+#: src/Site/BlockLayout/Buttons.php:21
+msgid "Buttons"
 msgstr ""
 
 #: src/Form/ListOfSitesFieldset.php:15
@@ -670,246 +1237,186 @@ msgstr ""
 msgid "Translated sites"
 msgstr ""
 
-#: src/Form/ListOfSitesFieldset.php:62
+#: src/Form/ListOfSitesFieldset.php:55
 msgid "Exclude sites"
-msgstr ""
-
-#: src/Form/ListOfSitesFieldset.php:105
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"list-of-sites\"."
 msgstr ""
 
 #: src/Form/RedirectToUrlFieldset.php:17
 msgid "Redirect the current page to this url"
 msgstr ""
 
-#: src/Form/PageMetadataFieldset.php:23
-msgid "Set types in the parameters of the site."
-msgstr ""
-
-#: src/Form/PageMetadataFieldset.php:32
-msgid "Page type"
-msgstr ""
-
-#: src/Form/PageMetadataFieldset.php:40
-msgid "Select the page type…"
-msgstr ""
-
-#: src/Form/PageMetadataFieldset.php:47
-msgid "Credits"
-msgstr ""
-
-#: src/Form/PageMetadataFieldset.php:69
-msgid "Featured"
-msgstr ""
-
-#: src/Form/PageMetadataFieldset.php:79
-msgid "Tags"
-msgstr ""
-
-#: src/Form/PageMetadataFieldset.php:80
-msgid "Comma-separated list of keywords"
-msgstr ""
-
-#: src/Form/PageMetadataFieldset.php:92
+#: src/Form/PageMetadataFieldset.php:63
 msgid "The params can be fetched as raw text, key/value pairs, or json."
 msgstr ""
 
-#: src/Form/PageMetadataFieldset.php:103
+#: src/Form/PageMetadataFieldset.php:74
 msgid "Cover image"
 msgstr ""
 
-#: src/Form/ItemWithMetadataFieldset.php:27
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"item-with-metadata\"."
-msgstr ""
-
-#: src/Form/MirrorPageFieldset.php:16
+#: src/Form/MirrorPageFieldset.php:17
 msgid ""
 "Private sites are marked with a \"*\". If a private page is selected, it "
 "will be hidden on the public site. The current page and recursive pages are "
 "forbidden."
 msgstr ""
 
-#: src/Form/BlockFieldset.php:33
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"block\"."
+#: src/Form/BlockFieldset.php:26
+msgid "Params type"
 msgstr ""
 
-#: src/Form/LinksFieldset.php:26 src/Site/BlockLayout/Links.php:22
+#: src/Form/BlockFieldset.php:28
+msgid "Automatic"
+msgstr ""
+
+#: src/Form/BlockFieldset.php:29
+msgid "Raw string"
+msgstr ""
+
+#: src/Form/BlockFieldset.php:30
+msgid "Format \"Ini\""
+msgstr ""
+
+#: src/Form/BlockFieldset.php:31
+msgid "Json"
+msgstr ""
+
+#: src/Form/BlockFieldset.php:32
+msgid "Associative array of key / value pairs (separated with \"=\")"
+msgstr ""
+
+#: src/Form/BlockFieldset.php:33
+msgid ""
+"List of arrays with two values, the key and the value (separated with \"=\")"
+msgstr ""
+
+#: src/Form/LinksFieldset.php:17 src/Site/BlockLayout/Links.php:23
 msgid "Links"
 msgstr ""
 
-#: src/Form/LinksFieldset.php:41
-msgid ""
-"Templates are in folder \"common/block-layout\" of the theme and should "
-"start with \"links\"."
+#: src/Service/Form/Element/PageModelSelectFactory.php:25
+msgid "Select a page model…"
 msgstr ""
 
-#: src/Generic/InstallResources.php:84
-#, php-format
-msgid ""
-"An error occured when loading vocabulary \"%s\": file has no json content."
+#: src/Site/ResourcePageBlockLayout/DownloadPrimary.php:16
+msgid "Download primary media"
 msgstr ""
 
-#: src/Generic/InstallResources.php:91
-#, php-format
-msgid ""
-"An error occured when adding the prefix \"%s\": another vocabulary exists. "
-"Resolve the conflict before installing this module."
+#: src/Site/ResourcePageBlockLayout/LinkedResourcesByItemSet.php:14
+msgid "Linked resources by item set"
 msgstr ""
 
-#: src/Generic/InstallResources.php:103
-#, php-format
-msgid ""
-"A custom vocab exists for \"%s\". Remove it or rename it before installing "
-"this module."
+#: src/Site/ResourcePageBlockLayout/Messages.php:16
+#: src/Site/BlockLayout/Messages.php:21
+msgid "Messages"
 msgstr ""
 
-#: src/Generic/InstallResources.php:114
-#, php-format
-msgid ""
-"A resource template exists for %s. Rename it or remove it before installing "
-"this module."
+#: src/Site/ResourcePageBlockLayout/HtmlSectionStart.php:16
+msgid "Html section (start)"
 msgstr ""
 
-#: src/Generic/InstallResources.php:314
-#, php-format
-msgid "The vocabulary \"%s\" was already installed and was kept."
+#: src/Site/ResourcePageBlockLayout/NoMedia.php:16
+msgid "No Media"
 msgstr ""
 
-#: src/Generic/InstallResources.php:323
-#, php-format
-msgid ""
-"An error occured when adding the prefix \"%s\": another vocabulary exists "
-"with the same prefix. Resolve the conflict before installing this module."
+#: src/Site/ResourcePageBlockLayout/Block.php:16
+msgid "Simple block for theme"
 msgstr ""
 
-#: src/Generic/InstallResources.php:335
-#, php-format
-msgid ""
-"An error occured when adding the prefix \"%s\" and the associated "
-"properties: %s"
+#: src/Site/ResourcePageBlockLayout/HtmlDivStart.php:16
+msgid "Html div (start)"
 msgstr ""
 
-#: src/Generic/InstallResources.php:415 src/Generic/InstallResources.php:425
-#, php-format
-msgid ""
-"An error occured when updating vocabulary \"%s\" and the associated "
-"properties: %s"
+#: src/Site/ResourcePageBlockLayout/PreviousNext.php:19
+msgid "Buttons Previous / Next"
 msgstr ""
 
-#: src/Generic/InstallResources.php:519
-#, php-format
-msgid "The following \"%1$s\" of the vocabulary \"%2$s\" were replaced: %3$s"
+#: src/Site/ResourcePageBlockLayout/HtmlSectionEnd.php:16
+msgid "Html section (end)"
 msgstr ""
 
-#: src/Generic/InstallResources.php:528
-msgid ""
-"Resources, values and templates were updated, but you may check settings "
-"where the old ones were used."
+#: src/Site/ResourcePageBlockLayout/HtmlDivToolsEnd.php:16
+msgid "Html div for tools (end)"
 msgstr ""
 
-#: src/Generic/InstallResources.php:554
-#, php-format
-msgid "The resource template named \"%s\" is already available and is skipped."
+#: src/Site/ResourcePageBlockLayout/NoItem.php:16
+msgid "No Item"
 msgstr ""
 
-#: src/Generic/InstallResources.php:822
-#, php-format
-msgid "The custom vocab named \"%s\" is not available."
+#: src/Site/ResourcePageBlockLayout/MediaPartOfItem.php:16
+msgid "Media part of item"
 msgstr ""
 
-#: src/Generic/InstallResources.php:968
-msgid "No file or url set for the vocabulary."
+#: src/Site/ResourcePageBlockLayout/HtmlDivEnd.php:16
+msgid "Html div (end)"
 msgstr ""
 
-#: src/Generic/InstallResources.php:978
-#, php-format
-msgid "The file \"%s\" cannot be read. Check the url."
+#: src/Site/ResourcePageBlockLayout/HtmlDivToolsStart.php:16
+msgid "Html div for tools (start)"
 msgstr ""
 
-#: src/Generic/InstallResources.php:988
-#, php-format
-msgid "The file \"%s\" cannot be read. Check the file."
-msgstr ""
-
-#: src/Generic/InstallResources.php:1009
-msgid "A vocabulary must have a namespace uri and a prefix."
-msgstr ""
-
-#: src/Site/BlockLayout/Showcase.php:43
+#: src/Site/BlockLayout/Showcase.php:46
 msgid "Showcase"
 msgstr ""
 
-#: src/Site/BlockLayout/SearchForm.php:20
-msgid "Search form"
+#: src/Site/BlockLayout/SearchForm.php:62
+msgid "The search config \"{search_slug}\" has no form associated."
 msgstr ""
 
 #: src/Site/BlockLayout/PageMetadata.php:17
-msgid "Page metadata"
+msgid "Page metadata (deprecated)"
 msgstr ""
 
-#: src/Site/BlockLayout/ResourceText.php:44
-msgid "Resource with text"
+#: src/Site/BlockLayout/MappingMapSearch.php:14
+msgid "Map by search"
 msgstr ""
 
 #: src/Site/BlockLayout/RedirectToUrl.php:15
 msgid "Redirect to url"
 msgstr ""
 
-#: src/Site/BlockLayout/TableOfContents.php:75
+#: src/Site/BlockLayout/TableOfContents.php:87
 #, php-format
 msgid ""
 "Cannot index and/or render a table of contents block in a mirror page for "
 "now: %s."
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:40
+#: src/Site/BlockLayout/MirrorPage.php:42
 msgid "Mirror page"
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:48
+#: src/Site/BlockLayout/MirrorPage.php:50
 msgid "A page should be selected to create a mirror page."
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:53
+#: src/Site/BlockLayout/MirrorPage.php:55
 msgid "A mirror page cannot be inside itself."
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:61
-#: src/Site/BlockLayout/MirrorPage.php:67
+#: src/Site/BlockLayout/MirrorPage.php:63
+#: src/Site/BlockLayout/MirrorPage.php:69
 msgid "A mirror page cannot use a page that uses it recursively as a block."
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:111
-#, php-format
+#: src/Site/BlockLayout/MirrorPage.php:113
 msgid ""
-"Mirror page block #%d of page \"%s\" of site \"%s\" should be updated: it "
-"refers to a removed page."
+"Mirror page block #{block_id} in site {site_slug} and page {page_slug} "
+"should be updated: it refers to a removed page."
 msgstr ""
 
-#: src/Site/BlockLayout/MirrorPage.php:139
-#, php-format
-msgid "Cannot render this mirror page for now: %s."
+#: src/Site/BlockLayout/MirrorPage.php:143
+msgid "Cannot render this mirror page for now: {exception}."
 msgstr ""
 
-#: src/Site/BlockLayout/SearchResults.php:22
+#: src/Site/BlockLayout/SearchResults.php:23
 msgid "Search form and results"
 msgstr ""
 
-#: src/Site/BlockLayout/PageDate.php:20
-msgid "Page date"
-msgstr ""
-
-#: src/Site/BlockLayout/Block.php:20
+#: src/Site/BlockLayout/Block.php:21
 msgid "Simple Block"
 msgstr ""
 
-#: src/Site/BlockLayout/TreeStructure.php:20
+#: src/Site/BlockLayout/TreeStructure.php:21
 msgid "Tree structure of resources"
 msgstr ""
 
@@ -917,167 +1424,332 @@ msgstr ""
 msgid "D3 Graph"
 msgstr ""
 
-#: src/Site/BlockLayout/D3Graph.php:66
-#, php-format
+#: src/Site/BlockLayout/D3Graph.php:67
 msgid ""
 "A list of resources as json queries by resource name should be defined for "
-"block D3 Graph in page %s."
+"block D3 Graph in page {page_url}."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:60
+#: src/Site/BlockLayout/Twitter.php:61
 msgid "Twitter"
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:74
+#: src/Site/BlockLayout/Twitter.php:76
 msgid "No Twitter authorization token is set, so the default one is used."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:89
+#: src/Site/BlockLayout/Twitter.php:91
 #, php-format
 msgid "The Twitter account \"%s\" is not available."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:94 src/Site/BlockLayout/Twitter.php:107
+#: src/Site/BlockLayout/Twitter.php:96 src/Site/BlockLayout/Twitter.php:109
 msgid ""
 "The token may be restricted to v2 or no app may be defined: try api v1.1."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:105
+#: src/Site/BlockLayout/Twitter.php:107
 #, php-format
 msgid ""
 "The Twitter account \"%s\" is available, but has no message currently, or "
 "the rate limit has been reached."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:110
+#: src/Site/BlockLayout/Twitter.php:112
 #, php-format
 msgid "The Twitter account \"%s\" is available and have messages."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:114
+#: src/Site/BlockLayout/Twitter.php:116
 msgid "A Twitter account is required to fetch messages."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:160
-#, php-format
-msgid "The twitter block for page \"%s\" in site \"%s\" has no account set."
+#: src/Site/BlockLayout/Twitter.php:162
+msgid ""
+"The twitter block for page \"{page_slug}\" in site \"{site_slug}\" has no "
+"account set."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:295 src/Site/BlockLayout/Twitter.php:437
+#: src/Site/BlockLayout/Twitter.php:292 src/Site/BlockLayout/Twitter.php:434
 msgid "Error for block Twitter: No response."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:302
-#, php-format
-msgid "Error for block Twitter: %s. Check token."
+#: src/Site/BlockLayout/Twitter.php:299
+msgid "Error for block Twitter: {error}. Check token."
 msgstr ""
 
-#: src/Site/BlockLayout/Twitter.php:444
-#, php-format
-msgid "Error for block Twitter: %s. Check token or use api v1."
+#: src/Site/BlockLayout/Twitter.php:441
+msgid "Error for block Twitter: {error}. Check token or use api v1."
 msgstr ""
 
-#: src/Site/BlockLayout/Division.php:17
-msgid "Division"
-msgstr ""
-
-#: src/Site/BlockLayout/Division.php:73 src/Site/BlockLayout/Division.php:204
-#: src/Site/BlockLayout/Division.php:211
-msgid ""
-"Type \"intermediate\" and \"end\" divisions must be after a block \"start\" "
-"or \"intermediate\"."
-msgstr ""
-
-#: src/Site/BlockLayout/Division.php:85 src/Site/BlockLayout/Division.php:220
-msgid "Unauthorized type for block division."
-msgstr ""
-
-#: src/Site/BlockLayout/Division.php:92 src/Site/BlockLayout/Division.php:230
-msgid "A block \"division\" cannot be single."
-msgstr ""
-
-#: src/Site/BlockLayout/Division.php:99 src/Site/BlockLayout/Division.php:237
-msgid "The first division block must be of type \"start\"."
-msgstr ""
-
-#: src/Site/BlockLayout/Division.php:104 src/Site/BlockLayout/Division.php:242
-msgid "The last division block must be of type \"end\"."
-msgstr ""
-
-#: src/Site/BlockLayout/Division.php:109 src/Site/BlockLayout/Division.php:247
-msgid "Some divisions have no end."
-msgstr ""
-
-#: src/Site/BlockLayout/ItemSetShowcase.php:20
+#: src/Site/BlockLayout/ItemSetShowcase.php:21
 msgid "Item set showcase"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:66
+#: src/Site/BlockLayout/ExternalContent.php:59
 msgid "External content"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:95
+#: src/Site/BlockLayout/ExternalContent.php:87
 msgid "Invalid OEmbed URL"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:101
+#: src/Site/BlockLayout/ExternalContent.php:93
 msgid "OEmbed URL"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:103
+#: src/Site/BlockLayout/ExternalContent.php:95
 msgid "OEmbed URL unavailable"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:111
+#: src/Site/BlockLayout/ExternalContent.php:103
 msgid "No OEmbed links were found at the given URI"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:117
+#: src/Site/BlockLayout/ExternalContent.php:109
 msgid "OEmbed link URL"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:119
+#: src/Site/BlockLayout/ExternalContent.php:111
 msgid "OEmbed link URL unavailable"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:125
+#: src/Site/BlockLayout/ExternalContent.php:117
 msgid "Error decoding OEmbed JSON"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:216
+#: src/Site/BlockLayout/ExternalContent.php:197
 #, php-format
 msgid "Invalid \"%s\" specified"
 msgstr ""
 
-#: src/Site/BlockLayout/ExternalContent.php:227
+#: src/Site/BlockLayout/ExternalContent.php:208
 #, php-format
 msgid "Error reading %s: %s (%s)"
 msgstr ""
 
-#: src/Site/BlockLayout/Separator.php:17
-msgid "Separator"
+#: config/page_models.config.php:23
+msgid "Home page"
 msgstr ""
 
-#: config/module.config.php:116
-msgid "Url (deprecated)"
+#: config/page_models.config.php:24
+msgid ""
+"A page model with blocks browse preview with a template for gallery, html, "
+"heading, and asset."
 msgstr ""
 
-#: config/module.config.php:117
-msgid "Insert Footnotes"
-msgstr ""
-
-#: config/module.config.php:127
+#: config/page_models.config.php:48
 msgid "Exhibit"
 msgstr ""
 
-#: config/module.config.php:128
+#: config/page_models.config.php:49
+msgid ""
+"A page model for an exhibit summary, with blocks page title, html, heading, "
+"and list of pages."
+msgstr ""
+
+#: config/page_models.config.php:66
 msgid "Exhibit page"
 msgstr ""
 
-#: config/module.config.php:129
+#: config/page_models.config.php:67
+msgid ""
+"A page model for an exhibit page, with blocks page title, html, heading and "
+"media."
+msgstr ""
+
+#: config/page_models.config.php:79
 msgid "Simple page"
 msgstr ""
 
-#: config/module.config.php:209
+#: config/page_models.config.php:80
+msgid "A page model for generic needs, with blocks page title and html."
+msgstr ""
+
+#: config/page_models.config.php:92
+msgid "Resource with text"
+msgstr ""
+
+#: config/page_models.config.php:93
+msgid "A group of blocks with a heading, a media and a field for html."
+msgstr ""
+
+#: config/module.config.php:136
+msgid "Block Plus: Home page"
+msgstr ""
+
+#: config/module.config.php:137
+msgid "Block Plus: Exhibit"
+msgstr ""
+
+#: config/module.config.php:138
+msgid "Block Plus: Exhibit page"
+msgstr ""
+
+#: config/module.config.php:139
+msgid "Block Plus: Simple page"
+msgstr ""
+
+#: config/module.config.php:143
+msgid "Block Plus: Asset with class and url"
+msgstr ""
+
+#: config/module.config.php:144
+msgid "Block Plus: Bootstrap Hero"
+msgstr ""
+
+#: config/module.config.php:145
+msgid "Block Plus: Left Right"
+msgstr ""
+
+#: config/module.config.php:146
+msgid "Block Plus: Partners"
+msgstr ""
+
+#: config/module.config.php:147 config/module.config.php:175
+#: config/module.config.php:183 config/module.config.php:189
+#: config/module.config.php:206
+msgid "Block Plus: Skip"
+msgstr ""
+
+#: config/module.config.php:148
+msgid "Block Plus: Asset (deprecated)"
+msgstr ""
+
+#: config/module.config.php:151
+msgid "Block Plus: Arborescence"
+msgstr ""
+
+#: config/module.config.php:152 config/module.config.php:181
+msgid "Block Plus: Glossary"
+msgstr ""
+
+#: config/module.config.php:153
+msgid "Block Plus: Html"
+msgstr ""
+
+#: config/module.config.php:156
+msgid "Block Plus: Omeka breadcrumbs"
+msgstr ""
+
+#: config/module.config.php:159
+msgid "Block Plus: Carousel"
+msgstr ""
+
+#: config/module.config.php:160
+msgid "Block Plus: Filter by year"
+msgstr ""
+
+#: config/module.config.php:161
+msgid "Block Plus: Gallery (square)"
+msgstr ""
+
+#: config/module.config.php:162
+msgid "Block Plus: Gallery (medium)"
+msgstr ""
+
+#: config/module.config.php:163
+msgid "Block Plus: Gallery (medium, link to item)"
+msgstr ""
+
+#: config/module.config.php:164
+msgid "Block Plus: Subjects"
+msgstr ""
+
+#: config/module.config.php:165
+msgid "Block Plus: Timeline list"
+msgstr ""
+
+#: config/module.config.php:166 config/module.config.php:209
+msgid "Block Plus: Browse preview (deprecated)"
+msgstr ""
+
+#: config/module.config.php:169 config/module.config.php:212
+msgid "Block Plus: Include html from group"
+msgstr ""
+
+#: config/module.config.php:172
+msgid "Block Plus: Heading link"
+msgstr ""
+
+#: config/module.config.php:173
+msgid "Block Plus: Details/summary (start)"
+msgstr ""
+
+#: config/module.config.php:174
+msgid "Block Plus: Details/summary (end)"
+msgstr ""
+
+#: config/module.config.php:178
+msgid "Block Plus: Accordion (h3)"
+msgstr ""
+
+#: config/module.config.php:179
+msgid "Block Plus: Anchor for headings"
+msgstr ""
+
+#: config/module.config.php:180
+msgid "Block Plus: Dialog (class for name)"
+msgstr ""
+
+#: config/module.config.php:182
+msgid "Block Plus: Page header"
+msgstr ""
+
+#: config/module.config.php:186
+msgid "Block Plus: Item with metadata (deprecated)"
+msgstr ""
+
+#: config/module.config.php:192
+msgid "Block Plus: List of pages (deprecated)"
+msgstr ""
+
+#: config/module.config.php:195
+msgid "Block Plus: List of sites (deprecated)"
+msgstr ""
+
+#: config/module.config.php:199
+msgid "Block Plus: Item showcase (deprecated)"
+msgstr ""
+
+#: config/module.config.php:200
+msgid "Block Plus: Resource text (deprecated)"
+msgstr ""
+
+#: config/module.config.php:203
+msgid "Block Plus: Page date time"
+msgstr ""
+
+#: config/module.config.php:215
+msgid "Block Plus: Table of contents (deprecated)"
+msgstr ""
+
+#: config/module.config.php:230
+msgid "Collapse the list of groups of blocks"
+msgstr ""
+
+#: config/module.config.php:231
+msgid "Expand to display the list of groups of blocks"
+msgstr ""
+
+#: config/module.config.php:232
+msgid "Insert Footnotes"
+msgstr ""
+
+#: config/module.config.php:234
+msgid ""
+"Please wait for previous group of blocks to be prepared before adding a new "
+"one."
+msgstr ""
+
+#: config/module.config.php:235
+msgid "This group does not contain any block."
+msgstr ""
+
+#: config/module.config.php:236
+msgid "Url (deprecated)"
+msgstr ""
+
+#: config/module.config.php:308
 msgid "Know more"
 msgstr ""

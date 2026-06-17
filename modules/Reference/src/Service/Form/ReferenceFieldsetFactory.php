@@ -2,14 +2,14 @@
 
 namespace Reference\Service\Form;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Reference\Form\ReferenceFieldset;
 use Reference\Form\ReferenceTreeFieldset;
 
 class ReferenceFieldsetFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         /**
          * @see \AdvancedSearch\Service\Form\SearchingFormFieldsetFactory
@@ -48,7 +48,7 @@ class ReferenceFieldsetFactory implements FactoryInterface
             'referenceFieldset' => ReferenceFieldset::class,
             'referenceTreeFieldset' => ReferenceTreeFieldset::class,
             ReferenceFieldset::class => ReferenceFieldset::class,
-            ReferenceTreeFieldset::class => ReferenceFieldset::class,
+            ReferenceTreeFieldset::class => ReferenceTreeFieldset::class,
         ];
 
         $form = $classes[$requestedName];

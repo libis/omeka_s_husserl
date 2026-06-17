@@ -15,6 +15,9 @@ class PageMetadata extends AbstractHelper
     /**
      * Get metadata of the current page.
      *
+     * The block Page Metadata may be needed for some metadata (attachments).
+     * Anyway, the use of the block Page Metadata is deprecated.
+     *
      * @param string $metadata
      * @param SitePageRepresentation $page Current page if empty.
      * @return \Omeka\Api\Representation\SitePageRepresentation|mixed|null
@@ -28,7 +31,11 @@ class PageMetadata extends AbstractHelper
             }
         }
 
-        $block = $this->currentBlockMetadata($page);
-        return $this->metadataBlock($metadata, $block);
+        $priorizeBlockMetadata = !in_array($metadata, $this->require['page_metadata'], true);
+        $block = $priorizeBlockMetadata
+            ? $this->currentBlockMetadata($page)
+            : null;
+
+        return $this->metadataBlock($metadata, $page, $block);
     }
 }

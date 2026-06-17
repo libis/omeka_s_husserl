@@ -2,7 +2,7 @@
 
 namespace Reference\Service\BlockLayout;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Reference\Site\BlockLayout\Reference;
 
@@ -13,7 +13,7 @@ class ReferenceFactory implements FactoryInterface
      *
      * @return \Reference\Site\BlockLayout\Reference
      */
-    public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
     {
         return new Reference(
             $services->get('Common\EasyMeta')

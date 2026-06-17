@@ -2,17 +2,16 @@
 
 namespace Reference\Service\ControllerPlugin;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Reference\Mvc\Controller\Plugin\ReferenceTree;
 
 class ReferenceTreeFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $services, $name, array $options = null)
+    public function __invoke(ContainerInterface $services, $name, ?array $options = null)
     {
-        $plugins = $services->get('ControllerPluginManager');
         return new ReferenceTree(
-            $plugins->get('references')
+            $services->get('Reference\ReferenceTree')
         );
     }
 }

@@ -48,17 +48,33 @@ class AssetElement extends AbstractHtmlElementHelper
 
         switch ($mainType) {
             case 'image':
+                // Include element for lazy loading. See https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/loading
+                if (!isset($attribs['loading'])) {
+                    // Due to a bug in firefox, the attribute "loading" should be set
+                    // before src (see https://bugzilla.mozilla.org/show_bug.cgi?id=1647077).
+                    $attribs = ['loading' => 'lazy'] + $attribs;
+                }
                 return sprintf('<img%s>', $this->htmlAttribs($attribs));
 
             case 'video':
                 $attribs['src'] = $url;
                 $attribs['type'] = $mediaType;
+                $attribs['preload'] ??= 'none';
                 return sprintf('<video%s controls="controls"></video>', $this->htmlAttribs($attribs));
 
             case 'audio':
                 $attribs['src'] = $url;
                 $attribs['type'] = $mediaType;
+                $attribs['preload'] ??= 'none';
                 return sprintf('<audio%s controls="controls"></audio>', $this->htmlAttribs($attribs));
+
+            case $mediaType === 'application/pdf':
+                $attribs['src'] = $url;
+                if (!isset($attribs['loading'])) {
+                    $attribs = ['loading' => 'lazy'] + $attribs;
+                }
+                $attribs['style'] ??= 'width: 100%%; height: 600px';
+                return sprintf('<iframe%s allowfullscreen></iframe>', $this->htmlAttribs($attribs));
 
             default:
                 $attribs['url'] = $url;

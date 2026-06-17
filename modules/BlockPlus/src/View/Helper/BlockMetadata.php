@@ -13,7 +13,10 @@ class BlockMetadata extends AbstractHelper
     use PageBlockMetadataTrait;
 
     /**
-     * Get metadata of the current block through the block Page Metadata.
+     * Get metadata of the current page or block.
+     *
+     * The block Page Metadata may be needed for some metadata (attachments).
+     * Anyway, the use of the block Page Metadata is deprecated.
      *
      * @param string $metadata
      * @param SitePageBlockRepresentation $block The block metadata if empty.
@@ -21,20 +24,25 @@ class BlockMetadata extends AbstractHelper
      */
     public function __invoke(?string $metadata = null, ?SitePageBlockRepresentation $block = null)
     {
-        $view = $this->getView();
+        // There are two cases. Metadata may require:
+        // - page data,
+        // - block metadata data.
+        // All other
 
-        if (!$block) {
-            if (empty($view->block)) {
-                $page = $this->currentPage();
-                if (!$page) {
-                    return null;
-                }
-                $block = $this->currentBlockMetadata($page);
-            } else {
-                $block = $view->block;
-            }
+        $page = $block
+            ? $block->page()
+            : $this->currentPage();
+        if (!$page) {
+            return null;
         }
 
-        return $this->metadataBlock($metadata, $block);
+        $priorizeBlockMetadata = !in_array($metadata, $this->require['page_metadata'], true);
+        if ($priorizeBlockMetadata
+            && (!$block || $block->layout() !== 'pageMetadata')
+        ) {
+            $block = $this->currentBlockMetadata($page);
+        }
+
+        return $this->metadataBlock($metadata, $page, $block);
     }
 }

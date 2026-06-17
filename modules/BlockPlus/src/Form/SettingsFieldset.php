@@ -2,7 +2,7 @@
 
 namespace BlockPlus\Form;
 
-use BlockPlus\Form\Element as BlockPlusElement;
+use Common\Form\Element as CommonElement;
 use Laminas\Form\Fieldset;
 
 class SettingsFieldset extends Fieldset
@@ -18,9 +18,12 @@ class SettingsFieldset extends Fieldset
         $this
             ->setAttribute('id', 'block-plus')
             ->setOption('element_groups', $this->elementGroups)
+
+            // Html mode.
+
             ->add([
                 'name' => 'blockplus_html_mode_page',
-                'type' => BlockPlusElement\OptionalRadio::class,
+                'type' => CommonElement\OptionalRadio::class,
                 'options' => [
                     'element_group' => 'block_plus',
                     'label' => 'Html edition mode for pages', // @translate
@@ -35,7 +38,7 @@ class SettingsFieldset extends Fieldset
             ])
             ->add([
                 'name' => 'blockplus_html_config_page',
-                'type' => BlockPlusElement\OptionalRadio::class,
+                'type' => CommonElement\OptionalRadio::class,
                 'options' => [
                     'element_group' => 'block_plus',
                     'label' => 'Html edition config and toolbar for pages', // @translate
@@ -51,11 +54,27 @@ class SettingsFieldset extends Fieldset
                 ],
             ])
 
+            // Layouts.
+
+            ->add([
+                'name' => 'blockplus_page_models',
+                'type' => CommonElement\IniTextarea::class,
+                'options' => [
+                    'element_group' => 'block_plus',
+                    'label' => 'Page models and groups of blocks', // @translate
+                    'info' => 'List all page models and blocks groups formatted as ini with a section for each group.', // @translate
+                    'documentation' => 'https://gitlab.com/Daniel-KM/Omeka-S-module-BlockPlus#Usage',
+                ],
+                'attributes' => [
+                    'id' => 'blockplus_page_models',
+                ],
+            ])
+
             // Other options.
 
             ->add([
                 'name' => 'blockplus_property_itemset',
-                'type' => BlockPlusElement\OptionalPropertySelect::class,
+                'type' => CommonElement\OptionalPropertySelect::class,
                 'options' => [
                     'element_group' => 'block_plus',
                     'label' => 'Property to set primary item set', // @translate

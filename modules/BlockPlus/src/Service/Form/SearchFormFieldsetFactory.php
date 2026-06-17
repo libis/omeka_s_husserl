@@ -10,22 +10,34 @@ class SearchFormFieldsetFactory implements FactoryInterface
 {
     public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
     {
+        /**
+         * @see \AdvancedSearch\Service\Form\SearchingFormFieldsetFactory
+         * Adapted:
+         * @see \BlockPlus\Service\Form\SearchFormFieldsetFactory
+         * @see \Reference\Service\Form\ReferenceFieldsetFactory
+         */
+
         $configs = [];
 
         if ($services->get('Omeka\ApiAdapterManager')->has('search_configs')) {
             $siteSettings = $services->get('Omeka\Settings\Site');
-            $available = $siteSettings->get('advancedsearch_configs', []);
+            $availableSearchConfigs = $siteSettings->get('advancedsearch_configs', []);
 
             /** @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation[] $searchConfigs */
             $api = $services->get('Omeka\ApiManager');
-            $searchConfigs = $api->search('search_configs', ['id' => $available])->getContent();
+            $searchConfigs = $api->search('search_configs', ['id' => $availableSearchConfigs])->getContent();
 
             foreach ($searchConfigs as $searchConfig) {
-                $configs[$searchConfig->id()] = sprintf('%s (/%s)', $searchConfig->name(), $searchConfig->path());
+                $configs[$searchConfig->id()] = sprintf(
+                    '%s (/%s)',
+                    $searchConfig->name(),
+                    // Support of old version of module AdvancedSearch.
+                    method_exists($searchConfig, 'path') ? $searchConfig->path() : $searchConfig->slug()
+                );
             }
 
             // Set the main search config first and as default.
-            $default = $siteSettings->get('advancedsearch_main_config') ?: reset($available);
+            $default = $siteSettings->get('advancedsearch_main_config') ?: reset($availableSearchConfigs);
             if (isset($configs[$default])) {
                 $configs = [$default => $configs[$default]] + $configs;
             }

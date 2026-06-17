@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-04 00:00+0000\n"
-"PO-Revision-Date: 2026-05-04 00:00+0000\n"
+"POT-Creation-Date: 2026-06-01 00:00+0000\n"
+"PO-Revision-Date: 2026-06-01 00:00+0000\n"
 "Last-Translator: Daniel Berthereau <Daniel.fr@Berthereau.net>\n"
 "Language-Team: \n"
 "Language: fr\n"
@@ -157,26 +157,26 @@ msgstr ""
 "Mail non envoyé : c’est un spam avec « {keyword} » (pour : {to}, de : "
 "{from}) : {body}"
 
-#: src/Mvc/Controller/Plugin/SendEmail.php:196
+#: src/Mvc/Controller/Plugin/SendEmail.php:217
 msgid "Email not sent: the cc emails {list} are invalid (subject: {subject})."
 msgstr ""
 "Mail non envoyé : les mails en copie « {list} » sont invalides (sujet : "
 "{subject})."
 
-#: src/Mvc/Controller/Plugin/SendEmail.php:208
+#: src/Mvc/Controller/Plugin/SendEmail.php:229
 msgid "Email not sent: the bcc emails {list} are invalid (subject: {subject})."
 msgstr ""
 "Mail non envoyé : les mails en copie cachée « {list} » sont invalides "
 "(sujet : {subject})."
 
-#: src/Mvc/Controller/Plugin/SendEmail.php:220
+#: src/Mvc/Controller/Plugin/SendEmail.php:241
 msgid ""
 "Email not sent: the reply-to emails {list} are invalid (subject: {subject})."
 msgstr ""
 "Mail non envoyé : les mails répondre-à « {list} » sont invalides (sujet : "
 "{subject})."
 
-#: src/Mvc/Controller/Plugin/SendEmail.php:236
+#: src/Mvc/Controller/Plugin/SendEmail.php:257
 msgid "An email was sent to {recipients} with subject: {subject}"
 msgstr "Un mail a été envoyé à {recipients} avec le sujet : {subject}."
 
@@ -460,7 +460,7 @@ msgstr ""
 msgid "A vocabulary must have a namespace uri and a prefix."
 msgstr "Un vocabulaire doit avoir une uri pour l’espace de nom et un préfixe."
 
-#: src/TraitModule.php:142 src/TraitModule.php:1128
+#: src/TraitModule.php:142 src/TraitModule.php:1213
 msgid "This module requires the module \"{module}\"."
 msgstr "Ce module requiert le module « {module} »."
 
@@ -480,18 +480,18 @@ msgstr ""
 "Ce module ne peut pas installer ses tables car elles existent déjà. Essayez "
 "de les supprimer manuellement."
 
-#: src/TraitModule.php:496
+#: src/TraitModule.php:577
 msgid "The module removed tables \"{tables}\" from a previous broken install."
 msgstr ""
 "Le module a supprimé les tables \"{tables}\" depuis une installation échouée."
 
-#: src/TraitModule.php:1123
+#: src/TraitModule.php:1208
 msgid ""
 "This module requires the module \"{module}\", version {version} or above."
 msgstr ""
 "Ce module requiert le module « {module} », version {version} ou supérieure."
 
-#: src/TraitModule.php:1235
+#: src/TraitModule.php:1320
 msgid ""
 "The module \"{module}\" was automatically deactivated because the "
 "dependencies are unavailable."
@@ -499,11 +499,11 @@ msgstr ""
 "Le module « {module} » a été automatiquement désactivé car ses dépendances "
 "ne sont plus disponibles."
 
-#: src/TraitModule.php:1257
+#: src/TraitModule.php:1342
 msgid "The directory \"{path}\" is not writeable."
 msgstr "Le dossier « {path} » n’est pas inscriptible."
 
-#: src/TraitModule.php:1268
+#: src/TraitModule.php:1353
 msgid "The directory \"{path}\" is not writeable: {error}."
 msgstr "Le dossier « {path} » n’est pas inscriptible : {error}"
 
@@ -515,59 +515,67 @@ msgstr "Choisir un ingéreur de média…"
 msgid "Select media renderers…"
 msgstr "Choisir un rendu pour le média…"
 
-#: src/Stdlib/EasyMeta.php:73
+#: src/Stdlib/EasyMeta.php:77
 msgid "annotation"
 msgstr "annotation"
 
-#: src/Stdlib/EasyMeta.php:78
+#: src/Stdlib/EasyMeta.php:79
+msgid "digital object"
+msgstr "objet numérique"
+
+#: src/Stdlib/EasyMeta.php:83
 msgid "resource"
 msgstr "ressource"
 
-#: src/Stdlib/EasyMeta.php:79
+#: src/Stdlib/EasyMeta.php:84
 msgid "property"
 msgstr "propriété"
 
-#: src/Stdlib/EasyMeta.php:80
+#: src/Stdlib/EasyMeta.php:85
 msgid "resource class"
 msgstr "classe de ressource"
 
-#: src/Stdlib/EasyMeta.php:88
+#: src/Stdlib/EasyMeta.php:93
 msgid "annotations"
 msgstr "annotations"
 
-#: src/Stdlib/EasyMeta.php:89
+#: src/Stdlib/EasyMeta.php:94
 msgid "assets"
 msgstr "fichiers"
 
-#: src/Stdlib/EasyMeta.php:90
+#: src/Stdlib/EasyMeta.php:95
+msgid "digital objects"
+msgstr "objets numériques"
+
+#: src/Stdlib/EasyMeta.php:96
 msgid "items"
 msgstr "contenus"
 
-#: src/Stdlib/EasyMeta.php:91
+#: src/Stdlib/EasyMeta.php:97
 msgid "item sets"
 msgstr "collections"
 
-#: src/Stdlib/EasyMeta.php:93
+#: src/Stdlib/EasyMeta.php:99
 msgid "resources"
 msgstr "ressources"
 
-#: src/Stdlib/EasyMeta.php:94
+#: src/Stdlib/EasyMeta.php:100
 msgid "properties"
 msgstr "propriétés"
 
-#: src/Stdlib/EasyMeta.php:95
+#: src/Stdlib/EasyMeta.php:101
 msgid "resource classes"
 msgstr "classes de ressource"
 
-#: src/Stdlib/EasyMeta.php:96
+#: src/Stdlib/EasyMeta.php:102
 msgid "resource templates"
 msgstr "modèles de ressource"
 
-#: src/Stdlib/EasyMeta.php:97
+#: src/Stdlib/EasyMeta.php:103
 msgid "vocabularies"
 msgstr "vocabulaires"
 
-#: src/Stdlib/EasyMeta.php:98
+#: src/Stdlib/EasyMeta.php:104
 msgid "sites"
 msgstr "sites"
 

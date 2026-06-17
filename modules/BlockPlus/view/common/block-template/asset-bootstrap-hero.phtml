@@ -1,0 +1,69 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SitePageBlockRepresentation $block
+ * @var array $attachments Contains keys:
+ *   - asset (AssetRepresentation)
+ *   - page (PageRepresentation)
+ *   - caption (string): the html is purified according to settings
+ *   - alt_link_title (string)
+ *
+ * The optional class, url and label may be set at start of caption like:
+ * ```
+ * url = https://example.org/
+ * class = xxx yyy
+ * label = Any zzz
+ * Next lines are the true caption, that may be raw text ot html.
+ * ```
+ *
+ * The string may be html.
+ * The url may be a local media file, for example `/files/original/xxx.pdf`.
+ * The label is used when there is no page, so no alt_link_title.
+ *
+ * @see \BlockPlus\View\Helper\AssetElement
+ * @uses \BlockPlus\View\Helper\CaptionClassAndUrl
+ */
+
+// Note: this hero uses the classes and js of Twitter Bootstrap.
+// The hero uses a random asset.
+
+if (!count($attachments)) return;
+
+$attachment = $attachments[array_rand($attachments)];
+if (empty($attachment['asset'])) return;
+
+$plugins = $this->getHelperPluginManager();
+$escape = $plugins->get('escapeHtml');
+$escapeAttr = $plugins->get('escapeHtmlAttr');
+
+// Manage minimal display when the module is disabled.
+$captionClassAndUrl = $plugins->has('captionClassAndUrl')
+    ? $plugins->get('captionClassAndUrl')
+    : fn($string) => [trim((string) $string), '', '', '', false, false, $string !== strip_tags($string)];
+
+$asset = $attachment['asset'];
+$page = $attachment['page'] ?? null;
+[$caption, $class, $url, $label, $isLocalUrl, $isMediaFile, $isHtmlCaption] = $captionClassAndUrl($attachment['caption'] ?? '');
+$title = strlen($attachment['alt_link_title']) ? $attachment['alt_link_title'] : ($page ? $page->title() : ($label ?: ($caption && $isHtmlCaption ? strip_tags($caption) : $caption)));
+?>
+
+<div class="block header-wrapper<?= strlen($class) ? ' ' . $escapeAttr($class) : '' ?>" style="background-image:url(<?= $asset->assetUrl() ?>);">
+    <?php if (strlen($caption)): ?>
+    <div class="container mt-5">
+        <div class="row mt-5">
+            <div class="col-md-6  offset-3 mt-5">
+                <h1 class="lorem text-uppercase text-center text-justify"><?= $isHtmlCaption ? $caption : $escape($caption) ?></h1>
+                <?php if ($page): ?>
+                <a href="<?= $escapeAttr($page->siteUrl()) ?>"<?php if (!$isLocalUrl || $isMediaFile): ?> target="_blank"<?php endif; ?><?php if (!$isLocalUrl): ?> rel="noopener"<?php endif; ?>>
+                    <button class="button btn knowmore"><?= $escape($title) ?></button>
+                </a>
+                <?php elseif ($url && $title): ?>
+                <a href="<?= $escapeAttr($url) ?>"<?php if (!$isLocalUrl || $isMediaFile): ?> target="_blank"<?php endif; ?><?php if (!$isLocalUrl): ?> rel="noopener"<?php endif; ?>>
+                    <button class="button btn knowmore"><?= $escape($title) ?></button>
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+</div>

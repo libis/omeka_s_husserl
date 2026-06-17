@@ -1,0 +1,81 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SitePageBlockRepresentation $block
+ * @var array $attachments Contains keys:
+ *   - asset (AssetRepresentation)
+ *   - page (PageRepresentation)
+ *   - caption (string): the html is purified according to settings
+ *   - alt_link_title (string)
+ *
+ * The optional class, url and label may be set at start of caption like:
+ * ```
+ * url = https://example.org/
+ * class = xxx yyy
+ * label = Any zzz
+ * Next lines are the true caption, that may be raw text ot html.
+ * ```
+ *
+ * The string may be html.
+ * The url may be a local media file, for example `/files/original/xxx.pdf`.
+ * The label is used when there is no page, so no alt_link_title.
+ *
+ * @see \BlockPlus\View\Helper\AssetElement
+ * @uses \BlockPlus\View\Helper\CaptionClassAndUrl
+ */
+
+// It is recommended to use the grid or a css with nth odd/even.
+$this->logger()->warn(
+    'The template "asset-left-right" should be replaced by new page block features in page {url}.', // @translate
+    ['url' => $_SERVER['REQUEST_URI']]
+);
+
+$plugins = $this->getHelperPluginManager();
+$escape = $plugins->get('escapeHtml');
+$escapeAttr = $plugins->get('escapeHtmlAttr');
+
+// Manage display when the module is disabled.
+$assetElement = $plugins->has('assetElement')
+    ? $plugins->get('assetElement')
+    : $plugins->get('thumbnail');
+$captionClassAndUrl = $plugins->has('captionClassAndUrl')
+    ? $plugins->get('captionClassAndUrl')
+    : fn($string) => [trim((string) $string), '', '', '', false, false, $string !== strip_tags($string)];
+?>
+
+<style>
+.align-left { float: left; margin-right: 6px; }
+.align-right { float: right; margin-left: 6px; }
+.clear { clear: both; }
+</style>
+
+<div class="block block-asset assets">
+    <?php $index = 0;
+    foreach ($attachments as $attachment):
+        $asset = $attachment['asset'];
+        $page = $attachment['page'] ?? null;
+        [$caption, $class, $url, $label, $isLocalUrl, $isMediaFile, $isHtmlCaption] = $captionClassAndUrl($attachment['caption'] ?? '');
+        $title = strlen($attachment['alt_link_title']) ? $attachment['alt_link_title'] : ($page ? $page->title() : $label);
+        ?>
+    <div class="asset<?= strlen($class) ? ' ' . $escapeAttr($class) : '' ?>">
+        <?php if ($asset): ?>
+            <?php $attachmentUrl = $page ? $page->siteUrl() : $url ?>
+            <?php if ($attachmentUrl): ?>
+        <a class="<?= ++$index % 2 ? 'align-left' : 'align-right' ?>" href="<?= $escapeAttr($attachmentUrl) ?>"<?php if (!$isLocalUrl || $isMediaFile): ?> target="_blank"<?php endif; ?><?php if (!$isLocalUrl): ?> rel="noopener"<?php endif; ?>>
+            <?= $assetElement($asset, 'square', ['alt' => $title]) ?>
+        </a>
+            <?php else: ?>
+        <span class="<?= ++$index % 2 ? 'align-left' : 'align-right' ?>">
+            <?= $assetElement($asset, 'square', ['alt' => $title]) ?>
+        </span>
+            <?php endif; ?>
+        <?php endif; ?>
+        <?php if (strlen($caption)): ?>
+        <div class="caption">
+            <?= $isHtmlCaption ? $caption : $escape($caption) ?>
+        </div>
+        <?php endif; ?>
+        <div class="clear"></div>
+    </div>
+    <?php endforeach; ?>
+</div>

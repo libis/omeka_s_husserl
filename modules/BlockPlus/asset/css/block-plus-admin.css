@@ -1,10 +1,75 @@
-@media screen {
+@media all {
+
+    [hidden],
+    .hidden {
+        display: none;
+    }
 
     /* Allows to display chosen-select in the bottom of a block. */
     .block.value .collapse + .collapsible {
         display: block;
         clear: both;
         overflow: inherit;
+    }
+
+    /* Page metadata with details/summary */
+    #site-page-metadata-details summary::after {
+        margin-left: 12px;
+        content: "";
+     }
+    #site-page-metadata-details[open] summary::after {
+        content: "";
+     }
+
+    /* Page model */
+    #button-page-model.button {
+        background: none;
+        border: none;
+        box-shadow: none;
+        margin: 0 6px 12px 0;
+        padding: 6px;
+    }
+    #button-page-model::after {
+        content: "";
+        margin-left: 0;
+    }
+    #button-page-model.collapse .o-icon-settings::before {
+        color: red;
+    }
+    .fields-page-model {
+        text-align: initial;
+        color: #676767;
+    }
+
+    /* Block group plus */
+    span.add-block-plus {
+        padding-right: 3px;
+    }
+    button.add-block-group-plus::after {
+        display: inline-block;
+        width: 14px;
+    }
+    #block-group-layouts {
+        width: 100%;
+        list-style: none;
+        margin-bottom: 6px;
+        padding-left: 0;
+    }
+    #block-group-layouts button {
+        font-size: 16px;
+        line-height: 24px;
+        margin: 0 0 12px 0;
+        padding: 6px 10px;
+    }
+    #block-group-layouts .spinner {
+        position: absolute;
+        right: 40px;
+        margin-top: 6px;
+        margin-right: 6px;
+        opacity: 0;
+    }
+    #block-group-layouts .spinner.processing {
+        opacity: 0.5;
     }
 
     /* Footnotes (against core styles) */
@@ -21,7 +86,7 @@
     }
 
     .cke_button_icon.cke_button__footnotes_icon {
-        background-image: url("../vendor/ckeditor-footnotes/icons/footnotes.png");
+        background-image: url("../vendor/ckeditor-footnotes/footnotes/icons/footnotes.png");
         background-size: auto;
     }
 

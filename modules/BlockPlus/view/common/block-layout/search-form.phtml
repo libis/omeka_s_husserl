@@ -1,9 +1,8 @@
 <?php
 /**
  * @var \Laminas\View\Renderer\PhpRenderer $this
- * @var string $heading
+ * @var \Omeka\Api\Representation\SitePageBlockRepresentation $block
  * @var \AdvancedSearch\Api\Representation\SearchConfigRepresentation|null $searchConfig
- * @var string $html
  * @var array $link
  * @var string $selector
  */
@@ -30,12 +29,8 @@ $searchValue = $params->fromQuery('fulltext_search', '');
 ?>
 
 <div class="block block-search">
-    <?php if (!empty($heading)): ?>
-    <h2><?= $escape($heading) ?></h2>
-    <?php endif; ?>
-    <?= $html ?>
     <?php if ($searchConfig): ?>
-    <?= $this->searchForm($searchConfig) ?>
+    <?= $searchConfig->renderForm() ?>
     <?php else: ?>
     <form action="<?= $escape($searchAction) ?>" id="search-form">
         <?php if ($selector === 'item_sets'): ?>
@@ -75,7 +70,7 @@ $searchValue = $params->fromQuery('fulltext_search', '');
             ]) ?>
         <?php endif; ?>
         <input type="text" name="fulltext_search" value="<?= $escape($searchValue) ?>" placeholder="<?= $translate('Search') ?>" aria-label="<?= $translate('Search') ?>">
-        <button type="submit"><?= $translate('Search') ?></button>
+        <button type="submit" class="button"><?= $translate('Search') ?></button>
     </form>
     <?php endif;  ?>
     <?php if ($link): ?>

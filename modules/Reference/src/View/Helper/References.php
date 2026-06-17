@@ -3,22 +3,22 @@
 namespace Reference\View\Helper;
 
 use Laminas\View\Helper\AbstractHelper;
-use Reference\Mvc\Controller\Plugin\References as ReferencesPlugin;
-use Reference\Mvc\Controller\Plugin\ReferenceTree;
+use Reference\Stdlib\References as ReferencesService;
+use Reference\Stdlib\ReferenceTree;
 
 class References extends AbstractHelper
 {
     /**
-     * @var \Reference\Mvc\Controller\Plugin\References
+     * @var \Reference\Stdlib\References
      */
     protected $references;
 
     /**
-     * @var \Reference\Mvc\Controller\Plugin\ReferenceTree
+     * @var \Reference\Stdlib\ReferenceTree
      */
     protected $referenceTree;
 
-    public function __construct(ReferencesPlugin $references, ReferenceTree $referenceTree)
+    public function __construct(ReferencesService $references, ReferenceTree $referenceTree)
     {
         $this->references = $references;
         $this->referenceTree = $referenceTree;
@@ -27,7 +27,7 @@ class References extends AbstractHelper
     /**
      * Get the references.
      *
-     * @uses \Reference\Mvc\Controller\Plugin\References
+     * @uses \Reference\Stdlib\References
      */
     public function __invoke(): self
     {
@@ -45,8 +45,8 @@ class References extends AbstractHelper
     /**
      * Get the references.
      *
-     * @uses \Reference\Mvc\Controller\Plugin\References::__invoke()
-     * @uses \Reference\Mvc\Controller\Plugin\References::list()
+     * @uses \Reference\Stdlib\References::__invoke()
+     * @uses \Reference\Stdlib\References::list()
      *
      * @param array|string $metadata List of metadata to get references for.
      * Classes, properties terms, template names, or other Omeka metadata names.
@@ -134,7 +134,7 @@ class References extends AbstractHelper
      *
      * If total is not correct, reindex the references in main settings.
      *
-     * @uses \Reference\Mvc\Controller\Plugin\References::count()
+     * @uses \Reference\Stdlib\References::count()
      * Unlike References::count(), it has arguments and may return an integer.
      *
      * @param string|array $metadata
@@ -159,7 +159,7 @@ class References extends AbstractHelper
      *
      * The filter "begin" is skipped from the query.
      *
-     * @uses \Reference\Mvc\Controller\Plugin\References::initials()
+     * @uses \Reference\Stdlib\References::initials()
      *
      * @param string|array $metadata
      * @param array $query
@@ -182,7 +182,7 @@ class References extends AbstractHelper
     /**
      * Display list of references of one or more fields via a template.
      *
-     * @uses \Reference\Mvc\Controller\Plugin\References::list()
+     * @uses \Reference\Stdlib\References::list()
      *
      * @param array $fields
      * @param array $query An Omeka search query to limit results.
@@ -216,15 +216,14 @@ class References extends AbstractHelper
         $firstId = $options['first'];
         unset($options['subject_property_id'], $options['subject_property_term']);
         if (!empty($options['subject_property'])) {
-            $api = $this->getView()->api();
-            $property = is_numeric($options['subject_property'])
-                ? $api->read('properties', ['id' => $options['subject_property']])->getContent()
-                : $api->searchOne('properties', ['term' => $options['subject_property']])->getContent();
-            if ($property) {
+            /** @var \Common\View\Helper\EasyMeta $easyMeta */
+            $easyMeta = $this->getView()->easyMeta();
+            $propertyId = $easyMeta->propertyId($options['subject_property']);
+            if ($propertyId) {
                 $options['first'] = true;
                 $options['subject_property'] = [
-                    'id' => $property->id(),
-                    'term' => $property->term(),
+                    'id' => $propertyId,
+                    'term' => $easyMeta->propertyTerm($propertyId),
                 ];
             } else {
                 unset($options['subject_property']);

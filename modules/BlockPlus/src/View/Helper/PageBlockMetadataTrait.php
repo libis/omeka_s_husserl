@@ -14,23 +14,128 @@ use Omeka\Api\Representation\SiteRepresentation;
 trait PageBlockMetadataTrait
 {
     /**
-     * Get metadata of a block.
+     * There are two cases. Metadata may require:
+     * - page data
+     * - block metadata data
+     * Threre are two situations:
+     * - from the page
+     * - from a block.
      *
+     * @var array
+     */
+    protected $require = [
+        'page_metadata' => [
+            'page',
+            'title',
+            'slug',
+            'theme_dir',
+            'template',
+            'template_name',
+            'type',
+            'first_image',
+            'is_home_page',
+            'nav_data',
+            'root',
+            'subroot',
+            'sub_root',
+            'parent',
+            'parents',
+            'prev',
+            'previous',
+            'next',
+            'children',
+            'siblings',
+            'exhibit',
+            'exhibit_nav',
+            // Pre-rdf metadata.
+            'dcterms:title',
+            'dcterms:creator',
+            'dcterms:description',
+            'dcterms:subject',
+            'curation:featured',
+            'curation:new',
+            // This is the raw block params.
+            'curation:data',
+        ],
+        // Priority to old block metadata.
+        'block_metadata' => [
+            'block',
+            null,
+            'type',
+            'credits',
+            'summary',
+            'tags',
+            'type_label',
+            'featured',
+            'new',
+            'cover',
+            'cover_url',
+            'attachments',
+            'main_image',
+            'params',
+            'params_raw',
+            'params_json',
+            'params_json_array',
+            'params_json_object',
+            'params_ini',
+            'params_key_value_array',
+            'params_key_value',
+            // And others.
+        ],
+        'fallback_block_metadata' => [
+            'credits',
+            'summary',
+            'tags',
+            'featured',
+            'new',
+            'params',
+            'params_raw',
+            'params_json',
+            'params_json_array',
+            'params_json_object',
+            'params_ini',
+            'params_key_value_array',
+            'params_key_value',
+        ],
+    ];
+
+    /**
+     * Get metadata of a page or a block metadata.
+     *
+     * The block should be the block metadata of the page.
      * If the block is not available, only common page metadata are available.
      */
-    protected function metadataBlock(?string $metadata = null, ?SitePageBlockRepresentation $block = null)
-    {
+    protected function metadataBlock(
+        ?string $metadata,
+        SitePageRepresentation $page,
+        ?SitePageBlockRepresentation $block
+    ) {
         $view = $this->getView();
-        $page = $block ? $block->page() : $this->currentPage();
-        if (!$page) {
-            return null;
-        }
+
+        $mapMetadata = [
+            'credits' => 'dcterms:creator',
+            'summary' => 'dcterms:description',
+            'tags' => 'dcterms:subject',
+            'featured' => 'curation:featured',
+            'new' => 'curation:new',
+            'params' => 'curation:data',
+        ];
+
+        $getParams = function () use ($page, $block) {
+            $p = $block ? trim((string) $block->dataValue('params')) : '';
+            return $p === ''
+                ? (string) $page->layoutDataValue('curation:data')
+                : $p;
+        };
 
         switch ($metadata) {
             case 'block':
+            case is_null($metadata):
                 return $block;
+
             case 'page':
                 return $page;
+            case 'dctermsdcterms:title':
             case 'title':
                 return $page->title();
             case 'slug':
@@ -39,13 +144,42 @@ trait PageBlockMetadataTrait
             case 'theme_dir':
                 return OMEKA_PATH . '/themes/' . $this->currentSite()->theme();
 
+            case 'template':
+            case 'template_name':
+                return $page->layoutDataValue('template_name') ?: null;
+
+            case 'dcterms:creator':
+            case 'dcterms:description':
+            case 'dcterms:subject':
+            case 'curation:featured':
+            case 'curation:new':
+            case 'curation:data':
+                return $page->layoutDataValue($metadata) ?: null;
+
             case 'type':
+                $view->logger()->warn('Since Omeka S 4.1, the metadata "type" is replaced by the page template name (key "template"). Check your theme.'); // @translate
+                return $page->layoutDataValue('template_name') ?: null;
+
             case 'credits':
             case 'summary':
+                if ($block) {
+                    $result = $block->dataValue($metadata);
+                    if ($result !== null && $result !== '' && $result !== []) {
+                        return $result;
+                    }
+                }
+                return $page->layoutDataValue($mapMetadata[$metadata]);
             case 'tags':
-                return $block
-                    ? $block->dataValue($metadata)
-                    : null;
+                if ($block) {
+                    $result = $block->dataValue('tags');
+                    if ($result !== null && $result !== '' && $result !== []) {
+                        return (array) $result;
+                    }
+                }
+                $result = $page->layoutDataValue($mapMetadata[$metadata], []) ?: [];
+                return is_array($result)
+                    ? $result
+                    : array_map('trim', explode(',', $result));
 
             case 'type_label':
                 if (!$block) {
@@ -56,9 +190,15 @@ trait PageBlockMetadataTrait
                 return $pageTypes[$type] ?? null;
 
             case 'featured':
-                return $block
-                    ? (bool) $block->dataValue('featured')
-                    : false;
+            case 'new':
+                if ($block) {
+                    $result = $block->dataValue($metadata);
+                    if ($result !== null && $result !== '' && $result !== []) {
+                        return (bool) $result;
+                    }
+                }
+                return (bool) $page->layoutDataValue($mapMetadata[$metadata]);
+
             case 'cover':
             case 'cover_url':
                 if (!$block) {
@@ -83,19 +223,9 @@ trait PageBlockMetadataTrait
                 return $block->attachments();
 
             case 'first_image':
-                // @deprecated Use "main_image", not "first_image".
-            case 'main_image':
-                if (!$block) {
-                    return null;
-                }
+                // First image in the page in any block (pageMetadata or asset).
                 $api = $view->api();
-                $asset = $block->dataValue('cover');
-                if ($asset) {
-                    try {
-                        return $api->read('assets', ['id' => $asset])->getContent();
-                    } catch (NotFoundException $e) {
-                    }
-                }
+                // Search for a block pageMetadata or asset.
                 foreach ($page->blocks() as $block) {
                     $layout = $block->layout();
                     if ($layout === 'pageMetadata') {
@@ -106,15 +236,15 @@ trait PageBlockMetadataTrait
                             } catch (\Omeka\Api\Exception\NotFoundException $e) {
                             }
                         }
-                    } elseif ($layout === 'assets') {
-                        foreach ($block->dataValue('assets', []) as $asset) {
+                    } elseif ($layout === 'asset') {
+                        foreach ($block->data() as $asset) {
                             try {
-                                return $api->read('assets', ['id' => $asset['asset']])->getContent();
+                                return $api->read('assets', ['id' => $asset['id']])->getContent();
                             } catch (\Omeka\Api\Exception\NotFoundException $e) {
                             }
                         }
-                        continue;
                     }
+                    // Search for attachments of the current block.
                     foreach ($block->attachments() as $attachment) {
                         $media = $attachment->media();
                         if ($media && ($media->hasThumbnails() || $media->thumbnail())) {
@@ -133,14 +263,59 @@ trait PageBlockMetadataTrait
                     }
                 }
                 return null;
+            case 'main_image':
+                // Main image checks current block only, metadata or asset.
+                if (!$block) {
+                    return null;
+                }
+                $api = $view->api();
+                $layout = $block->layout();
+                // Check if acover is defined in the current block.
+                if ($layout === 'pageMetadata') {
+                    $asset = $block->dataValue('cover');
+                    if ($asset) {
+                        try {
+                            return $api->read('assets', ['id' => $asset])->getContent();
+                        } catch (\Omeka\Api\Exception\NotFoundException $e) {
+                        }
+                    }
+                } elseif ($layout === 'asset') {
+                    foreach ($block->data() as $asset) {
+                        try {
+                            return $api->read('assets', ['id' => $asset['id']])->getContent();
+                        } catch (\Omeka\Api\Exception\NotFoundException $e) {
+                        }
+                    }
+                }
+                // Search for attachments of the current block.
+                foreach ($block->attachments() as $attachment) {
+                    $media = $attachment->media();
+                    if ($media && ($media->hasThumbnails() || $media->thumbnail())) {
+                        return $media;
+                    }
+                    $item = $attachment->item();
+                    if ($item) {
+                        if ($thumbnail = $item->thumbnail()) {
+                            return $thumbnail;
+                        }
+                        $media = $item->primaryMedia();
+                        if ($media && ($media->hasThumbnails() || $media->thumbnail())) {
+                            return $media;
+                        }
+                    }
+                }
+                return null;
 
             case 'is_home_page':
                 return $view->isHomePage($page);
 
+            case 'nav_data':
+                return $this->findPageInNavigation($page->id(), $page->site()->navigation());
             case 'root':
                 $parents = $this->parentPages($page);
                 return empty($parents) ? $page : array_pop($parents);
             case 'subroot':
+            case 'sub_root':
                 $parents = $this->parentPages($page);
                 if (empty($parents)) {
                     return null;
@@ -162,9 +337,13 @@ trait PageBlockMetadataTrait
                 return $this->previousNextPages($page, 'next');
             case 'children':
                 return $this->childrenPages($page);
+            case 'siblings':
+                return $this->siblingPages($page);
 
             case 'exhibit':
-                switch ($block->dataValue('type')) {
+                $type = $page->layoutDataValue('template_name') ?: null;
+                switch ($type) {
+                    case 'exhibit-page':
                     case 'exhibit_page':
                         $parentPages = $this->parentPages($page);
                         foreach ($parentPages as $parentPage) {
@@ -186,49 +365,32 @@ trait PageBlockMetadataTrait
                     ? $this->navigationForPage($exhibit)
                     : null;
 
-            case is_null($metadata):
-                return $block;
-
             case 'params':
             case 'params_raw':
-                if (!$block) {
-                    return null;
-                }
-                return $block->dataValue('params', '');
+                return $getParams();
             case 'params_json':
             case 'params_json_array':
-                if (!$block) {
-                    return [];
-                }
-                return @json_decode($block->dataValue('params', ''), true) ?: [];
+                $p = $getParams();
+                return @json_decode($p, true) ?: [];
             case 'params_json_object':
-                if (!$block) {
-                    return (object) [];
-                }
-                return @json_decode($block->dataValue('params', '')) ?: (object) [];
+                $p = $getParams();
+                return @json_decode($p) ?: (object) [];
             case 'params_ini':
                 $reader = new \Laminas\Config\Reader\Ini();
-                return $reader->fromString($block->dataValue('params', ''));
+                $p = $getParams();
+                return $reader->fromString($p);
             case 'params_key_value_array':
-                if (!$block) {
-                    return [];
-                }
-                $params = array_map('trim', explode("\n", trim($block->dataValue('params', ''))));
+                $p = $getParams();
+                $params = array_map('trim', explode("\n", $p));
                 $list = [];
                 foreach ($params as $keyValue) {
                     $list[] = array_map('trim', explode('=', $keyValue, 2)) + ['', ''];
                 }
                 return $list;
             case 'params_key_value':
-                if (!$block) {
-                    return [];
-                }
-                // no break
             default:
-                if (!$block) {
-                    return null;
-                }
-                $params = array_filter(array_map('trim', explode("\n", trim($block->dataValue('params', '')))), 'strlen');
+                $p = $getParams();
+                $params = array_filter(array_map('trim', explode("\n", $p)), 'strlen');
                 $list = [];
                 foreach ($params as $keyValue) {
                     [$key, $value] = mb_strpos($keyValue, '=') === false
@@ -296,7 +458,7 @@ trait PageBlockMetadataTrait
             if (empty($pageData['parent_id'])) {
                 return $pages;
             }
-            $pages[] = $sitePages[$pageData['parent_id']];
+            $pages[] = $sitePages[$pageData['parent_id']] ?? null;
             $pageId = $pageData['parent_id'];
         }
         return $pages;
@@ -343,14 +505,34 @@ trait PageBlockMetadataTrait
      * @param SitePageRepresentation $page
      * @return SitePageRepresentation[]
      */
-    protected function childrenPages(SitePageRepresentation $page)
+    protected function childrenPages(SitePageRepresentation $page): array
     {
         $site = $page->site();
         $pageData = $this->findPageInNavigation($page->id(), $site->navigation());
-        return array_intersect_key(
-            $this->sitePages($site),
-            array_flip($pageData['children'])
-        );
+        if (empty($pageData['children'])) {
+            return [];
+        }
+        $ids = array_values(array_filter(array_map(fn ($v) => $v && $v['type'] === 'page' ? $v['id'] : null, $pageData['children'])));
+        return $ids
+            ? array_intersect_key($this->sitePages($site), array_flip($ids))
+            : [];
+    }
+
+    /**
+     * Get the sibling pages of a page.
+     *
+     * The process uses the parent page.
+     *
+     * @param SitePageRepresentation $page
+     * @return SitePageRepresentation[]
+     */
+    protected function siblingPages(SitePageRepresentation $page): array
+    {
+        $site = $page->site();
+        $pageData = $this->findPageInNavigation($page->id(), $site->navigation());
+        return empty($pageData['siblings'])
+            ? []
+            : array_intersect_key($this->sitePages($site), array_flip($pageData['siblings']));
     }
 
     /**
@@ -364,50 +546,51 @@ trait PageBlockMetadataTrait
      * @param int $parentPageId
      * @return array
      */
-    protected function findPageInNavigation($pageId, $navItems, $parentPageId = null)
+    protected function findPageInNavigation($pageId, $navItems, $parentPageId = null, $navId = 0): array
     {
-        $siblings = [];
-        foreach ($navItems as $navItem) {
-            if ($navItem['type'] === 'page') {
-                $navItemData = $navItem['data'];
-                $navItemId = $navItemData['id'];
-                $siblings[] = $navItemId;
-            }
+        static $pages = [];
+
+        if (isset($pages[$pageId])) {
+            return $pages[$pageId];
         }
 
-        $childLinks = [];
         foreach ($navItems as $navItem) {
-            if ($navItem['type'] === 'page') {
-                $navItemData = $navItem['data'];
-                $navItemId = $navItemData['id'];
+            ++$navId;
+            $isPage = $navItem['type'] === 'page';
 
-                if ($navItemId === $pageId) {
-                    return [
-                        'id' => $pageId,
-                        'parent_id' => $parentPageId,
-                        'siblings' => $siblings,
-                        'children' => empty($navItem['links'])
-                            ? []
-                            : array_values(array_filter(array_map(function ($v) {
-                                return $v['type'] === 'page' ? $v['data']['id'] : null;
-                            }, $navItem['links']))),
-                    ];
-                }
+            $navItemId = $isPage
+                ? $navItem['data']['id']
+                : "_$navId";
 
-                if (array_key_exists('links', $navItem)) {
-                    $childLinks[$navItemId] = $navItem['links'];
+            $siblings = [];
+            foreach ($navItems as $navItemSibling) {
+                if ($navItemSibling['type'] === 'page') {
+                    $siblings[] = $navItemSibling['data']['id'];
                 }
             }
-        }
 
-        foreach ($childLinks as $parentPageId => $links) {
-            $childLinkResult = $this->findPageInNavigation($pageId, $links, $parentPageId);
-            if ($childLinkResult) {
-                return $childLinkResult;
+            $childLinks = [];
+            if (!empty($navItem['links'])) {
+                foreach ($navItem['links'] as $link) {
+                    $subNavId = $link['type'] === 'page'
+                        ? $link['data']['id']
+                        : ++$navId;
+                    $childLinks[] = $this->findPageInNavigation($subNavId, $navItem['links'], $navItemId, $navId);
+                }
             }
+
+            $pages[$navItemId] = [
+                'id' => $navItemId,
+                'type' => $navItem['type'],
+                'parent_id' => $parentPageId,
+                'siblings' => $siblings,
+                'children' => $childLinks,
+                'label' => $navItem['data']['label'] ?? null,
+                'is_public' => $navItem['data']['is_public'] ?? null,
+            ];
         }
 
-        return [];
+        return $pages[$pageId] ?? [];
     }
 
     protected function currentSite(): ?SiteRepresentation
@@ -432,7 +615,10 @@ trait PageBlockMetadataTrait
         }
 
         $site = $this->currentSite();
-        return $view->api()->searchOne('site_pages', ['site_id' => $site->id(), 'slug' => $pageSlug])->getContent();
+        // TODO Replace by api->read().
+        $page = $view->api()->searchOne('site_pages', ['site_id' => $site->id(), 'slug' => $pageSlug])->getContent();
+        $this->view->page = $page;
+        return $page;
     }
 
     protected function currentBlockMetadata(SitePageRepresentation $page): ?SitePageBlockRepresentation

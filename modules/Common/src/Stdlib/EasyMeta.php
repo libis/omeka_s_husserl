@@ -20,6 +20,8 @@ class EasyMeta
         // Module Annotate (for future usage).
         'resource:annotation' => 'resource',
         'annotation' => 'resource',
+        // Module DigitalObject.
+        'resource:digitalobject' => 'resource',
         // Module DataTypeGeometry.
         'geography' => 'literal',
         'geography:coordinates' => 'literal',
@@ -50,6 +52,7 @@ class EasyMeta
     const RESOURCE_CLASSES = [
         'annotations' => \Annotate\Entity\Annotation::class,
         'assets' => \Omeka\Entity\Asset::class,
+        'digital_objects' => \DigitalObject\Entity\DigitalObject::class,
         'items' => \Omeka\Entity\Item::class,
         'item_sets' => \Omeka\Entity\ItemSet::class,
         'media' => \Omeka\Entity\Media::class,
@@ -62,6 +65,7 @@ class EasyMeta
 
     const RESOURCE_RESOURCE_CLASSES = [
         'annotations' => \Annotate\Entity\Annotation::class,
+        'digital_objects' => \DigitalObject\Entity\DigitalObject::class,
         'items' => \Omeka\Entity\Item::class,
         'item_sets' => \Omeka\Entity\ItemSet::class,
         'media' => \Omeka\Entity\Media::class,
@@ -72,6 +76,7 @@ class EasyMeta
     const RESOURCE_LABELS = [
         'annotations' => 'annotation', // @translate
         'assets' => 'asset', // @translate
+        'digital_objects' => 'digital object', // @translate
         'items' => 'item', // @translate
         'item_sets' => 'item set', // @translate
         'media' => 'media', // @translate
@@ -87,6 +92,7 @@ class EasyMeta
     const RESOURCE_LABELS_PLURAL = [
         'annotations' => 'annotations', // @translate
         'assets' => 'assets', // @translate
+        'digital_objects' => 'digital objects', // @translate
         'items' => 'items', // @translate
         'item_sets' => 'item sets', // @translate
         'media' => 'media', // @translate
@@ -269,11 +275,32 @@ class EasyMeta
         'sites' => 'sites',
         'page' => 'site_pages',
         'pages' => 'site_pages',
+        // Module DigitalObject.
+        'digital_objects' => 'digital_objects',
+        'o:DigitalObject' => 'digital_objects',
+        'o:digital_object' => 'digital_objects',
+        'o:digital_objects' => 'digital_objects',
+        'digital-object' => 'digital_objects',
+        'digital-objects' => 'digital_objects',
+        'digital_object' => 'digital_objects',
+        'digitalobject' => 'digital_objects',
+        'digitalobjects' => 'digital_objects',
+        'DigitalObject' => 'digital_objects',
+        'DigitalObjectController' => 'digital_objects',
+        'resource:digitalobject' => 'digital_objects',
+        'resource:digital_object' => 'digital_objects',
+        'resource:digital-object' => 'digital_objects',
+        \DigitalObject\Api\Representation\DigitalObjectRepresentation::class => 'digital_objects',
+        \DigitalObject\Entity\DigitalObject::class => 'digital_objects',
+        \DoctrineProxies\__CG__\DigitalObject\Entity\DigitalObject::class => 'digital_objects',
+        'DigitalObject\Controller\Admin\DigitalObject' => 'digital_objects',
+        'DigitalObject\Controller\Admin\DigitalObjectController' => 'digital_objects',
     ];
 
     const RESOURCE_TABLES = [
         'annotations' => 'annotation',
         'assets' => 'asset',
+        'digital_objects' => 'digital_object',
         'items' => 'item',
         'item_sets' => 'item_set',
         'media' => 'media',
@@ -287,6 +314,7 @@ class EasyMeta
     const RESOURCE_TYPES = [
         'annotations' => 'annotation',
         'assets' => 'asset',
+        'digital_objects' => 'digital-object',
         'items' => 'item',
         'item_sets' => 'item-set',
         'media' => 'media',
@@ -1533,7 +1561,7 @@ class EasyMeta
             ->groupBy('`value`.`type`')
             ->orderBy('`value`.`type`', 'asc')
         ;
-        static::$dataTypesByNamesUsed = $this->connection->executeQuery($qb)->fetchAllKeyValue();
+        static::$dataTypesByNamesUsed = $this->connection->executeQuery($qb->getSQL())->fetchAllKeyValue();
     }
 
     protected function initDataTypesMainCustomVocabs(): void
@@ -1581,7 +1609,7 @@ class EasyMeta
             ->orderBy('`vocabulary`.`id`', 'asc')
             ->addOrderBy('`property`.`id`', 'asc')
         ;
-        $result = $this->connection->executeQuery($qb)->fetchAllAssociative();
+        $result = $this->connection->executeQuery($qb->getSQL())->fetchAllAssociative();
 
         static::$propertyIdsByTerms = array_map('intval', array_column($result, 'id', 'term'));
         static::$propertyIdsByTermsAndIds = static::$propertyIdsByTerms
@@ -1608,7 +1636,7 @@ class EasyMeta
             ->orderBy('`vocabulary`.`id`', 'asc')
             ->addOrderBy('`property`.`id`', 'asc')
         ;
-        $result = $this->connection->executeQuery($qb)->fetchAllKeyValue();
+        $result = $this->connection->executeQuery($qb->getSQL())->fetchAllKeyValue();
         $propertyIdsByTerms = array_map('intval', $result);
         $propertyIdsByIds = array_combine($propertyIdsByTerms, $propertyIdsByTerms);
         static::$propertyIdsByTermsAndIdsUsed = $propertyIdsByTerms + $propertyIdsByIds;
@@ -1628,7 +1656,7 @@ class EasyMeta
             ->orderBy('`vocabulary`.`id`', 'asc')
             ->addOrderBy('`resource_class`.`id`', 'asc')
         ;
-        $result = $this->connection->executeQuery($qb)->fetchAllAssociative();
+        $result = $this->connection->executeQuery($qb->getSQL())->fetchAllAssociative();
         static::$resourceClassIdsByTerms = array_map('intval', array_column($result, 'id', 'term'));
         static::$resourceClassIdsByTermsAndIds = static::$resourceClassIdsByTerms
             + array_column($result, 'id', 'id');
@@ -1654,7 +1682,7 @@ class EasyMeta
             ->orderBy('`vocabulary`.`id`', 'asc')
             ->addOrderBy('`resource_class`.`id`', 'asc')
         ;
-        $result = $this->connection->executeQuery($qb)->fetchAllKeyValue();
+        $result = $this->connection->executeQuery($qb->getSQL())->fetchAllKeyValue();
         $resourceClassIdsByTerms = array_map('intval', $result);
         $resourceClassIdsByIds = array_combine($resourceClassIdsByTerms, $resourceClassIdsByTerms);
         static::$resourceClassIdsByTermsAndIdsUsed = $resourceClassIdsByTerms + $resourceClassIdsByIds;
@@ -1671,7 +1699,7 @@ class EasyMeta
             ->from('resource_template', 'resource_template')
             ->orderBy('`resource_template`.`label`', 'asc')
         ;
-        $result = $this->connection->executeQuery($qb)->fetchAllKeyValue();
+        $result = $this->connection->executeQuery($qb->getSQL())->fetchAllKeyValue();
         static::$resourceTemplateIdsByLabels = array_map('intval', $result);
         static::$resourceTemplateIdsByLabelsAndIds = static::$resourceTemplateIdsByLabels
             + array_column($result, 'id', 'id');
@@ -1692,7 +1720,7 @@ class EasyMeta
             ->andWhere('EXISTS (SELECT 1 FROM `resource` WHERE `resource`.`resource_template_id` = `resource_template`.`id`)')
             ->orderBy('`resource_template`.`label`', 'asc')
         ;
-        $result = $this->connection->executeQuery($qb)->fetchAllKeyValue();
+        $result = $this->connection->executeQuery($qb->getSQL())->fetchAllKeyValue();
         $resourceTemplateIdsByLabels = array_map('intval', $result);
         $resourceTemplateIdsByIds = array_combine($resourceTemplateIdsByLabels, $resourceTemplateIdsByLabels);
         static::$resourceTemplateIdsByLabelsAndIdsUsed = $resourceTemplateIdsByLabels + $resourceTemplateIdsByIds;
@@ -1709,7 +1737,7 @@ class EasyMeta
             ->from('resource_template', 'resource_template')
             ->orderBy('resource_template.id', 'asc')
         ;
-        $result = $this->connection->executeQuery($qb)->fetchAllKeyValue();
+        $result = $this->connection->executeQuery($qb->getSQL())->fetchAllKeyValue();
         static::$resourceTemplateClassesByIds = array_map(fn ($v) => $v !== null ? (int) $v : null, $result);
     }
 
@@ -1726,7 +1754,7 @@ class EasyMeta
             ->from('`vocabulary`', 'vocabulary')
             ->orderBy('`vocabulary`.`id`', 'asc')
         ;
-        $result = $this->connection->executeQuery($qb)->fetchAllAssociative();
+        $result = $this->connection->executeQuery($qb->getSQL())->fetchAllAssociative();
 
         static::$vocabularyIdsByPrefixes = array_map('intval', array_column($result, 'id', 'prefix'));
         static::$vocabularyIdsByUris = array_map('intval', array_column($result, 'id', 'uri'));

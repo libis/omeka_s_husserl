@@ -3,10 +3,9 @@
  * @var \Laminas\View\Renderer\PhpRenderer $this
  * @var string $heading
  * @var array $glossary Array of arrays with "term" and "definition".
- * @var ?int $defaultPerPage
+ * @var string|null $defaultPerPage
  * @var bool $isHtml
  * @var bool $keepOriginalOrder
- * @var string $divclass
  */
 
 // This partial is used by blocks block-glossary and html-glossary.
@@ -25,7 +24,6 @@ $themeSetting = $plugins->get('themeSetting');
 $defaultPerPage = empty($defaultPerPage) ? null : (int) $defaultPerPage;
 $isHtml = !empty($isHtml);
 $keepOriginalOrder = !empty($keepOriginalOrder);
-$divclass = empty($divclass) ? '' : $divclass;
 
 // There may be multiple start letters.
 // TODO Js to manage multiple start letters.
@@ -34,7 +32,7 @@ $currentPage = (int) ($query['page'] ?? 1) ?: 1;
 $perPage = (int) ($query['per_page'] ?? 0) ?: $defaultPerPage;
 // On the first load, the first letter is the first available one: see below.
 // There may be multiple first letters to consolidate small lists.
-$startWith = array_filter((array) ($startWith['startwith'] ?? []), 'strlen');
+$startWith = array_filter((array) ($query['startwith'] ?? []), 'strlen');
 
 $hasExtensionIntl = extension_loaded('intl');
 $hasExtensionIconv = extension_loaded('iconv');
@@ -78,7 +76,7 @@ $glossary = array_values($glossary);
 // Order glossary and current definition list by default.
 if (!$keepOriginalOrder) {
     if (extension_loaded('intl')) {
-        $collator = new \Collator(null);
+        $collator = new \Collator('');
         usort($glossary, function($a, $b) use ($collator) {
             return $collator->compare($a['term'], $b['term']);
         });
@@ -130,7 +128,7 @@ $this->headScript()
     ->appendFile($assetUrl('js/block-plus-glossary.js', 'BlockPlus', 'text/javascript', ['defer' => 'defer']));
 ?>
 
-<div class="block glossary <?= $escapeAttr($divclass) ?>">
+<div class="block glossary">
     <?php if (!empty($heading)): ?>
     <h2><?= $escape($heading) ?></h2>
     <?php endif; ?>

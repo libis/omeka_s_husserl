@@ -8,9 +8,10 @@ use Omeka\Api\Representation\SitePageRepresentation;
 use Omeka\Api\Representation\SiteRepresentation;
 use Omeka\Entity\SitePageBlock;
 use Omeka\Site\BlockLayout\AbstractBlockLayout;
+use Omeka\Site\BlockLayout\TemplateableBlockLayoutInterface;
 use Omeka\Stdlib\ErrorStore;
 
-class Links extends AbstractBlockLayout
+class Links extends AbstractBlockLayout implements TemplateableBlockLayoutInterface
 {
     /**
      * The default partial view script.
@@ -29,7 +30,7 @@ class Links extends AbstractBlockLayout
 
         $links = $data['links'] ?? [];
         if (is_string($links)) {
-            $string = str_replace(["\r\n", "\n\r", "\r"], ["\n", "\n", "\n"], $links);
+            $string = strtr($links, ["\r\n" => "\n", "\n\r" => "\n", "\r" => "\n"]);
             $array = array_filter(array_map('trim', explode("\n", $string)), 'strlen');
             $links = [];
             foreach ($array as $keyValue) {
@@ -58,7 +59,7 @@ class Links extends AbstractBlockLayout
         $defaultSettings = $services->get('Config')['blockplus']['block_settings']['links'];
         $blockFieldset = \BlockPlus\Form\LinksFieldset::class;
 
-        $data = $block ? $block->data() + $defaultSettings : $defaultSettings;
+        $data = $block ? ($block->data() ?? []) + $defaultSettings : $defaultSettings;
 
         $dataForm = [];
         foreach ($data as $key => $value) {
@@ -71,14 +72,10 @@ class Links extends AbstractBlockLayout
         return $view->formCollection($fieldset, false);
     }
 
-    public function render(PhpRenderer $view, SitePageBlockRepresentation $block)
+    public function render(PhpRenderer $view, SitePageBlockRepresentation $block, $templateViewScript = self::PARTIAL_NAME)
     {
         $vars = ['block' => $block] + $block->data();
-        $template = $vars['template'] ?: self::PARTIAL_NAME;
-        unset($vars['template']);
-        return $template !== self::PARTIAL_NAME && $view->resolver($template)
-            ? $view->partial($template, $vars)
-            : $view->partial(self::PARTIAL_NAME, $vars);
+        return $view->partial($templateViewScript, $vars);
     }
 
     public function getFulltextText(PhpRenderer $view, SitePageBlockRepresentation $block)

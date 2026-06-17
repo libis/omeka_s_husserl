@@ -2,7 +2,6 @@
 
 namespace BlockPlus\Form;
 
-use BlockPlus\Form\Element\TemplateSelect;
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
 use Omeka\Form\Element as OmekaElement;
@@ -12,16 +11,6 @@ class SearchResultsFieldset extends Fieldset
     public function init(): void
     {
         $this
-            ->add([
-                'name' => 'o:block[__blockIndex__][o:data][heading]',
-                'type' => Element\Text::class,
-                'options' => [
-                    'label' => 'Block title', // @translate
-                ],
-                'attributes' => [
-                    'id' => 'search-results-heading',
-                ],
-            ])
             ->add([
                 'name' => 'o:block[__blockIndex__][o:data][resource_type]',
                 'type' => Element\Select::class,
@@ -107,17 +96,52 @@ class SearchResultsFieldset extends Fieldset
                     'data-placeholder' => 'Select resource template…', // @translate
                 ],
             ])
+            // Implemented for compatibility with old templates of the block
+            // Browse Preview after migration.
             ->add([
-                'name' => 'o:block[__blockIndex__][o:data][template]',
-                'type' => TemplateSelect::class,
+                'name' => 'o:block[__blockIndex__][o:data][components]',
+                'type' => Element\MultiCheckbox::class,
                 'options' => [
-                    'label' => 'Template to display', // @translate
-                    'info' => 'Templates are in folder "common/block-layout" of the theme and should start with "search-results".', // @translate
-                    'template' => 'common/block-layout/search-results',
+                    'label' => 'Components', // @translate
+                    'info' => 'Components to display for each resource. If not set in Site Settings, Heading defaults to resource Title and Body to resource Description', // @translate
+                    'value_options' => [
+                        [
+                            'value' => 'search-form',
+                            'label' => 'Search form', // @translate
+                        ],
+                        [
+                            'value' => 'resource-heading',
+                            'label' => 'Heading', // @translate
+                        ],
+                        [
+                            'value' => 'resource-body',
+                            'label' => 'Body', // @translate
+                        ],
+                        [
+                            'value' => 'thumbnail',
+                            'label' => 'Thumbnail', // @translate
+                        ],
+                    ],
                 ],
                 'attributes' => [
-                    'id' => 'search-results-template',
-                    'class' => 'chosen-select',
+                    'id' => 'search-results-components',
+                    'value' => [
+                        'search-form',
+                        'resource-heading',
+                        'resource-body',
+                        'thumbnail',
+                    ],
+                ],
+            ])
+            ->add([
+                'name' => 'o:block[__blockIndex__][o:data][link-text]',
+                'type' => Element\Text::class,
+                'options' => [
+                    'label' => 'Link text', // @translate
+                    'info' => 'Text for link to full browse view, if any.', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'search-results-link-text',
                 ],
             ])
         ;

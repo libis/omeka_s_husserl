@@ -4,7 +4,7 @@ namespace Reference\Service;
 
 use Composer\Semver\Semver;
 use DirectoryIterator;
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\Config\Reader\Ini as IniReader;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Omeka\Module as CoreModule;
@@ -21,7 +21,7 @@ use SplFileInfo;
  */
 class ThemeManagerFactory implements FactoryInterface
 {
-    public function __invoke(ContainerInterface $serviceLocator, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $serviceLocator, $requestedName, ?array $options = null)
     {
         // This is a copy of ThemeManagerFactory, except last lines of the loop.
 
@@ -34,14 +34,26 @@ class ThemeManagerFactory implements FactoryInterface
         $iniReader = new IniReader;
 
         // Get all themes from the filesystem.
-        foreach (new DirectoryIterator(OMEKA_PATH . '/themes') as $dir) {
+        $themeDirs = [OMEKA_PATH . '/themes'];
+        $composerThemesPath = OMEKA_PATH . '/composer-addons/themes';
+        if (is_dir($composerThemesPath)) {
+            $themeDirs[] = $composerThemesPath;
+        }
+        foreach ($themeDirs as $themesDir) {
+            foreach (new DirectoryIterator($themesDir) as $dir) {
 
             // Theme must be a directory
             if (!$dir->isDir() || $dir->isDot()) {
                 continue;
             }
 
-            $theme = $manager->registerTheme($dir->getBasename());
+            // Local themes/ take priority over composer-addons/themes/.
+            $basename = $dir->getBasename();
+            if ($themesDir !== OMEKA_PATH . '/themes' && $manager->getTheme($basename)) {
+                continue;
+            }
+
+            $theme = $manager->registerTheme($basename);
 
             // Theme directory must contain config/module.ini
             $iniFile = new SplFileInfo($dir->getPathname() . '/config/theme.ini');
@@ -92,6 +104,7 @@ class ThemeManagerFactory implements FactoryInterface
                 // Array_map() removes keys.
                 : array_replace_recursive($moduleBlockTemplates, $configSpec['block_templates']);
             $theme->setConfigSpec($configSpec);
+            }
         }
 
         // Note that, unlike the ModuleManagerFactory, this does not register

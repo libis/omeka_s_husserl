@@ -4,6 +4,9 @@ namespace BlockPlus\Form\Element;
 
 use Laminas\Form\Element\Select;
 
+/**
+ * @deprecated Since Omeka S v4.1, use core block template mechanism.
+ */
 class TemplateSelect extends Select
 {
     protected $templatePathStack = [];
@@ -66,12 +69,12 @@ class TemplateSelect extends Select
         $isWindows = PHP_OS_FAMILY === 'Windows';
 
         if ($isWindows) {
-            $dir = str_replace('\\', '/', $dir);
+            $dir = strtr($dir, '\\', '/');
             $base = rtrim($dir, '/');
             if (!$base) {
                 return [];
             }
-            $layout = str_replace('\\', '/', $layout);
+            $layout = strtr($layout, '\\', '/');
             $layout = ltrim($layout, '/');
         } else {
             $base = rtrim($dir, '\\/') ?: '/';

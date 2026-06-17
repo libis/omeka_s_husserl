@@ -75,6 +75,7 @@ Asia
                         'item_sets' => 'Item sets',  // @translate
                         'items' => 'Items',  // @translate
                         // 'media' => 'Media',  // @translate
+                        'digital_objects' => 'Digital objects',  // @translate
                     ],
                 ],
                 'attributes' => [
@@ -140,6 +141,9 @@ Asia
                 'attributes' => [
                     'id' => 'reference-tree-link_to_single',
                 ],
+                'filters' => [
+                    ['name' => \Laminas\Filter\Boolean::class],
+                ],
             ])
             ->add([
                 'name' => 'o:block[__blockIndex__][o:data][custom_url]',
@@ -151,6 +155,9 @@ Asia
                 'attributes' => [
                     'id' => 'reference-tree-custom_url',
                 ],
+                'filters' => [
+                    ['name' => \Laminas\Filter\Boolean::class],
+                ],
             ])
             ->add([
                 'name' => 'o:block[__blockIndex__][o:data][total]',
@@ -160,6 +167,22 @@ Asia
                 ],
                 'attributes' => [
                     'id' => 'reference-tree-total',
+                ],
+                'filters' => [
+                    ['name' => \Laminas\Filter\Boolean::class],
+                ],
+            ])
+            ->add([
+                'name' => 'o:block[__blockIndex__][o:data][url_argument_reference]',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Append "reference" as argument to query urls for themes', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'reference-tree-url_argument_reference',
+                ],
+                'filters' => [
+                    ['name' => \Laminas\Filter\Boolean::class],
                 ],
             ])
             ->add([
@@ -182,6 +205,9 @@ Asia
                 'attributes' => [
                     'id' => 'reference-tree-expanded',
                 ],
+                'filters' => [
+                    ['name' => \Laminas\Filter\Boolean::class],
+                ],
             ])
             ->add([
                 'name' => 'o:block[__blockIndex__][o:data][branch]',
@@ -192,6 +218,9 @@ Asia
                 ],
                 'attributes' => [
                     'id' => 'reference-tree-branch',
+                ],
+                'filters' => [
+                    ['name' => \Laminas\Filter\Boolean::class],
                 ],
             ]);
     }

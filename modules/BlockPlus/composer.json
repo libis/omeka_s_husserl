@@ -26,11 +26,11 @@
         "carousel"
     ],
     "require": {
-        "oomphinc/composer-installers-extender": "^2.0",
-        "andykirk/ckeditor-footnotes": "1.0.10",
-        "asset/thumbnail-grid-expanding-preview": "0.1",
+        "andykirk/ckeditor-footnotes": "^1.2",
+        "asset/thumbnail-grid-expanding-preview": "^0.3",
         "d3/d3": "3.5.17",
         "kenwheeler/slick": "1.8.1",
+        "oomphinc/composer-installers-extender": "^2.0",
         "thetechy/jslists": "0.4.5"
     },
     "replace": {
@@ -50,13 +50,12 @@
         {
             "type": "package",
             "package": {
-                "type": "omeka-addon-asset",
                 "name": "andykirk/ckeditor-footnotes",
-                "version": "1.0.10",
+                "version": "1.2.0",
+                "type": "omeka-addon-asset",
                 "dist": {
                     "type": "tar",
-                    "reference": "",
-                    "url": "https://github.com/Daniel-KM/Omeka-S-module-BlockPlus/releases/download/3.3.14.0/ckeditor-footnotes-1.0.10-omeka.tar.gz"
+                    "url": "https://github.com/Daniel-KM/Omeka-S-module-BlockPlus/releases/download/3.4.33/CKEditorFootnotes.1.2.0-fix-blockplus.tar.gz"
                 }
             }
         },
@@ -65,11 +64,11 @@
             "package": {
                 "type": "omeka-addon-asset",
                 "name": "asset/thumbnail-grid-expanding-preview",
-                "version": "0.1",
+                "version": "0.3.0",
                 "dist": {
-                    "type": "zip",
-                    "reference": "0.1",
-                    "url": "https://github.com/Daniel-KM/ThumbnailGridExpandingPreview/archive/0.1.zip"
+                    "type": "tar",
+                    "reference": "0.3.0",
+                    "url": "https://github.com/Daniel-KM/ThumbnailGridExpandingPreview/archive/refs/tags/0.3.0.tar.gz"
                 }
             }
         },
@@ -93,9 +92,9 @@
                 "name": "jsor/jcarousel",
                 "version": "0.3.9",
                 "dist": {
-                    "type": "zip",
+                    "type": "tar",
                     "reference": "0.3.9",
-                    "url": "https://github.com/jsor/jcarousel/archive/refs/heads/master.zip"
+                    "url": "https://github.com/jsor/jcarousel/archive/refs/heads/master.tar.gz"
                 }
             }
         },
@@ -106,9 +105,9 @@
                 "name": "kenwheeler/slick",
                 "version": "1.8.1",
                 "dist": {
-                    "type": "zip",
+                    "type": "tar",
                     "reference": "",
-                    "url": "https://github.com/kenwheeler/slick/archive/refs/heads/master.zip"
+                    "url": "https://github.com/kenwheeler/slick/archive/refs/heads/master.tar.gz"
                 }
             }
         },
@@ -119,9 +118,9 @@
                 "name": "thetechy/jslists",
                 "version": "0.4.5",
                 "dist": {
-                    "type": "zip",
+                    "type": "tar",
                     "reference": "",
-                    "url": "https://github.com/TheTechy/jslists/archive/refs/heads/master.zip"
+                    "url": "https://github.com/TheTechy/jslists/archive/refs/heads/master.tar.gz"
                 }
             }
         }
@@ -132,26 +131,8 @@
             "asset/vendor/{$name}/": [
                 "type:omeka-addon-asset"
             ]
-        }
-    },
-    "scripts": {
-        "pre-install-cmd": "@build-pre",
-        "pre-update-cmd": "@build-pre",
-        "post-install-cmd": "@build",
-        "post-update-cmd": "@build",
-        "build-pre": [
-            "@php -r 'shell_exec(\"rm -rf ./asset/vendor/thumbnail-grid-expanding-preview\");'"
-        ],
-        "build": [
-            "@php -r '@rename(__DIR__ . \"/asset/vendor/thumbnail-grid-expanding-preview\", __DIR__ . \"/asset/vendor/ThumbnailGridExpandingPreview\");'",
-            "@php -r '@rename(__DIR__ . \"/asset/vendor/ThumbnailGridExpandingPreview/vendor/imagesloaded\", __DIR__ . \"/asset/vendor/imagesloaded\");'",
-            "@php -r '@rename(__DIR__ . \"/asset/vendor/ThumbnailGridExpandingPreview/vendor/jquery-smartresize\", __DIR__ . \"/asset/vendor/jquery-smartresize\");'",
-            "@php -r '@rename(__DIR__ . \"/asset/vendor/ThumbnailGridExpandingPreview/vendor/modernizr\", __DIR__ . \"/asset/vendor/modernizr/\");'",
-
-            "#@php -r 'sleep(1);'",
-            "@php -r '@rmdir(__DIR__ . \"/asset/vendor/ThumbnailGridExpandingPreview/vendor\");'",
-            "@php -r 'shell_exec(\"rm -rf ./asset/vendor/thumbnail-grid-expanding-preview\");'"
-        ]
+        },
+        "installer-name" : "BlockPlus"
     },
     "config": {
         "allow-plugins": {

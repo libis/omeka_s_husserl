@@ -73,6 +73,7 @@ class ReferenceFieldset extends Fieldset
                         'item_sets' => 'Item sets',  // @translate
                         'items' => 'Items',  // @translate
                         // 'media' => 'Media',  // @translate
+                        'digital_objects' => 'Digital objects',  // @translate
                     ],
                 ],
                 'attributes' => [
@@ -114,7 +115,7 @@ class ReferenceFieldset extends Fieldset
                 // 'type' => CommonElement\OptionalRadio::class,
                 'type' => Element\Select::class,
                 'options' => [
-                    'label' => 'Select order', // @translate
+                    'label' => 'Sort by', // @translate
                     'value_options' => [
                         'alphabetic' => 'Alphabetic',  // @translate
                         'total' => 'Total',  // @translate
@@ -131,10 +132,10 @@ class ReferenceFieldset extends Fieldset
                 // 'type' => CommonElement\OptionalRadio::class,
                 'type' => Element\Select::class,
                 'options' => [
-                    'label' => 'Select order', // @translate
+                    'label' => 'Sort order', // @translate
                     'value_options' => [
-                        'asc' => 'Ascendant',  // @translate
-                        'desc' => 'Descendant',  // @translate
+                        'asc' => 'Ascending',  // @translate
+                        'desc' => 'Descending',  // @translate
                     ],
                 ],
                 'attributes' => [
@@ -245,6 +246,20 @@ class ReferenceFieldset extends Fieldset
                 ],
                 'attributes' => [
                     'id' => 'reference-options-total',
+                    'data-fieldset' => 'options',
+                ],
+                'filters' => [
+                    ['name' => \Laminas\Filter\Boolean::class],
+                ],
+            ])
+            ->add([
+                'name' => 'o:block[__blockIndex__][o:data][url_argument_reference]',
+                'type' => Element\Checkbox::class,
+                'options' => [
+                    'label' => 'Append "reference" as argument to query urls for themes', // @translate
+                ],
+                'attributes' => [
+                    'id' => 'reference-options-url-argument-reference',
                     'data-fieldset' => 'options',
                 ],
                 'filters' => [

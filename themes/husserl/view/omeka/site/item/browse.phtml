@@ -410,7 +410,7 @@ Find links to related publications and available transcriptions to support your 
                 </li>
               <?php elseif($item->resourceTemplate()->label() == "Archival folder"): ?>
                 <li class="browse-results-list__resource-item resource-item item-folder-card">
-                  <a href="<?= $site->url() . '/item/browse/?requestedItem=' .$item->value('schema:alternateName') .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($item->title())?>">
+                  <a href="<?= $site->url() . '/husserl/item/browse?requestedItem=' .$item->value('schema:alternateName') .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($item->title())?>">
                     <div class="item-folder-card__item-folder-top-card item-folder-top-card">
                       <h4 class="item-folder-top-card__folder-title folder-title h4"><?= $item->value("schema:identifier") ?></h4>
                       <div class="item-folder-top-card__folder-metadata-group folder-metadata-group">

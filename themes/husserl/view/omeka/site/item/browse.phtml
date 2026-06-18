@@ -144,7 +144,7 @@ function renderTree($rootId, $resPathId, $site, $context, $options = [], $level 
         ? 'folder'
         : 'page-item';
 
-      $url = $site->url() . '/item/browse/?requestedItem=' . $altName;
+      $url = $site->url() . '/husserl/item/browse?requestedItem=' . $altName;
     ?>
       <li class="browse-items__browse-item browse-item big-body-text">
         <p class="browse-item-link <?= ($isOpen ? 'open' : 'close') ?> <?= $typeClass ?>" data-link="<?= $url ?>" onclick="saveBrowseData(event)">
@@ -169,10 +169,10 @@ function renderTree($rootId, $resPathId, $site, $context, $options = [], $level 
         <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/search">Archive</a></li>
         <?php foreach($resPathId as $item): ?>
           <?php if($item['altId'] == "husserl-nachlass"):?>
-            <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $item['altId'] ?>">manuscripten</a></li>
+            <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/husserl/item/browse?requestedItem=<?= $item['altId'] ?>">manuscripten</a></li>
           <?php else: ?>
             <?php $element = searchElement($item['id'], $this);?>
-            <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $item['altId']?>"><?= $element->value("schema:identifier")?></a></li>
+            <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/husserl/item/browse?requestedItem=<?= $item['altId']?>"><?= $element->value("schema:identifier")?></a></li>
           <?php endif; ?>
         <?php endforeach; ?>
       </ul>

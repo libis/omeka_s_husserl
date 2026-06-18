@@ -144,7 +144,7 @@ function renderTree($rootId, $resPathId, $site, $context, $options = [], $level 
         ? 'folder'
         : 'page-item';
 
-      $url = $site->url() . '/husserl/item/browse?requestedItem=' . $altName;
+      $url = $site->url() . '/item/browse?requestedItem=' . $altName;
     ?>
       <li class="browse-items__browse-item browse-item big-body-text">
         <p class="browse-item-link <?= ($isOpen ? 'open' : 'close') ?> <?= $typeClass ?>" data-link="<?= $url ?>" onclick="saveBrowseData(event)">
@@ -169,10 +169,10 @@ function renderTree($rootId, $resPathId, $site, $context, $options = [], $level 
         <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/search">Archive</a></li>
         <?php foreach($resPathId as $item): ?>
           <?php if($item['altId'] == "husserl-nachlass"):?>
-            <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/husserl/item/browse?requestedItem=<?= $item['altId'] ?>">manuscripten</a></li>
+            <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $item['altId'] ?>">manuscripten</a></li>
           <?php else: ?>
             <?php $element = searchElement($item['id'], $this);?>
-            <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/husserl/item/browse?requestedItem=<?= $item['altId']?>"><?= $element->value("schema:identifier")?></a></li>
+            <li class="breadcrumb-listt_breadcrumb-item breadcrumb-item body-text"><a href="<?= $site->url();?>/item/browse?requestedItem=<?= $item['altId']?>"><?= $element->value("schema:identifier")?></a></li>
           <?php endif; ?>
         <?php endforeach; ?>
       </ul>
@@ -221,7 +221,7 @@ Find links to related publications and available transcriptions to support your 
           <?php foreach ($treeRoots as $tree): ?>
             <?php
               $isActiveRoot = isset($resPathId[0]) && $resPathId[0]['altId'] == $tree['altId'];
-              $link = $site->url() . '/husserl/item/browse?requestedItem=' . $tree['altId'];
+              $link = $site->url() . '/item/browse?requestedItem=' . $tree['altId'];
               if ($tree['filterText']) {
                 $link .= '&sort_by=schema_identifier&sort_order=asc'
                   . '&property%5B0%5D%5Bjoiner%5D=and'
@@ -410,7 +410,7 @@ Find links to related publications and available transcriptions to support your 
                 </li>
               <?php elseif($item->resourceTemplate()->label() == "Archival folder"): ?>
                 <li class="browse-results-list__resource-item resource-item item-folder-card">
-                  <a href="<?= $site->url() . '/husserl/item/browse?requestedItem=' .$item->value('schema:alternateName') .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($item->title())?>">
+                  <a href="<?= $site->url() . '/item/browse?requestedItem=' .$item->value('schema:alternateName') .'&sort_by=schema_identifier&sort_order=asc&property%5B0%5D%5Bjoiner%5D=and&property%5B0%5D%5Bproperty%5D=186&property%5B0%5D%5Btype%5D=eq&property%5B0%5D%5Btext%5D=+' .urlencode($item->title())?>">
                     <div class="item-folder-card__item-folder-top-card item-folder-top-card">
                       <h4 class="item-folder-top-card__folder-title folder-title h4"><?= $item->value("schema:identifier") ?></h4>
                       <div class="item-folder-top-card__folder-metadata-group folder-metadata-group">

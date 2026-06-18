@@ -221,7 +221,7 @@ Find links to related publications and available transcriptions to support your 
           <?php foreach ($treeRoots as $tree): ?>
             <?php
               $isActiveRoot = isset($resPathId[0]) && $resPathId[0]['altId'] == $tree['altId'];
-              $link = $site->url() . '/item/browse/?requestedItem=' . $tree['altId'];
+              $link = $site->url() . '/husserl/item/browse?requestedItem=' . $tree['altId'];
               if ($tree['filterText']) {
                 $link .= '&sort_by=schema_identifier&sort_order=asc'
                   . '&property%5B0%5D%5Bjoiner%5D=and'
